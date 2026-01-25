@@ -1,0 +1,16 @@
+[project]
+name = "aos-api"
+version = "0.1.0"
+description = "FastAPI service for AOS PDF parsing and filling"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi==0.115.6",
+  "ipykernel==6.29.5",
+  "cryptography==42.0.8",
+  "pikepdf==10.2.0",
+  "pypdf==5.1.0",
+  "uvicorn[standard]==0.32.1",
+]
+
+[tool.uv]
+dev-dependencies = []
