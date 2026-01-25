@@ -57,7 +57,7 @@ export function PdfFillDemo() {
         globalThis.URL.revokeObjectURL(pdfUrl);
       }
       setPdfUrl(url);
-    } catch (err) {
+  } catch (err) {
       const message =
         err instanceof Error ? err.message : "Failed to fill PDF";
       setError(message);
