@@ -16,9 +16,20 @@
 # next.js
 /.next/
 /out/
+.next/
 
 # production
 /build
+
+# python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# turbo
+.turbo/
 
 # misc
 .DS_Store

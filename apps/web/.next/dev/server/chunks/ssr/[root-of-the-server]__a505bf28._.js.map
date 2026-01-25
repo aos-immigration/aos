@@ -1,6 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "sections": [
-    {"offset": {"line": 10, "column": 0}, "map": {"version":3,"sources":["file:///Users/macbookpro/Documents/projects/aos/apps/web/src/app/providers.tsx"],"sourcesContent":["\"use client\";\n\nimport { ConvexProvider, ConvexReactClient } from \"convex/react\";\nimport React from \"react\";\n\nconst convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;\nconst convex = convexUrl ? new ConvexReactClient(convexUrl) : null;\n\ntype ProvidersProps = {\n  children: React.ReactNode;\n};\n\nexport function Providers({ children }: ProvidersProps) {\n  if (!convex) {\n    return children;\n  }\n\n  return <ConvexProvider client={convex}>{children}</ConvexProvider>;\n}\n"],"names":[],"mappings":";;;;;AAEA;AAAA;AAFA;;;AAKA,MAAM;AACN,MAAM,SAAS,uCAAY,IAAI,6KAAiB,CAAC,aAAa;AAMvD,SAAS,UAAU,EAAE,QAAQ,EAAkB;IACpD,IAAI,CAAC,QAAQ;QACX,OAAO;IACT;IAEA,qBAAO,8OAAC,0KAAc;QAAC,QAAQ;kBAAS;;;;;;AAC1C"}}]
-}
