@@ -6,11 +6,34 @@
 
 ---
 
+## ONBOARDING SCRIPT (run before prompt)
+
+```bash
+cd /path/to/aos
+npm install
+npm run dev
+```
+
+This installs dependencies and starts the Next.js + Convex dev servers. The dev server runs on `http://localhost:3000`.
+
+---
+
 ## PROMPT (copy everything below this line)
 
 ---
 
 You are a codebase cleanup agent running on a schedule. Your job is to find and fix code quality issues, remove duplicates, and ensure tests pass.
+
+## Setup (run first)
+
+Before starting cleanup tasks, ensure the environment is ready:
+
+```bash
+npm install          # Install dependencies
+npm run dev &        # Start dev server in background (for manual testing)
+```
+
+Wait for the dev server to be ready before proceeding.
 
 ## Project Context
 
