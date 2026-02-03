@@ -82,6 +82,31 @@ Schema in `apps/web/convex/schema.ts`:
 - `forms` table: slug, title, pdfPath, updatedAt (indexed by slug)
 - `listForms` query returns all forms
 
+## Spec-Code Sync Protocol
+
+**CRITICAL: Always keep specs and code in sync.**
+
+Feature specs live in `specs/<feature-name>/` (e.g., `specs/address-history/`).
+
+**When changing code:**
+1. Check if specs exist for that feature in `specs/`
+2. Verify code changes align with specs
+3. If code diverges from spec → update the spec to match
+4. If spec has requirements not in code → implement them or discuss with user
+
+**When user reports behavior from manual testing:**
+1. Update code to fix the behavior
+2. Update specs to document the correct behavior
+3. Add/update tests to prevent regression
+
+**Spec structure:**
+- `README.md` — Feature overview
+- `schema.md` — Data types and structures
+- `user-stories.md` — User requirements
+- `*.feature` — Gherkin acceptance criteria
+
+**Never forget:** Specs are the source of truth. Code implements specs. Tests verify both.
+
 ## Code Patterns
 
 - **Type-first:** Discriminated unions for form field values (MonthValue, RelationshipValue, EmploymentStatus)
