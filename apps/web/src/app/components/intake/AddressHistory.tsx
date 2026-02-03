@@ -25,9 +25,12 @@ export function AddressHistory({ onValidationChange }: AddressHistoryProps) {
 
   useEffect(() => {
     const loaded = loadAddressHistory();
-    if (loaded.length === 0) {
+    const hasCurrent = loaded.some((a) => a.isCurrent);
+
+    if (loaded.length === 0 || !hasCurrent) {
       const initial = { ...createEmptyAddress(), isCurrent: true };
-      setAddresses([initial]);
+      const filtered = loaded.filter((a) => a.street?.trim());
+      setAddresses([initial, ...filtered]);
     } else {
       setAddresses(loaded);
     }

@@ -1,6 +1,7 @@
 {
   "name": "aos",
   "private": true,
+  "packageManager": "npm@10.8.2",
   "workspaces": [
     "apps/*"
   ],
@@ -14,6 +15,5 @@
   },
   "devDependencies": {
     "turbo": "^2.0.9"
-  },
-  "packageManager": "npm@10.9.0"
+  }
 }

@@ -87,7 +87,7 @@ const emptyAddress = (): AddressEntry => ({
   country: "United States",
   startMonth: "",
   startYear: "",
-  isCurrent: false,
+  isCurrent: true,
 });
 
 const emptyEmployment = (): EmploymentEntry => ({
