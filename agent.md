@@ -6,6 +6,16 @@ experience for marriage-based Adjustment of Status flows. This is not legal
 advice. Always defer to official USCIS instructions and forms.
 All Notion notes should be added under the AOS Notion page in tawsif/AOS.
 
+Spec-Driven Development
+For detailed feature specifications, see the `specs/` directory. Each feature
+has a spec document that defines:
+1. What it should do (behavior/requirements)
+2. How it should work (architecture/implementation)
+3. What it should look like (visual design/UI)
+
+See `SPEC_DRIVEN_DEVELOPMENT.md` for the complete guide on creating specs for
+long-running agents.
+
 Principles
 - Use simple, human language; avoid form jargon where possible.
 - Prefer step-by-step flows over long forms.

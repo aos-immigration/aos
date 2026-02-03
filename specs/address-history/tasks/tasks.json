@@ -1,0 +1,403 @@
+{
+  "project": "Address History Feature",
+  "version": "1.0.0",
+  "totalTasks": 18,
+  "tasks": [
+    {
+      "id": "TASK-01",
+      "title": "Define AddressEntry Type",
+      "status": "pending",
+      "complexity": "low",
+      "estimatedMinutes": 15,
+      "dependencies": [],
+      "phase": 1,
+      "agentType": "any",
+      "files": {
+        "modify": ["apps/web/src/app/lib/intakeStorage.ts"]
+      },
+      "acceptanceCriteria": [
+        "AddressEntry type includes all required fields from spec",
+        "Type is exported and can be imported",
+        "TypeScript compiles without errors"
+      ]
+    },
+    {
+      "id": "TASK-02",
+      "title": "Create Address Storage Functions",
+      "status": "pending",
+      "complexity": "low",
+      "estimatedMinutes": 30,
+      "dependencies": ["TASK-01"],
+      "phase": 1,
+      "agentType": "any",
+      "files": {
+        "modify": ["apps/web/src/app/lib/intakeStorage.ts"]
+      },
+      "acceptanceCriteria": [
+        "Function saveAddressHistory saves to localStorage",
+        "Function loadAddressHistory loads from localStorage",
+        "Functions addAddress, updateAddress, removeAddress work correctly",
+        "All functions handle localStorage errors gracefully"
+      ]
+    },
+    {
+      "id": "TASK-03",
+      "title": "Create Validation Utility Functions",
+      "status": "pending",
+      "complexity": "medium",
+      "estimatedMinutes": 45,
+      "dependencies": ["TASK-01", "TASK-05"],
+      "phase": 2,
+      "agentType": "any",
+      "canRunParallel": ["TASK-04"],
+      "files": {
+        "create": ["apps/web/src/app/lib/addressValidation.ts"]
+      },
+      "acceptanceCriteria": [
+        "validateRequiredFields validates all required fields",
+        "validateDateRange checks date logic",
+        "validateZipCode validates format",
+        "validateAllAddresses checks for overlaps"
+      ]
+    },
+    {
+      "id": "TASK-04",
+      "title": "Create Gap Detection Function",
+      "status": "pending",
+      "complexity": "medium",
+      "estimatedMinutes": 30,
+      "dependencies": ["TASK-01", "TASK-05"],
+      "phase": 2,
+      "agentType": "any",
+      "canRunParallel": ["TASK-03"],
+      "files": {
+        "create": ["apps/web/src/app/lib/gapDetection.ts"]
+      },
+      "acceptanceCriteria": [
+        "detectGap calculates days between addresses",
+        "hasSignificantGap returns true for gaps > 30 days",
+        "Function handles edge cases gracefully"
+      ]
+    },
+    {
+      "id": "TASK-05",
+      "title": "Create Date Utility Functions",
+      "status": "pending",
+      "complexity": "low",
+      "estimatedMinutes": 20,
+      "dependencies": ["TASK-01"],
+      "phase": 1,
+      "agentType": "any",
+      "files": {
+        "create": ["apps/web/src/app/lib/dateUtils.ts"]
+      },
+      "acceptanceCriteria": [
+        "formatDateRange formats dates correctly",
+        "compareDates compares dates correctly",
+        "isDateInFuture detects future dates",
+        "getYearOptions and getMonthOptions return correct arrays"
+      ]
+    },
+    {
+      "id": "TASK-06",
+      "title": "Create Form Validation Hook",
+      "status": "pending",
+      "complexity": "medium",
+      "estimatedMinutes": 30,
+      "dependencies": ["TASK-03", "TASK-04"],
+      "phase": 2,
+      "agentType": "any",
+      "files": {
+        "create": ["apps/web/src/app/components/intake/useAddressValidation.ts"]
+      },
+      "acceptanceCriteria": [
+        "Hook returns errors, isValid, and validate function",
+        "Validates on demand",
+        "Can validate single address or check against all addresses",
+        "Error messages are user-friendly"
+      ]
+    },
+    {
+      "id": "TASK-07",
+      "title": "Create Address Form Component (Base)",
+      "status": "pending",
+      "complexity": "medium",
+      "estimatedMinutes": 60,
+      "dependencies": ["TASK-02", "TASK-06"],
+      "phase": 3,
+      "agentType": "frontend",
+      "files": {
+        "create": ["apps/web/src/app/components/intake/AddressForm.tsx"]
+      },
+      "acceptanceCriteria": [
+        "Component renders all required fields",
+        "Shows validation errors below fields",
+        "Uses shadcn/ui components",
+        "Auto-saves on blur",
+        "Handles optional end date"
+      ]
+    },
+    {
+      "id": "TASK-08",
+      "title": "Create Address Card Component",
+      "status": "pending",
+      "complexity": "medium",
+      "estimatedMinutes": 45,
+      "dependencies": ["TASK-05", "TASK-07"],
+      "phase": 3,
+      "agentType": "frontend",
+      "canRunParallel": ["TASK-10"],
+      "files": {
+        "create": ["apps/web/src/app/components/intake/AddressCard.tsx"]
+      },
+      "acceptanceCriteria": [
+        "Displays address in readable format",
+        "Shows date range using formatDateRange",
+        "Shows Edit and Remove buttons",
+        "Matches visual spec (colors, borders, hover)"
+      ]
+    },
+    {
+      "id": "TASK-09",
+      "title": "Implement Edit/Remove Address Actions",
+      "status": "pending",
+      "complexity": "low",
+      "estimatedMinutes": 30,
+      "dependencies": ["TASK-02", "TASK-08"],
+      "phase": 3,
+      "agentType": "any",
+      "files": {
+        "modify": ["apps/web/src/app/components/intake/AddressHistory.tsx"]
+      },
+      "acceptanceCriteria": [
+        "Edit switches card to form mode",
+        "Remove updates localStorage",
+        "Re-validates all addresses after changes",
+        "UI updates immediately"
+      ]
+    },
+    {
+      "id": "TASK-10",
+      "title": "Create Current Address Form Component",
+      "status": "pending",
+      "complexity": "low",
+      "estimatedMinutes": 20,
+      "dependencies": ["TASK-07"],
+      "phase": 3,
+      "agentType": "frontend",
+      "canRunParallel": ["TASK-08"],
+      "files": {
+        "create": ["apps/web/src/app/components/intake/CurrentAddressForm.tsx"]
+      },
+      "acceptanceCriteria": [
+        "Uses AddressForm component",
+        "Hides end date fields",
+        "Sets isCurrent: true automatically",
+        "Shows 'Current Address' label"
+      ]
+    },
+    {
+      "id": "TASK-11",
+      "title": "Create Previous Address Form Component",
+      "status": "pending",
+      "complexity": "medium",
+      "estimatedMinutes": 45,
+      "dependencies": ["TASK-07", "TASK-04"],
+      "phase": 3,
+      "agentType": "frontend",
+      "files": {
+        "create": ["apps/web/src/app/components/intake/PreviousAddressForm.tsx"]
+      },
+      "acceptanceCriteria": [
+        "Uses AddressForm component",
+        "Pre-fills end date based on previous address",
+        "Calls gap detection when start date changes",
+        "Shows gap explanation prompt if needed",
+        "Sets isCurrent: false automatically"
+      ]
+    },
+    {
+      "id": "TASK-12",
+      "title": "Create Gap Explanation Dialog",
+      "status": "pending",
+      "complexity": "medium",
+      "estimatedMinutes": 30,
+      "dependencies": ["TASK-04", "TASK-11"],
+      "phase": 3,
+      "agentType": "frontend",
+      "files": {
+        "create": ["apps/web/src/app/components/intake/GapExplanationDialog.tsx"]
+      },
+      "acceptanceCriteria": [
+        "Uses shadcn/ui Dialog component",
+        "Shows gap explanation message",
+        "Provides options: Unemployed, Traveling, Student, Other",
+        "Saves explanation to address.gapExplanation",
+        "Validation: explanation required to continue"
+      ]
+    },
+    {
+      "id": "TASK-13",
+      "title": "Create Main Address History Component",
+      "status": "pending",
+      "complexity": "high",
+      "estimatedMinutes": 120,
+      "dependencies": ["TASK-10", "TASK-11", "TASK-08", "TASK-09"],
+      "phase": 4,
+      "agentType": "fullstack",
+      "files": {
+        "create": ["apps/web/src/app/components/intake/AddressHistory.tsx"]
+      },
+      "acceptanceCriteria": [
+        "Manages addresses state",
+        "Loads from localStorage on mount",
+        "Displays current address form/card",
+        "Shows 'Add Previous Address' button",
+        "Displays list of previous addresses",
+        "Handles add/edit/remove",
+        "Auto-saves to localStorage",
+        "Validates all addresses"
+      ]
+    },
+    {
+      "id": "TASK-14",
+      "title": "Create Address List Display Component",
+      "status": "pending",
+      "complexity": "low",
+      "estimatedMinutes": 20,
+      "dependencies": ["TASK-08", "TASK-13"],
+      "phase": 4,
+      "agentType": "any",
+      "files": {
+        "create": ["apps/web/src/app/components/intake/AddressList.tsx"]
+      },
+      "acceptanceCriteria": [
+        "Filters out current address",
+        "Sorts by start date (newest first)",
+        "Renders AddressCard for each",
+        "Shows count and empty state"
+      ]
+    },
+    {
+      "id": "TASK-15",
+      "title": "Implement Add Previous Address Flow",
+      "status": "pending",
+      "complexity": "medium",
+      "estimatedMinutes": 45,
+      "dependencies": ["TASK-11", "TASK-12", "TASK-13"],
+      "phase": 4,
+      "agentType": "any",
+      "files": {
+        "modify": ["apps/web/src/app/components/intake/AddressHistory.tsx"]
+      },
+      "acceptanceCriteria": [
+        "Clicking button shows PreviousAddressForm",
+        "Pre-fills end date",
+        "Checks for gaps when start date entered",
+        "Shows GapExplanationDialog if gap > 30 days",
+        "Saves to localStorage and re-validates"
+      ]
+    },
+    {
+      "id": "TASK-16",
+      "title": "Integrate with StepShell",
+      "status": "pending",
+      "complexity": "low",
+      "estimatedMinutes": 15,
+      "dependencies": ["TASK-13"],
+      "phase": 4,
+      "agentType": "any",
+      "files": {
+        "create": ["apps/web/src/app/sections/beneficiary/address/page.tsx"]
+      },
+      "acceptanceCriteria": [
+        "Uses StepShell component",
+        "Wraps AddressHistory component",
+        "Shows Back and Continue buttons",
+        "Continue disabled if validation fails",
+        "Matches layout from IntakeFlow.tsx"
+      ]
+    },
+    {
+      "id": "TASK-17",
+      "title": "Implement Responsive Design",
+      "status": "pending",
+      "complexity": "medium",
+      "estimatedMinutes": 60,
+      "dependencies": ["TASK-16"],
+      "phase": 5,
+      "agentType": "frontend",
+      "canRunParallel": ["TASK-18"],
+      "files": {
+        "modify": [
+          "apps/web/src/app/components/intake/AddressForm.tsx",
+          "apps/web/src/app/components/intake/AddressCard.tsx",
+          "apps/web/src/app/components/intake/AddressHistory.tsx"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Desktop: City/State/ZIP in row, cards max-width 600px",
+        "Tablet: City/State in row, ZIP below",
+        "Mobile: All fields stacked, buttons full-width",
+        "Tested at breakpoints: 320px, 480px, 768px, 1024px"
+      ]
+    },
+    {
+      "id": "TASK-18",
+      "title": "Accessibility & Visual Polish",
+      "status": "pending",
+      "complexity": "medium",
+      "estimatedMinutes": 60,
+      "dependencies": ["TASK-16"],
+      "phase": 5,
+      "agentType": "frontend",
+      "canRunParallel": ["TASK-17"],
+      "files": {
+        "modify": [
+          "apps/web/src/app/components/intake/AddressForm.tsx",
+          "apps/web/src/app/components/intake/AddressHistory.tsx"
+        ]
+      },
+      "acceptanceCriteria": [
+        "All inputs have Label components",
+        "Error messages use aria-live",
+        "Keyboard navigation works",
+        "Focus states visible",
+        "Screen reader announcements",
+        "Loading states, success feedback, empty states"
+      ]
+    }
+  ],
+  "phases": [
+    {
+      "number": 1,
+      "name": "Foundation",
+      "tasks": ["TASK-01", "TASK-02", "TASK-05"],
+      "description": "Data model and core utilities"
+    },
+    {
+      "number": 2,
+      "name": "Validation & Logic",
+      "tasks": ["TASK-03", "TASK-04", "TASK-06"],
+      "description": "Validation, gap detection, form validation hook"
+    },
+    {
+      "number": 3,
+      "name": "UI Components",
+      "tasks": ["TASK-07", "TASK-08", "TASK-09", "TASK-10", "TASK-11", "TASK-12"],
+      "description": "Form components, cards, dialogs"
+    },
+    {
+      "number": 4,
+      "name": "Integration",
+      "tasks": ["TASK-13", "TASK-14", "TASK-15", "TASK-16"],
+      "description": "Main component, orchestration, StepShell integration"
+    },
+    {
+      "number": 5,
+      "name": "Polish",
+      "tasks": ["TASK-17", "TASK-18"],
+      "description": "Responsive design, accessibility, visual polish"
+    }
+  ]
+}
