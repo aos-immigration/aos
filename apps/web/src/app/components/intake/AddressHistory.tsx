@@ -11,7 +11,7 @@ import {
 import { validateAllAddresses } from "@/app/lib/addressValidation";
 import { AddressCard } from "./AddressCard";
 import { CurrentAddressForm } from "./CurrentAddressForm";
-import { PreviousAddressForm } from "./PreviousAddressForm";
+import { PreviousAddressFormRHF } from "./PreviousAddressFormRHF";
 
 type AddressHistoryProps = {
   onValidationChange?: (isValid: boolean) => void;
@@ -20,7 +20,7 @@ type AddressHistoryProps = {
 export function AddressHistory({ onValidationChange }: AddressHistoryProps) {
   const [addresses, setAddresses] = useState<AddressEntry[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [isAddingPrevious, setIsAddingPrevious] = useState(false);
+  const [draftAddress, setDraftAddress] = useState<AddressEntry | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -36,16 +36,22 @@ export function AddressHistory({ onValidationChange }: AddressHistoryProps) {
     }
   }, []);
 
-  const saveAndValidate = useCallback(
-    (newAddresses: AddressEntry[]) => {
-      setAddresses(newAddresses);
-      saveAddressHistory(newAddresses);
-
-      const validationErrors = validateAllAddresses(newAddresses);
+  const runValidation = useCallback(
+    (addressList: AddressEntry[]) => {
+      const validationErrors = validateAllAddresses(addressList);
       setErrors(validationErrors);
       onValidationChange?.(Object.keys(validationErrors).length === 0);
     },
     [onValidationChange]
+  );
+
+  const saveAndValidate = useCallback(
+    (newAddresses: AddressEntry[]) => {
+      setAddresses(newAddresses);
+      saveAddressHistory(newAddresses);
+      runValidation(newAddresses);
+    },
+    [runValidation]
   );
 
   const handleAddressChange = useCallback(
@@ -70,7 +76,7 @@ export function AddressHistory({ onValidationChange }: AddressHistoryProps) {
     [addresses, saveAndValidate]
   );
 
-  const handleAddPreviousAddress = useCallback(() => {
+  const handleStartAddPrevious = useCallback(() => {
     const newAddress = {
       ...createEmptyAddress(),
       isCurrent: false,
@@ -92,11 +98,12 @@ export function AddressHistory({ onValidationChange }: AddressHistoryProps) {
       newAddress.endYear = String(endYear);
     }
 
-    const newAddresses = [...addresses, newAddress];
-    saveAndValidate(newAddresses);
-    setEditingId(newAddress.id);
-    setIsAddingPrevious(true);
-  }, [addresses, saveAndValidate]);
+    setDraftAddress(newAddress);
+  }, [addresses]);
+
+  const handleCancelDraft = useCallback(() => {
+    setDraftAddress(null);
+  }, []);
 
   const currentAddress = addresses.find((a) => a.isCurrent);
   const previousAddresses = addresses
@@ -111,6 +118,7 @@ export function AddressHistory({ onValidationChange }: AddressHistoryProps) {
     });
 
   const isCurrentEditing = editingId === currentAddress?.id;
+  const isAddingPrevious = draftAddress !== null;
 
   return (
     <div className="space-y-6">
@@ -147,11 +155,13 @@ export function AddressHistory({ onValidationChange }: AddressHistoryProps) {
                 className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900"
               >
                 {isEditing ? (
-                  <PreviousAddressForm
+                  <PreviousAddressFormRHF
                     address={address}
-                    onChange={(updated) => handleAddressChange(address.id, updated)}
-                    errors={errors[address.id] ? { general: errors[address.id] } : {}}
-                    previousAddress={olderAddress}
+                    onSave={(updated) => {
+                      handleAddressChange(address.id, updated);
+                      setEditingId(null);
+                    }}
+                    onCancel={() => setEditingId(null)}
                     index={index + 1}
                   />
                 ) : (
@@ -167,38 +177,25 @@ export function AddressHistory({ onValidationChange }: AddressHistoryProps) {
         </div>
       )}
 
-      {isAddingPrevious && editingId && (
-        <div className="flex justify-end gap-2">
-          <Button
-            variant="outline"
-            onClick={() => {
-              setIsAddingPrevious(false);
-              setEditingId(null);
+      {isAddingPrevious && draftAddress && (
+        <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900">
+          <PreviousAddressFormRHF
+            address={draftAddress}
+            onSave={(saved) => {
+              const newAddresses = [...addresses, saved];
+              saveAndValidate(newAddresses);
+              setDraftAddress(null);
             }}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={() => {
-              setIsAddingPrevious(false);
-              setEditingId(null);
-            }}
-          >
-            Save Address
-          </Button>
+            onCancel={handleCancelDraft}
+            index={previousAddresses.length + 1}
+          />
         </div>
       )}
 
       {!isAddingPrevious && (
-        <Button type="button" variant="secondary" onClick={handleAddPreviousAddress}>
+        <Button type="button" variant="secondary" onClick={handleStartAddPrevious}>
           Add Previous Address
         </Button>
-      )}
-
-      {Object.keys(errors).length > 0 && (
-        <div className="rounded-lg bg-red-50 p-3 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-200">
-          Please fix the validation errors above before continuing.
-        </div>
       )}
     </div>
   );

@@ -38,17 +38,38 @@ Feature: Address History Collection
     And when I refresh the page
     Then "123 Main Street" should still be in the street field
 
-  Scenario: Add previous address
-    Given I have added my current address
+  Scenario: Add previous address with draft/save flow
+    Given I have added my current address starting "Jan 2020"
     When I click "Add Previous Address"
-    Then I should see a new address form
-    And the end date should be pre-filled based on my current address
+    Then I should see a new draft address form
+    And the end date should be pre-filled to "Dec 2019" (month before current start)
+    And the address should NOT be saved to localStorage yet
     When I enter a previous address
     And I enter a start date before the end date
-    And I blur the form
-    Then the previous address should be saved
+    And I click "Save Address"
+    Then the previous address should be validated
+    And if valid, saved to localStorage
     And I should see it displayed in the "Previous Addresses" list
     And it should be sorted in reverse chronological order
+
+  Scenario: Cancel discards draft address
+    Given I have added my current address
+    When I click "Add Previous Address"
+    And I enter some address data
+    And I click "Cancel"
+    Then the draft should be discarded
+    And no new address should be saved
+    And I should see only the current address
+
+  Scenario: Save blocked when validation fails
+    Given I have added my current address
+    When I click "Add Previous Address"
+    And I leave required fields empty
+    And I click "Save Address"
+    Then I should see red borders on invalid fields
+    And I should see validation error messages
+    And the address should NOT be saved
+    And the form should remain open for corrections
 
   Scenario: Detect and explain address gap
     Given I have added my current address starting "Jan 2020"

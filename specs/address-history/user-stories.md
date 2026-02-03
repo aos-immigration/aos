@@ -20,9 +20,13 @@ As a **user**, I want to **add previous addresses in reverse chronological order
 
 **Acceptance Criteria:**
 - [ ] User can click "Add Previous Address" button
-- [ ] System pre-fills end date based on previous address
+- [ ] System shows a draft form (not saved until explicit Save)
+- [ ] System pre-fills end date based on current address start date
 - [ ] User can enter address and start date
-- [ ] System validates dates make sense
+- [ ] User clicks "Save Address" to validate and save
+- [ ] If validation fails, show red borders on invalid fields and block save
+- [ ] If validation passes, save address and close form
+- [ ] User can click "Cancel" to discard draft without saving
 - [ ] Previous addresses display in reverse chronological order
 
 ### Story 3: Explain Address Gaps

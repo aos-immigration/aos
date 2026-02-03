@@ -52,6 +52,7 @@ Uses `uv` for Python package management. API requires Python 3.11+.
 ### Frontend (apps/web)
 - **Framework:** Next.js 16 with App Router, React 19, TypeScript
 - **UI:** shadcn/ui components (Radix primitives) + Tailwind CSS
+- **Forms:** React Hook Form + Zod for validation (`src/app/lib/schemas/`)
 - **State:** localStorage for intake data (`aos:intake:v1` key), Convex for persistent form metadata
 - **PDF:** pdf-lib for client-side PDF manipulation
 
