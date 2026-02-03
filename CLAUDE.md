@@ -16,21 +16,25 @@ npm run build    # Production build
 npm run lint     # ESLint
 ```
 
-### Testing (apps/web)
+### Testing (Turborepo)
 ```bash
+# From repo root (recommended) - runs across all packages
+npm run test:unit      # Unit tests (~500ms with turbo) - RUN AFTER EVERY CODE CHANGE
+npm run test:e2e       # Playwright browser tests
+
+# From apps/web directly
 cd apps/web
-npm run test:unit      # Run unit tests (~135ms) - RUN AFTER EVERY CODE CHANGE
-npm run test:watch     # Run tests on file change (dev mode)
-npm run test:e2e       # Run Playwright browser tests
-npm run test:e2e:headed # Run E2E with visible browser (debugging)
+npm run test:unit      # Unit tests (~135ms)
+npm run test:watch     # Watch mode for dev
+npm run test:e2e:headed # E2E with visible browser (debugging)
 ```
 
 **Test Structure:**
-- `src/app/lib/__tests__/*.test.ts` — Unit tests for validation, dates, gap detection
-- `e2e/*.spec.ts` — Browser tests for user flows
+- `apps/web/src/app/lib/__tests__/*.test.ts` — Unit tests (validation, dates, gap detection)
+- `apps/web/e2e/*.spec.ts` — Browser tests for user flows
 
 **Agent Testing Protocol:**
-1. After modifying logic → `npm run test:unit`
+1. After modifying logic → `npm run test:unit` (from root)
 2. After UI changes → `npm run test:e2e`
 3. TypeScript check → `npx tsc --noEmit`
 
