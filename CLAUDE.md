@@ -33,10 +33,12 @@ npm run test:e2e:headed # E2E with visible browser (debugging)
 - `apps/web/src/app/lib/__tests__/*.test.ts` — Unit tests (validation, dates, gap detection)
 - `apps/web/e2e/*.spec.ts` — Browser tests for user flows
 
-**Agent Testing Protocol:**
+**Agent Testing Protocol (ALWAYS FOLLOW):**
 1. After modifying logic → `npm run test:unit` (from root)
-2. After UI changes → `npm run test:e2e`
+2. After UI/frontend changes → `npm run test:e2e` (verifies user flows still work)
 3. TypeScript check → `npx tsc --noEmit`
+4. If tests fail → fix code or update tests to match new behavior
+5. Update specs in `specs/` if behavior changed
 
 ### API (apps/api)
 ```bash
