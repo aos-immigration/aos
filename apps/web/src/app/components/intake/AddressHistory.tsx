@@ -10,7 +10,7 @@ import {
 } from "@/app/lib/intakeStorage";
 import { validateAllAddresses } from "@/app/lib/addressValidation";
 import { AddressCard } from "./AddressCard";
-import { CurrentAddressForm } from "./CurrentAddressForm";
+import { CurrentAddressFormRHF } from "./CurrentAddressFormRHF";
 import { PreviousAddressFormRHF } from "./PreviousAddressFormRHF";
 
 type AddressHistoryProps = {
@@ -124,10 +124,12 @@ export function AddressHistory({ onValidationChange }: AddressHistoryProps) {
     <div className="space-y-6">
       <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900">
         {currentAddress && (isCurrentEditing || !currentAddress.street) ? (
-          <CurrentAddressForm
+          <CurrentAddressFormRHF
             address={currentAddress}
-            onChange={(updated) => handleAddressChange(currentAddress.id, updated)}
-            errors={errors[currentAddress.id] ? { general: errors[currentAddress.id] } : {}}
+            onSave={(updated) => {
+              handleAddressChange(currentAddress.id, updated);
+              setEditingId(null);
+            }}
           />
         ) : currentAddress ? (
           <AddressCard

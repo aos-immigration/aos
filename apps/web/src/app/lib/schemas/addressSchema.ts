@@ -38,6 +38,8 @@ export const addressSchema = z.object({
 
 export type AddressFormData = z.infer<typeof addressSchema>;
 
+export const currentAddressSchema = addressSchema;
+
 export const previousAddressSchema = addressSchema.refine(
   (data) => data.endMonth && data.endMonth.length > 0,
   { message: "End month is required for previous addresses", path: ["endMonth"] }

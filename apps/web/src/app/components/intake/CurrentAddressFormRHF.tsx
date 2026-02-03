@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { previousAddressSchema, type AddressFormData } from "@/app/lib/schemas/addressSchema";
+import { currentAddressSchema, type AddressFormData } from "@/app/lib/schemas/addressSchema";
 import { getMonthOptions, getYearOptions } from "@/app/lib/dateUtils";
 import type { AddressEntry, MonthValue } from "@/app/lib/intakeStorage";
 
@@ -25,19 +25,15 @@ const US_STATES = [
   "DC", "PR", "VI", "GU", "AS", "MP",
 ];
 
-type PreviousAddressFormRHFProps = {
+type CurrentAddressFormRHFProps = {
   readonly address: AddressEntry;
   readonly onSave: (address: AddressEntry) => void;
-  readonly onCancel: () => void;
-  readonly index: number;
 };
 
-export function PreviousAddressFormRHF({
+export function CurrentAddressFormRHF({
   address,
   onSave,
-  onCancel,
-  index,
-}: PreviousAddressFormRHFProps) {
+}: CurrentAddressFormRHFProps) {
   const months = getMonthOptions();
   const years = getYearOptions();
 
@@ -48,7 +44,7 @@ export function PreviousAddressFormRHF({
     watch,
     formState: { errors },
   } = useForm<AddressFormData>({
-    resolver: zodResolver(previousAddressSchema),
+    resolver: zodResolver(currentAddressSchema),
     defaultValues: {
       id: address.id,
       street: address.street || "",
@@ -59,9 +55,7 @@ export function PreviousAddressFormRHF({
       country: address.country || "United States",
       startMonth: address.startMonth || "",
       startYear: address.startYear || "",
-      endMonth: address.endMonth || "",
-      endYear: address.endYear || "",
-      isCurrent: false,
+      isCurrent: true,
     },
   });
 
@@ -69,21 +63,27 @@ export function PreviousAddressFormRHF({
     onSave({
       ...data,
       startMonth: data.startMonth as MonthValue,
-      endMonth: data.endMonth as MonthValue,
+      isCurrent: true,
+      endMonth: undefined,
+      endYear: undefined,
+      endDay: undefined,
     } as AddressEntry);
   };
 
   const stateValue = watch("state");
   const startMonthValue = watch("startMonth");
   const startYearValue = watch("startYear");
-  const endMonthValue = watch("endMonth");
-  const endYearValue = watch("endYear");
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-        Previous Address {index}
-      </h3>
+      <div className="flex items-center gap-2">
+        <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+          Current Address
+        </h3>
+        <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900 dark:text-green-200">
+          Present
+        </span>
+      </div>
 
       <div className="grid gap-4">
         <div className="grid gap-4 sm:grid-cols-2">
@@ -169,7 +169,7 @@ export function PreviousAddressFormRHF({
           </div>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-2 text-sm">
             <Label>Start month</Label>
             <Select
@@ -209,53 +209,10 @@ export function PreviousAddressFormRHF({
               <span className="text-xs text-red-500">{errors.startYear.message}</span>
             )}
           </div>
-
-          <div className="flex flex-col gap-2 text-sm">
-            <Label>End month</Label>
-            <Select
-              value={endMonthValue || undefined}
-              onValueChange={(v) => setValue("endMonth", v, { shouldValidate: true })}
-            >
-              <SelectTrigger aria-invalid={!!errors.endMonth}>
-                <SelectValue placeholder="Month" />
-              </SelectTrigger>
-              <SelectContent>
-                {months.map((m) => (
-                  <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.endMonth && (
-              <span className="text-xs text-red-500">{errors.endMonth.message}</span>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-2 text-sm">
-            <Label>End year</Label>
-            <Select
-              value={endYearValue || undefined}
-              onValueChange={(v) => setValue("endYear", v, { shouldValidate: true })}
-            >
-              <SelectTrigger aria-invalid={!!errors.endYear}>
-                <SelectValue placeholder="Year" />
-              </SelectTrigger>
-              <SelectContent>
-                {years.map((y) => (
-                  <SelectItem key={y} value={y}>{y}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.endYear && (
-              <span className="text-xs text-red-500">{errors.endYear.message}</span>
-            )}
-          </div>
         </div>
       </div>
 
-      <div className="flex justify-end gap-2 pt-4">
-        <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
-        </Button>
+      <div className="flex justify-end">
         <Button type="submit">
           Save Address
         </Button>
