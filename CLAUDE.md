@@ -16,6 +16,24 @@ npm run build    # Production build
 npm run lint     # ESLint
 ```
 
+### Testing (apps/web)
+```bash
+cd apps/web
+npm run test:unit      # Run unit tests (~135ms) - RUN AFTER EVERY CODE CHANGE
+npm run test:watch     # Run tests on file change (dev mode)
+npm run test:e2e       # Run Playwright browser tests
+npm run test:e2e:headed # Run E2E with visible browser (debugging)
+```
+
+**Test Structure:**
+- `src/app/lib/__tests__/*.test.ts` — Unit tests for validation, dates, gap detection
+- `e2e/*.spec.ts` — Browser tests for user flows
+
+**Agent Testing Protocol:**
+1. After modifying logic → `npm run test:unit`
+2. After UI changes → `npm run test:e2e`
+3. TypeScript check → `npx tsc --noEmit`
+
 ### API (apps/api)
 ```bash
 cd apps/api

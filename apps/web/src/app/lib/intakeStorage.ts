@@ -20,17 +20,20 @@ export type EmploymentStatus = "" | "employed" | "unemployed" | "student" | "oth
 export type AddressEntry = {
   id: string;
   street: string;
-  unit: string;
+  unit?: string;
   city: string;
   state: string;
-  postal: string;
+  zip: string;
   country: string;
-  fromMonth: MonthValue;
-  fromYear: string;
-  toMonth: MonthValue;
-  toYear: string;
+  startMonth: MonthValue;
+  startYear: string;
+  startDay?: string;
+  endMonth?: MonthValue;
+  endYear?: string;
+  endDay?: string;
   isCurrent: boolean;
-  notes: string;
+  gapExplanation?: string;
+  notes?: string;
 };
 
 export type EmploymentEntry = {
@@ -78,17 +81,13 @@ const STORAGE_KEY = "aos:intake:v1";
 const emptyAddress = (): AddressEntry => ({
   id: createId(),
   street: "",
-  unit: "",
   city: "",
   state: "",
-  postal: "",
+  zip: "",
   country: "United States",
-  fromMonth: "",
-  fromYear: "",
-  toMonth: "",
-  toYear: "",
+  startMonth: "",
+  startYear: "",
   isCurrent: false,
-  notes: "",
 });
 
 const emptyEmployment = (): EmploymentEntry => ({
@@ -191,3 +190,39 @@ const createId = () => {
   }
   return `id_${Date.now()}_${Math.random().toString(16).slice(2)}`;
 };
+
+export { createId };
+
+export function loadAddressHistory(): AddressEntry[] {
+  const data = loadIntake();
+  return data.addresses;
+}
+
+export function saveAddressHistory(addresses: AddressEntry[]): void {
+  const data = loadIntake();
+  data.addresses = addresses;
+  saveIntake(data);
+}
+
+export function addAddress(address: AddressEntry): void {
+  const data = loadIntake();
+  data.addresses.push(address);
+  saveIntake(data);
+}
+
+export function updateAddress(id: string, updates: Partial<AddressEntry>): void {
+  const data = loadIntake();
+  data.addresses = data.addresses.map((entry) =>
+    entry.id === id ? { ...entry, ...updates } : entry
+  );
+  saveIntake(data);
+}
+
+export function removeAddress(id: string): void {
+  const data = loadIntake();
+  data.addresses = data.addresses.filter((entry) => entry.id !== id);
+  if (data.addresses.length === 0) {
+    data.addresses = [emptyAddress()];
+  }
+  saveIntake(data);
+}

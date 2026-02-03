@@ -340,7 +340,7 @@ const AddressHistoryStep = ({
           <label className="flex flex-col gap-2 text-sm">
             <Label>Unit / Apt</Label>
             <Input
-              value={data.mailingAddress.unit}
+              value={data.mailingAddress.unit ?? ""}
               onChange={(event) =>
                 onMailingAddressChange({ unit: event.target.value })
               }
@@ -370,9 +370,9 @@ const AddressHistoryStep = ({
           <label className="flex flex-col gap-2 text-sm">
             <Label>ZIP / Postal code</Label>
             <Input
-              value={data.mailingAddress.postal}
+              value={data.mailingAddress.zip}
               onChange={(event) =>
-                onMailingAddressChange({ postal: event.target.value })
+                onMailingAddressChange({ zip: event.target.value })
               }
               placeholder="95112"
             />
@@ -426,7 +426,7 @@ const AddressHistoryStep = ({
           <label className="flex flex-col gap-2 text-sm">
             <Label>Unit / Apt</Label>
             <Input
-              value={entry.unit}
+              value={entry.unit ?? ""}
               onChange={(event) =>
                 onUpdateAddress(entry.id, { unit: event.target.value })
               }
@@ -456,9 +456,9 @@ const AddressHistoryStep = ({
           <label className="flex flex-col gap-2 text-sm">
             <Label>ZIP / Postal code</Label>
             <Input
-              value={entry.postal}
+              value={entry.zip}
               onChange={(event) =>
-                onUpdateAddress(entry.id, { postal: event.target.value })
+                onUpdateAddress(entry.id, { zip: event.target.value })
               }
               placeholder="95112"
             />
@@ -479,8 +479,8 @@ const AddressHistoryStep = ({
           <label className="flex flex-col gap-2 text-sm">
             <Label>From month</Label>
             {renderSelect(
-              entry.fromMonth,
-              (value) => onUpdateAddress(entry.id, { fromMonth: value as MonthValue }),
+              entry.startMonth,
+              (value) => onUpdateAddress(entry.id, { startMonth: value as MonthValue }),
               "Month",
               MONTHS.map((month) => ({
                 value: month.value,
@@ -491,8 +491,8 @@ const AddressHistoryStep = ({
           <label className="flex flex-col gap-2 text-sm">
             <Label>From year</Label>
             {renderSelect(
-              entry.fromYear,
-              (value) => onUpdateAddress(entry.id, { fromYear: value }),
+              entry.startYear,
+              (value) => onUpdateAddress(entry.id, { startYear: value }),
               "Year",
               yearOptions.map((year) => ({ value: year, label: year }))
             )}
@@ -500,8 +500,8 @@ const AddressHistoryStep = ({
           <label className="flex flex-col gap-2 text-sm">
             <Label>To month</Label>
             {renderSelect(
-              entry.toMonth,
-              (value) => onUpdateAddress(entry.id, { toMonth: value as MonthValue }),
+              entry.endMonth ?? "",
+              (value) => onUpdateAddress(entry.id, { endMonth: value as MonthValue }),
               "Month",
               MONTHS.map((month) => ({
                 value: month.value,
@@ -514,8 +514,8 @@ const AddressHistoryStep = ({
           <label className="flex flex-col gap-2 text-sm">
             <Label>To year</Label>
             {renderSelect(
-              entry.toYear,
-              (value) => onUpdateAddress(entry.id, { toYear: value }),
+              entry.endYear ?? "",
+              (value) => onUpdateAddress(entry.id, { endYear: value }),
               "Year",
               yearOptions.map((year) => ({ value: year, label: year })),
               undefined,
@@ -532,8 +532,8 @@ const AddressHistoryStep = ({
               onChange={(event) =>
                 onUpdateAddress(entry.id, {
                   isCurrent: event.target.checked,
-                  toMonth: event.target.checked ? "" : entry.toMonth,
-                  toYear: event.target.checked ? "" : entry.toYear,
+                  endMonth: event.target.checked ? undefined : entry.endMonth,
+                  endYear: event.target.checked ? undefined : entry.endYear,
                 })
               }
               className="h-4 w-4 rounded border-zinc-300 text-zinc-900"
@@ -618,16 +618,16 @@ export function IntakeFlow() {
   };
 
   const formatTimeline = (entry: {
-    fromMonth: MonthValue;
-    fromYear: string;
-    toMonth: MonthValue;
-    toYear: string;
+    startMonth: MonthValue;
+    startYear: string;
+    endMonth?: MonthValue;
+    endYear?: string;
     isCurrent: boolean;
   }) => {
-    const start = formatMonthYear(entry.fromMonth, entry.fromYear);
+    const start = formatMonthYear(entry.startMonth, entry.startYear);
     const end = entry.isCurrent
       ? "Present"
-      : formatMonthYear(entry.toMonth, entry.toYear);
+      : formatMonthYear(entry.endMonth ?? "", entry.endYear ?? "");
     if (!start && !end) {
       return "";
     }
@@ -648,7 +648,7 @@ export function IntakeFlow() {
         entry.unit,
         entry.city,
         entry.state,
-        entry.postal,
+        entry.zip,
         entry.country,
       ]
         .filter(Boolean)
@@ -696,8 +696,8 @@ export function IntakeFlow() {
             [`${prefix}_AptSteFlrNumber[0]`]: entry?.unit || "",
             [`${prefix}_CityOrTown[0]`]: entry?.city || "",
             [`${prefix}_State[0]`]: entry?.state || "",
-            [`${prefix}_ZipCode[0]`]: entry?.postal || "",
-            [`${prefix}_PostalCode[0]`]: entry?.postal || "",
+            [`${prefix}_ZipCode[0]`]: entry?.zip || "",
+            [`${prefix}_PostalCode[0]`]: entry?.zip || "",
             [`${prefix}_Country[0]`]: entry?.country || "",
           }
         : {};
