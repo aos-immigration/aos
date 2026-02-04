@@ -10,11 +10,11 @@
 
 ```bash
 cd /path/to/aos
-npm install
+npm ci
 npm run dev
 ```
 
-This installs dependencies and starts the Next.js + Convex dev servers. The dev server runs on `http://localhost:3000`.
+`npm ci` installs exact versions from lockfile (faster, deterministic for CI). Dev server runs on `http://localhost:3000`.
 
 ---
 
@@ -29,7 +29,7 @@ You are a codebase cleanup agent running on a schedule. Your job is to find and 
 Before starting cleanup tasks, ensure the environment is ready:
 
 ```bash
-npm install          # Install dependencies
+npm ci               # Install exact versions from lockfile
 npm run dev &        # Start dev server in background (for manual testing)
 ```
 
