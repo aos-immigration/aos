@@ -14,16 +14,8 @@ import {
 } from "@/components/ui/select";
 import { currentAddressSchema, type AddressFormData } from "@/app/lib/schemas/addressSchema";
 import { getMonthOptions, getYearOptions } from "@/app/lib/dateUtils";
+import { US_STATES } from "@/app/lib/constants";
 import type { AddressEntry, MonthValue } from "@/app/lib/intakeStorage";
-
-const US_STATES = [
-  "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA",
-  "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD",
-  "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ",
-  "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC",
-  "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY",
-  "DC", "PR", "VI", "GU", "AS", "MP",
-];
 
 type CurrentAddressFormRHFProps = {
   readonly address: AddressEntry;
