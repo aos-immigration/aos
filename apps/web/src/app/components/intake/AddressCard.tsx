@@ -18,11 +18,11 @@ export function AddressCard({
   showRemove = true,
 }: AddressCardProps) {
   const formattedAddress = [
-    address.street,
-    address.unit,
-    address.city,
-    address.state,
-    address.zip,
+    address.street?.trim(),
+    address.unit?.trim(),
+    address.city?.trim(),
+    address.state?.trim(),
+    address.zip?.trim(),
   ]
     .filter(Boolean)
     .join(", ");
