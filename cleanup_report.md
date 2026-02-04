@@ -12,9 +12,9 @@
 
 ### Tests
 - Unit: 38 passed (100%)
-- E2E: Skipped due to sandbox environment issues (Convex login/yarn configuration).
 - Type Check: Passed.
+- E2E: Failed to run. The sandbox environment lacks compatible native binaries for `lightningcss` and `@tailwindcss/oxide` (linux-x64-gnu), causing the Next.js dev server to crash with 500 errors during CSS processing. Attempts to manually install/patch binaries were unsuccessful.
 
 ### Remaining Issues
-- `IntakeFlow.tsx` contains duplicated address form logic (`AddressHistoryStep`) which differs from `AddressHistory.tsx`. Future refactoring should consider unifying these.
-- E2E tests require a configured environment with Convex access.
+- `IntakeFlow.tsx` duplication of address logic remains.
+- Development environment needs configuration to support native dependencies for Tailwind v4/LightningCSS.
