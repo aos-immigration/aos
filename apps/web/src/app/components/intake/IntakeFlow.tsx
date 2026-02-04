@@ -12,6 +12,7 @@ import {
   type IntakeData,
   type MonthValue,
 } from "@/app/lib/intakeStorage";
+import { getMonthOptions, getYearOptions } from "@/app/lib/dateUtils";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -33,29 +34,7 @@ import {
 import { cn } from "@/lib/utils";
 import { StepShell } from "./StepShell";
 
-const MONTHS: Array<{ value: MonthValue; label: string }> = [
-  { value: "01", label: "Jan" },
-  { value: "02", label: "Feb" },
-  { value: "03", label: "Mar" },
-  { value: "04", label: "Apr" },
-  { value: "05", label: "May" },
-  { value: "06", label: "Jun" },
-  { value: "07", label: "Jul" },
-  { value: "08", label: "Aug" },
-  { value: "09", label: "Sep" },
-  { value: "10", label: "Oct" },
-  { value: "11", label: "Nov" },
-  { value: "12", label: "Dec" },
-];
-
-const getYearOptions = () => {
-  const current = new Date().getFullYear();
-  const years: string[] = [];
-  for (let i = 0; i < 12; i += 1) {
-    years.push(String(current - i));
-  }
-  return years;
-};
+const MONTHS = getMonthOptions();
 
 type RenderSelectFn = (
   value: string,
