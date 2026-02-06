@@ -8,12 +8,7 @@ export const addressSchema = z.object({
   unit: z.string().optional(),
   city: z.string().min(1, "City is required"),
   state: z.string().min(1, "State is required"),
-  zip: z.string()
-    .min(1, "ZIP code is required")
-    .refine(
-      (val) => /^\d{5}(-\d{4})?$/.test(val),
-      "ZIP code must be 5 digits (or 5+4 format)"
-    ),
+  zip: z.string().min(1, "ZIP code is required"),
   country: z.string().min(1, "Country is required"),
   startMonth: z.string().min(1, "Start month is required"),
   startYear: z.string().min(1, "Start year is required"),
@@ -34,6 +29,14 @@ export const addressSchema = z.object({
     return true;
   },
   { message: "Start date must be before end date", path: ["startMonth"] }
+).refine(
+  (data) => {
+    if (data.country === "United States" || data.country === "US" || data.country === "USA") {
+      return /^\d{5}(-\d{4})?$/.test(data.zip);
+    }
+    return true;
+  },
+  { message: "ZIP code must be 5 digits (or 5+4 format)", path: ["zip"] }
 );
 
 export type AddressFormData = z.infer<typeof addressSchema>;
