@@ -1,8 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
   formatDateRange,
-  compareDates,
-  isDateInFuture,
   getYearOptions,
   getMonthOptions,
   monthYearToDate,
@@ -22,35 +20,6 @@ describe("formatDateRange", () => {
   it("returns empty string when no start date", () => {
     expect(formatDateRange("", "")).toBe("");
     expect(formatDateRange("", "2020")).toBe("");
-  });
-});
-
-describe("compareDates", () => {
-  it("returns negative when first date is earlier", () => {
-    expect(compareDates("01", "2020", "12", "2022")).toBeLessThan(0);
-  });
-
-  it("returns positive when first date is later", () => {
-    expect(compareDates("12", "2022", "01", "2020")).toBeGreaterThan(0);
-  });
-
-  it("returns 0 for same dates", () => {
-    expect(compareDates("06", "2021", "06", "2021")).toBe(0);
-  });
-
-  it("compares by year first", () => {
-    expect(compareDates("12", "2019", "01", "2020")).toBeLessThan(0);
-  });
-});
-
-describe("isDateInFuture", () => {
-  it("returns true for future dates", () => {
-    const futureYear = String(new Date().getFullYear() + 1);
-    expect(isDateInFuture("01", futureYear)).toBe(true);
-  });
-
-  it("returns false for past dates", () => {
-    expect(isDateInFuture("01", "2020")).toBe(false);
   });
 });
 

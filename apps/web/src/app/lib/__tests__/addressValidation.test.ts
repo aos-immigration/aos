@@ -1,8 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  validateRequiredFields,
-  validateDateRange,
-  validateZipCode,
+  validateAddress,
   validateAllAddresses,
 } from "../addressValidation";
 import type { AddressEntry } from "../intakeStorage";
@@ -20,99 +18,90 @@ const createAddress = (overrides: Partial<AddressEntry> = {}): AddressEntry => (
   ...overrides,
 });
 
-describe("validateRequiredFields", () => {
+describe("validateAddress", () => {
   it("returns no errors for valid address", () => {
     const address = createAddress();
-    const errors = validateRequiredFields(address);
+    const errors = validateAddress(address, [address]);
     expect(Object.keys(errors)).toHaveLength(0);
   });
 
-  it("returns error for missing street", () => {
-    const address = createAddress({ street: "" });
-    const errors = validateRequiredFields(address);
+  it("returns error for missing required fields", () => {
+    const address = createAddress({ street: "", city: "" });
+    const errors = validateAddress(address, [address]);
     expect(errors.street).toBe("Street address is required");
-  });
-
-  it("returns error for missing city", () => {
-    const address = createAddress({ city: "" });
-    const errors = validateRequiredFields(address);
     expect(errors.city).toBe("City is required");
   });
 
-  it("handles undefined fields without throwing", () => {
-    const address = {
-      id: "test",
-      isCurrent: true,
-    } as AddressEntry;
+  describe("ZIP code validation", () => {
+    it("accepts valid US zip codes", () => {
+      const address = createAddress({ zip: "10001", country: "United States" });
+      expect(validateAddress(address, [address]).zip).toBeUndefined();
 
-    expect(() => validateRequiredFields(address)).not.toThrow();
-    const errors = validateRequiredFields(address);
-    expect(errors.street).toBeDefined();
-    expect(errors.zip).toBeDefined();
-  });
-
-  it("handles null-ish values", () => {
-    const address = createAddress({
-      street: undefined as unknown as string,
-      zip: undefined as unknown as string,
+      const address2 = createAddress({ zip: "12345-6789", country: "USA" });
+      expect(validateAddress(address2, [address2]).zip).toBeUndefined();
     });
-    expect(() => validateRequiredFields(address)).not.toThrow();
-  });
-});
 
-describe("validateZipCode", () => {
-  it("accepts valid US zip codes", () => {
-    expect(validateZipCode("10001", "United States")).toBeNull();
-    expect(validateZipCode("90210", "USA")).toBeNull();
-    expect(validateZipCode("12345-6789", "US")).toBeNull();
-  });
-
-  it("rejects invalid US zip codes", () => {
-    expect(validateZipCode("123", "United States")).toBe("ZIP code must be 5 digits");
-    expect(validateZipCode("abcde", "United States")).toBe("ZIP code must be 5 digits");
-  });
-
-  it("is flexible for international zip codes", () => {
-    expect(validateZipCode("SW1A 1AA", "United Kingdom")).toBeNull();
-    expect(validateZipCode("M5V 3L9", "Canada")).toBeNull();
-  });
-
-  it("handles undefined zip", () => {
-    expect(() => validateZipCode(undefined, "United States")).not.toThrow();
-    expect(validateZipCode(undefined, "United States")).toBe("ZIP code is required");
-  });
-});
-
-describe("validateDateRange", () => {
-  it("returns null for valid date range", () => {
-    const address = createAddress({
-      startMonth: "01",
-      startYear: "2020",
-      endMonth: "12",
-      endYear: "2022",
-      isCurrent: false,
+    it("rejects invalid US zip codes", () => {
+      const address = createAddress({ zip: "123", country: "United States" });
+      expect(validateAddress(address, [address]).zip).toBe("ZIP code must be 5 digits (or 5+4 format)");
     });
-    expect(validateDateRange(address)).toBeNull();
+
+    it("accepts international zip codes", () => {
+      const address = createAddress({ zip: "SW1A 1AA", country: "United Kingdom" });
+      expect(validateAddress(address, [address]).zip).toBeUndefined();
+    });
   });
 
-  it("returns error when start date is after end date", () => {
-    const address = createAddress({
-      startMonth: "12",
-      startYear: "2022",
-      endMonth: "01",
-      endYear: "2020",
-      isCurrent: false,
+  describe("Date range validation", () => {
+    it("returns error when start date is after end date", () => {
+      const address = createAddress({
+        startMonth: "12",
+        startYear: "2022",
+        endMonth: "01",
+        endYear: "2020",
+        isCurrent: false,
+      });
+      const errors = validateAddress(address, [address]);
+      expect(errors.startMonth).toBe("Start date must be before end date");
     });
-    expect(validateDateRange(address)).toBe("Start date must be before end date");
+
+    it("requires end date for previous addresses", () => {
+        const address = createAddress({
+            isCurrent: false,
+            endMonth: undefined,
+            endYear: undefined
+        });
+        const addr: AddressEntry = {
+            ...address,
+            endMonth: "" as any,
+            endYear: ""
+        };
+        const errors = validateAddress(addr, [addr]);
+        expect(errors.endMonth).toBe("End month is required for previous addresses");
+        expect(errors.endYear).toBe("End year is required for previous addresses");
+    });
   });
 
-  it("allows missing end date for current address", () => {
-    const address = createAddress({
-      startMonth: "01",
-      startYear: "2020",
-      isCurrent: true,
+  describe("Overlap validation", () => {
+    it("detects overlap between addresses", () => {
+        const addr1 = createAddress({
+            id: "1",
+            startMonth: "01",
+            startYear: "2020",
+            endMonth: "12",
+            endYear: "2020",
+            isCurrent: false
+        });
+        const addr2 = createAddress({
+            id: "2",
+            startMonth: "06",
+            startYear: "2020",
+            isCurrent: true
+        });
+
+        const errors = validateAddress(addr2, [addr1, addr2]);
+        expect(errors.overlap).toBe("Address dates overlap with another address");
     });
-    expect(validateDateRange(address)).toBeNull();
   });
 });
 

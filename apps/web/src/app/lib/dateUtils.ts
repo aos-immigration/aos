@@ -34,34 +34,6 @@ export function formatDateRange(
   return `${start} - ${end}`;
 }
 
-export function compareDates(
-  month1: string,
-  year1: string,
-  month2: string,
-  year2: string
-): number {
-  const y1 = parseInt(year1, 10);
-  const y2 = parseInt(year2, 10);
-  if (y1 !== y2) return y1 - y2;
-
-  const m1 = parseInt(month1, 10);
-  const m2 = parseInt(month2, 10);
-  return m1 - m2;
-}
-
-export function isDateInFuture(month: string, year: string): boolean {
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth() + 1;
-
-  const y = parseInt(year, 10);
-  const m = parseInt(month, 10);
-
-  if (y > currentYear) return true;
-  if (y === currentYear && m > currentMonth) return true;
-  return false;
-}
-
 export function getYearOptions(): string[] {
   const currentYear = new Date().getFullYear();
   const years: string[] = [];
