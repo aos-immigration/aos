@@ -1,6 +1,7 @@
 "use client";
 
 import { AddressHistory } from "@/app/components/intake/AddressHistory";
+import { PdfVerifyButton } from "@/app/components/PdfVerifyButton";
 
 export default function PetitionerAddressPage() {
   return (
@@ -18,6 +19,20 @@ export default function PetitionerAddressPage() {
       </div>
 
       <AddressHistory />
+
+      <div className="border-t border-border pt-6">
+        <h2 className="text-lg font-semibold mb-3">Verify on PDF Forms</h2>
+        <p className="text-sm text-muted-foreground mb-4">
+          Preview how your addresses will appear on the actual immigration forms.
+        </p>
+        <div className="flex flex-wrap gap-3">
+          <PdfVerifyButton formSlug="i-130" label="Preview I-130" />
+          <PdfVerifyButton formSlug="i-130a" label="Preview I-130A" />
+          <PdfVerifyButton formSlug="i-485" label="Preview I-485" />
+          <PdfVerifyButton formSlug="i-765" label="Preview I-765" />
+          <PdfVerifyButton formSlug="i-131" label="Preview I-131" />
+        </div>
+      </div>
     </div>
   );
 }
