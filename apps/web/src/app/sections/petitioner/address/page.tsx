@@ -10,6 +10,7 @@ import {
   type MonthValue,
 } from "@/app/lib/intakeStorage";
 import { formatDateRange, getMonthOptions, getYearOptions } from "@/app/lib/dateUtils";
+import { PdfVerifyPanel } from "@/app/components/PdfVerifyPanel";
 import { US_STATES } from "@/app/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -698,6 +699,14 @@ export default function PetitionerAddressPage() {
             + Add Previous Address
           </Button>
         )}
+      </section>
+
+      {/* ── PDF Verification Panel ── */}
+      <section className="space-y-3">
+        <h2 className="text-sm font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+          Form Verification
+        </h2>
+        <PdfVerifyPanel data={data} />
       </section>
     </div>
   );
