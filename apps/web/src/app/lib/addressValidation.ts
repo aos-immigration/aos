@@ -1,71 +1,74 @@
 import type { AddressEntry } from "./intakeStorage";
-import { compareDates, isDateInFuture, monthYearToDate } from "./dateUtils";
+import { addressSchema } from "./schemas/addressSchema";
+import { monthYearToDate } from "./dateUtils";
 
 export type ValidationErrors = Record<string, string>;
 
-export function validateRequiredFields(address: AddressEntry): ValidationErrors {
+// Helper to convert Zod errors to Record<string, string>
+function zodErrorToMap(error: any): ValidationErrors {
   const errors: ValidationErrors = {};
-
-  if (!address.street?.trim()) {
-    errors.street = "Street address is required";
-  }
-  if (!address.city?.trim()) {
-    errors.city = "City is required";
-  }
-  if (!address.state?.trim()) {
-    errors.state = "State is required";
-  }
-  if (!address.zip?.trim()) {
-    errors.zip = "ZIP code is required";
-  }
-  if (!address.country?.trim()) {
-    errors.country = "Country is required";
-  }
-  if (!address.startMonth) {
-    errors.startMonth = "Start month is required";
-  }
-  if (!address.startYear) {
-    errors.startYear = "Start year is required";
-  }
-
+  error.issues.forEach((issue: any) => {
+    const path = issue.path[issue.path.length - 1];
+    if (typeof path === "string") {
+      errors[path] = issue.message;
+    }
+  });
   return errors;
 }
 
+/**
+ * @deprecated Use addressSchema directly
+ */
+export function validateRequiredFields(address: AddressEntry): ValidationErrors {
+  const result = addressSchema.safeParse(address);
+  if (!result.success) {
+    return zodErrorToMap(result.error);
+  }
+  return {};
+}
+
+/**
+ * @deprecated Use addressSchema directly
+ */
 export function validateDateRange(address: AddressEntry): string | null {
-  if (!address.startMonth || !address.startYear) {
-    return null;
-  }
-
-  if (isDateInFuture(address.startMonth, address.startYear)) {
-    return "Start date cannot be in the future";
-  }
-
-  if (!address.isCurrent && address.endMonth && address.endYear) {
-    const cmp = compareDates(
-      address.startMonth,
-      address.startYear,
-      address.endMonth,
-      address.endYear
+  const result = addressSchema.safeParse(address);
+  if (!result.success) {
+    // Find specific date range error
+    const issue = result.error.issues.find(
+      (i) => i.message === "Start date must be before end date"
     );
-    if (cmp > 0) {
-      return "Start date must be before end date";
-    }
+    if (issue) return issue.message;
   }
-
   return null;
 }
 
-export function validateZipCode(zip: string | undefined, country: string): string | null {
-  if (!zip?.trim()) {
-    return "ZIP code is required";
-  }
+/**
+ * @deprecated Use addressSchema directly
+ */
+export function validateZipCode(
+  zip: string | undefined,
+  country: string
+): string | null {
+  // We construct a partial object to validate just the ZIP logic via schema.
+  // This ensures single source of truth for validation rules.
+  // We mock other required fields to pass basic schema validation.
+  const mockAddress = {
+    id: "temp",
+    street: "temp",
+    city: "temp",
+    state: "temp",
+    startMonth: "01",
+    startYear: "2020",
+    isCurrent: true,
+    zip: zip || "",
+    country: country || "",
+  };
 
-  if (country === "United States" || country === "USA" || country === "US") {
-    if (!/^\d{5}(-\d{4})?$/.test(zip.trim())) {
-      return "ZIP code must be 5 digits";
-    }
+  const result = addressSchema.safeParse(mockAddress);
+  if (!result.success) {
+    const zipIssue = result.error.issues.find((i) => i.path.includes("zip"));
+    if (zipIssue) return zipIssue.message;
   }
-
   return null;
 }
 
@@ -79,19 +82,27 @@ function checkOverlap(addr1: AddressEntry, addr2: AddressEntry): boolean {
     return false;
   }
 
-  const start1 = monthYearToDate(addr1.startMonth, addr1.startYear, addr1.startDay);
+  const start1 = monthYearToDate(
+    addr1.startMonth,
+    addr1.startYear,
+    addr1.startDay
+  );
   const end1 = addr1.isCurrent
     ? new Date()
     : addr1.endMonth && addr1.endYear
-      ? monthYearToDate(addr1.endMonth, addr1.endYear, addr1.endDay)
-      : start1;
+    ? monthYearToDate(addr1.endMonth, addr1.endYear, addr1.endDay)
+    : start1;
 
-  const start2 = monthYearToDate(addr2.startMonth, addr2.startYear, addr2.startDay);
+  const start2 = monthYearToDate(
+    addr2.startMonth,
+    addr2.startYear,
+    addr2.startDay
+  );
   const end2 = addr2.isCurrent
     ? new Date()
     : addr2.endMonth && addr2.endYear
-      ? monthYearToDate(addr2.endMonth, addr2.endYear, addr2.endDay)
-      : start2;
+    ? monthYearToDate(addr2.endMonth, addr2.endYear, addr2.endDay)
+    : start2;
 
   return start1 <= end2 && start2 <= end1;
 }
@@ -103,24 +114,15 @@ export function validateAllAddresses(
 
   for (let i = 0; i < addresses.length; i++) {
     const addr = addresses[i];
-    const required = validateRequiredFields(addr);
-    if (Object.keys(required).length > 0) {
-      errors[addr.id] = Object.values(required)[0];
+
+    // Field-level validation using Zod
+    const result = addressSchema.safeParse(addr);
+    if (!result.success) {
+      errors[addr.id] = result.error.issues[0].message;
       continue;
     }
 
-    const dateError = validateDateRange(addr);
-    if (dateError) {
-      errors[addr.id] = dateError;
-      continue;
-    }
-
-    const zipError = validateZipCode(addr.zip, addr.country);
-    if (zipError) {
-      errors[addr.id] = zipError;
-      continue;
-    }
-
+    // Cross-address validation (overlap)
     for (let j = i + 1; j < addresses.length; j++) {
       if (checkOverlap(addr, addresses[j])) {
         errors[addr.id] = "Address dates overlap with another address";
@@ -136,19 +138,11 @@ export function validateAddress(
   address: AddressEntry,
   allAddresses: AddressEntry[]
 ): ValidationErrors {
+  const result = addressSchema.safeParse(address);
   const errors: ValidationErrors = {};
 
-  const required = validateRequiredFields(address);
-  Object.assign(errors, required);
-
-  const dateError = validateDateRange(address);
-  if (dateError) {
-    errors.dateRange = dateError;
-  }
-
-  const zipError = validateZipCode(address.zip, address.country);
-  if (zipError) {
-    errors.zip = zipError;
+  if (!result.success) {
+    Object.assign(errors, zodErrorToMap(result.error));
   }
 
   const otherAddresses = allAddresses.filter((a) => a.id !== address.id);

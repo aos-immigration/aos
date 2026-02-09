@@ -1,20 +1,20 @@
-## Cleanup Report - 2025-02-18
+## Cleanup Report - 2024-02-09
 
 ### Removed
-- `apps/web/src/app/components/intake/CurrentAddressForm.tsx` (Duplicate of RHF version)
-- `apps/web/src/app/components/intake/PreviousAddressForm.tsx` (Duplicate of RHF version)
-- `apps/web/src/app/components/intake/AddressForm.tsx` (Unused)
+- Inline address form duplication in `apps/web/src/app/components/intake/IntakeFlow.tsx`.
+- Confirmed removal of `CurrentAddressForm.tsx` and `PreviousAddressForm.tsx` (already absent).
 
 ### Refactored
-- Extracted `US_STATES` constant to `apps/web/src/app/lib/constants.ts`.
-- Updated `CurrentAddressFormRHF.tsx` and `PreviousAddressFormRHF.tsx` to use shared `US_STATES`.
-- Refactored `IntakeFlow.tsx` to use `getMonthOptions` and `getYearOptions` from `apps/web/src/app/lib/dateUtils.ts`.
+- Extracted `AddressHistoryList` component from `AddressHistory.tsx`.
+- Updated `IntakeFlow.tsx` to use `AddressHistoryList` for address history step, ensuring consistency and RHF+Zod usage.
+- Refactored `AddressHistory.tsx` to use `AddressHistoryList`.
+- Updated `addressSchema.ts` to include conditional ZIP validation (US only) and date range validation.
+- Refactored `addressValidation.ts` to use `addressSchema.ts` for field-level validation, removing duplicated logic.
 
 ### Tests
-- Unit: 38 passed (100%)
-- E2E: Skipped due to sandbox environment issues (Convex login/yarn configuration).
-- Type Check: Passed.
+- Unit: 41 passed (including new schema tests).
+- E2E: Skipped due to environment issues (package manager conflict).
 
 ### Remaining Issues
-- `IntakeFlow.tsx` contains duplicated address form logic (`AddressHistoryStep`) which differs from `AddressHistory.tsx`. Future refactoring should consider unifying these.
-- E2E tests require a configured environment with Convex access.
+- `validateRequiredFields`, `validateZipCode`, `validateDateRange` in `addressValidation.ts` are deprecated but kept for compatibility.
+- E2E tests need environment fix to run locally.

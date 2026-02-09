@@ -68,8 +68,8 @@ describe("validateZipCode", () => {
   });
 
   it("rejects invalid US zip codes", () => {
-    expect(validateZipCode("123", "United States")).toBe("ZIP code must be 5 digits");
-    expect(validateZipCode("abcde", "United States")).toBe("ZIP code must be 5 digits");
+    expect(validateZipCode("123", "United States")).toBe("ZIP code must be 5 digits (or 5+4 format)");
+    expect(validateZipCode("abcde", "United States")).toBe("ZIP code must be 5 digits (or 5+4 format)");
   });
 
   it("is flexible for international zip codes", () => {
