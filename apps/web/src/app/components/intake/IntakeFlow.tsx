@@ -3,7 +3,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   createEmptyAddress,
-  createEmptyEmployment,
   defaultIntakeData,
   loadIntake,
   saveIntake,
@@ -33,6 +32,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { StepShell } from "./StepShell";
+import { EmploymentHistory } from "./EmploymentHistory";
 
 const MONTHS = getMonthOptions();
 
@@ -69,188 +69,6 @@ const renderSelect: RenderSelectFn = (
       ))}
     </SelectContent>
   </Select>
-);
-
-type EmploymentEntryCardProps = {
-  entry: EmploymentEntry;
-  index: number;
-  yearOptions: string[];
-  onUpdate: (id: string, patch: Partial<EmploymentEntry>) => void;
-  onRemove: (id: string) => void;
-  showRemove: boolean;
-};
-
-const EmploymentEntryCard = ({
-  entry,
-  index,
-  yearOptions,
-  onUpdate,
-  onRemove,
-  showRemove,
-}: EmploymentEntryCardProps) => (
-  <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900">
-    <div className="flex items-center justify-between">
-      <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-        {index === 0 ? "Current employment" : `Previous employment ${index}`}
-      </p>
-      {showRemove ? (
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => onRemove(entry.id)}
-        >
-          Remove
-        </Button>
-      ) : null}
-    </div>
-
-    <div className="mt-4 grid gap-4 sm:grid-cols-2">
-      <label className="flex flex-col gap-2 text-sm">
-        <Label>Status</Label>
-        {renderSelect(
-          entry.status,
-          (value) =>
-            onUpdate(entry.id, {
-              status: value as EmploymentEntry["status"],
-            }),
-          "Select",
-          [
-            { value: "employed", label: "Employed" },
-            { value: "unemployed", label: "Unemployed" },
-            { value: "student", label: "Student" },
-            { value: "other", label: "Other" },
-          ]
-        )}
-      </label>
-      {entry.status === "employed" ? (
-        <>
-          <label className="flex flex-col gap-2 text-sm">
-            <Label>Employer name</Label>
-            <Input
-              value={entry.employerName}
-              onChange={(event) =>
-                onUpdate(entry.id, {
-                  employerName: event.target.value,
-                })
-              }
-              placeholder="Company name"
-            />
-          </label>
-          <label className="flex flex-col gap-2 text-sm">
-            <Label>Job title</Label>
-            <Input
-              value={entry.jobTitle}
-              onChange={(event) =>
-                onUpdate(entry.id, { jobTitle: event.target.value })
-              }
-              placeholder="Software Engineer"
-            />
-          </label>
-          <label className="flex flex-col gap-2 text-sm">
-            <Label>City</Label>
-            <Input
-              value={entry.city}
-              onChange={(event) => onUpdate(entry.id, { city: event.target.value })}
-              placeholder="San Jose"
-            />
-          </label>
-          <label className="flex flex-col gap-2 text-sm">
-            <Label>State</Label>
-            <Input
-              value={entry.state}
-              onChange={(event) => onUpdate(entry.id, { state: event.target.value })}
-              placeholder="CA"
-            />
-          </label>
-          <label className="flex flex-col gap-2 text-sm">
-            <Label>Country</Label>
-            <Input
-              value={entry.country}
-              onChange={(event) =>
-                onUpdate(entry.id, { country: event.target.value })
-              }
-              placeholder="United States"
-            />
-          </label>
-        </>
-      ) : (
-        <div className="rounded-lg border border-dashed border-zinc-300 p-3 text-xs text-zinc-500 dark:border-zinc-700">
-          Employer details only appear when your status is Employed.
-        </div>
-      )}
-    </div>
-
-    <div className="mt-4 grid gap-4 sm:grid-cols-4">
-      <label className="flex flex-col gap-2 text-sm">
-        <Label>From month</Label>
-        {renderSelect(
-          entry.fromMonth,
-          (value) =>
-            onUpdate(entry.id, {
-              fromMonth: value as MonthValue,
-            }),
-          "Month",
-          MONTHS.map((month) => ({
-            value: month.value,
-            label: month.label,
-          }))
-        )}
-      </label>
-      <label className="flex flex-col gap-2 text-sm">
-        <Label>From year</Label>
-        {renderSelect(
-          entry.fromYear,
-          (value) => onUpdate(entry.id, { fromYear: value }),
-          "Year",
-          yearOptions.map((year) => ({ value: year, label: year }))
-        )}
-      </label>
-      <label className="flex flex-col gap-2 text-sm">
-        <Label>To month</Label>
-        {renderSelect(
-          entry.toMonth,
-          (value) => onUpdate(entry.id, { toMonth: value as MonthValue }),
-          "Month",
-          MONTHS.map((month) => ({
-            value: month.value,
-            label: month.label,
-          })),
-          undefined,
-          entry.isCurrent
-        )}
-      </label>
-      <label className="flex flex-col gap-2 text-sm">
-        <Label>To year</Label>
-        {renderSelect(
-          entry.toYear,
-          (value) => onUpdate(entry.id, { toYear: value }),
-          "Year",
-          yearOptions.map((year) => ({ value: year, label: year })),
-          undefined,
-          entry.isCurrent
-        )}
-      </label>
-    </div>
-
-    <div className="mt-4 flex items-center justify-between">
-      <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          checked={entry.isCurrent}
-          onChange={(event) =>
-            onUpdate(entry.id, {
-              isCurrent: event.target.checked,
-              toMonth: event.target.checked ? "" : entry.toMonth,
-              toYear: event.target.checked ? "" : entry.toYear,
-            })
-          }
-          className="h-4 w-4 rounded border-zinc-300 text-zinc-900"
-        />
-        <span>Current situation</span>
-      </label>
-    </div>
-  </div>
 );
 
 type AddressHistoryStepProps = {
@@ -779,12 +597,10 @@ export function IntakeFlow() {
     }));
   };
 
-  const updateEmployment = (id: string, patch: Partial<EmploymentEntry>) => {
+  const handleEmploymentChange = (newEmployment: EmploymentEntry[]) => {
     setData((prev) => ({
       ...prev,
-      employment: prev.employment.map((entry) =>
-        entry.id === id ? { ...entry, ...patch } : entry
-      ),
+      employment: newEmployment,
     }));
   };
 
@@ -794,22 +610,10 @@ export function IntakeFlow() {
       addresses: [...prev.addresses, createEmptyAddress()],
     }));
 
-  const addEmployment = () =>
-    setData((prev) => ({
-      ...prev,
-      employment: [...prev.employment, createEmptyEmployment()],
-    }));
-
   const removeAddress = (id: string) =>
     setData((prev) => ({
       ...prev,
       addresses: prev.addresses.filter((entry) => entry.id !== id),
-    }));
-
-  const removeEmployment = (id: string) =>
-    setData((prev) => ({
-      ...prev,
-      employment: prev.employment.filter((entry) => entry.id !== id),
     }));
 
   return (
@@ -1043,21 +847,10 @@ export function IntakeFlow() {
           title="Employment history (last 5 years)"
           description="Start with your current situation and work backwards."
         >
-          {data.employment.map((entry, idx) => (
-            <EmploymentEntryCard
-              key={entry.id}
-              entry={entry}
-              index={idx}
-              yearOptions={yearOptions}
-              onUpdate={updateEmployment}
-              onRemove={removeEmployment}
-              showRemove={data.employment.length > 1}
-            />
-          ))}
-
-          <Button type="button" variant="secondary" onClick={addEmployment}>
-            Add another job or status
-          </Button>
+          <EmploymentHistory
+            employment={data.employment}
+            onChange={handleEmploymentChange}
+          />
         </StepShell>
       ) : null}
 
