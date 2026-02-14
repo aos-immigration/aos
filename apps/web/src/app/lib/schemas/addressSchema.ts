@@ -1,20 +1,37 @@
 import { z } from "zod";
+import { isDateInFuture } from "@/app/lib/dateUtils";
 
 const monthOptions = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"] as const;
 
-export const addressSchema = z.object({
+const baseFields = {
   id: z.string(),
   street: z.string().min(1, "Street address is required"),
   unit: z.string().optional(),
   city: z.string().min(1, "City is required"),
   state: z.string().min(1, "State is required"),
-  zip: z.string()
-    .min(1, "ZIP code is required")
-    .refine(
-      (val) => /^\d{5}(-\d{4})?$/.test(val),
-      "ZIP code must be 5 digits (or 5+4 format)"
-    ),
+  zip: z.string().min(1, "ZIP code is required"),
   country: z.string().min(1, "Country is required"),
+};
+
+const zipCheck = (data: { country: string; zip: string }, ctx: z.RefinementCtx) => {
+  const usVariants = ["United States", "USA", "US", "united states", "usa", "us"];
+  if (usVariants.includes(data.country) || usVariants.includes(data.country.trim())) {
+     if (!/^\d{5}(-\d{4})?$/.test(data.zip.trim())) {
+       ctx.addIssue({
+         code: z.ZodIssueCode.custom,
+         message: "ZIP code must be 5 digits (or 5+4 format)",
+         path: ["zip"],
+       });
+     }
+  }
+};
+
+export const mailingAddressSchema = z.object(baseFields).superRefine(zipCheck);
+
+export type MailingAddressFormData = z.infer<typeof mailingAddressSchema>;
+
+export const addressSchema = z.object({
+  ...baseFields,
   startMonth: z.string().min(1, "Start month is required"),
   startYear: z.string().min(1, "Start year is required"),
   startDay: z.string().optional(),
@@ -24,17 +41,33 @@ export const addressSchema = z.object({
   isCurrent: z.boolean(),
   gapExplanation: z.string().optional(),
   notes: z.string().optional(),
-}).refine(
-  (data) => {
-    if (!data.isCurrent && data.startMonth && data.startYear && data.endMonth && data.endYear) {
-      const start = new Date(parseInt(data.startYear), parseInt(data.startMonth) - 1);
-      const end = new Date(parseInt(data.endYear), parseInt(data.endMonth) - 1);
-      return start <= end;
+}).superRefine((data, ctx) => {
+  zipCheck(data, ctx);
+
+  // 2. Start date in future check
+  if (data.startMonth && data.startYear) {
+    if (isDateInFuture(data.startMonth, data.startYear)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Start date cannot be in the future",
+        path: ["startMonth"],
+      });
     }
-    return true;
-  },
-  { message: "Start date must be before end date", path: ["startMonth"] }
-);
+  }
+
+  // 3. Date range check (Start <= End)
+  if (!data.isCurrent && data.startMonth && data.startYear && data.endMonth && data.endYear) {
+    const start = new Date(parseInt(data.startYear), parseInt(data.startMonth) - 1);
+    const end = new Date(parseInt(data.endYear), parseInt(data.endMonth) - 1);
+    if (start > end) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Start date must be before end date",
+        path: ["startMonth"],
+      });
+    }
+  }
+});
 
 export type AddressFormData = z.infer<typeof addressSchema>;
 
