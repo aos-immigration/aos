@@ -2,7 +2,7 @@ import { z } from "zod";
 
 const monthOptions = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"] as const;
 
-export const addressSchema = z.object({
+const baseAddressSchema = z.object({
   id: z.string(),
   street: z.string().min(1, "Street address is required"),
   unit: z.string().optional(),
@@ -15,6 +15,13 @@ export const addressSchema = z.object({
       "ZIP code must be 5 digits (or 5+4 format)"
     ),
   country: z.string().min(1, "Country is required"),
+  gapExplanation: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+export const mailingAddressSchema = baseAddressSchema;
+
+export const addressSchema = baseAddressSchema.extend({
   startMonth: z.string().min(1, "Start month is required"),
   startYear: z.string().min(1, "Start year is required"),
   startDay: z.string().optional(),
@@ -22,8 +29,6 @@ export const addressSchema = z.object({
   endYear: z.string().optional(),
   endDay: z.string().optional(),
   isCurrent: z.boolean(),
-  gapExplanation: z.string().optional(),
-  notes: z.string().optional(),
 }).refine(
   (data) => {
     if (!data.isCurrent && data.startMonth && data.startYear && data.endMonth && data.endYear) {
@@ -37,6 +42,7 @@ export const addressSchema = z.object({
 );
 
 export type AddressFormData = z.infer<typeof addressSchema>;
+export type MailingAddressFormData = z.infer<typeof mailingAddressSchema>;
 
 export const currentAddressSchema = addressSchema;
 
