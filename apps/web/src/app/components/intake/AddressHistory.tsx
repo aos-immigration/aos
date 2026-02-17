@@ -8,7 +8,7 @@ import {
   createEmptyAddress,
   type AddressEntry,
 } from "@/app/lib/intakeStorage";
-import { validateAllAddresses } from "@/app/lib/addressValidation";
+import { findOverlaps } from "@/app/lib/gapDetection";
 import { AddressCard } from "./AddressCard";
 import { CurrentAddressFormRHF } from "./CurrentAddressFormRHF";
 import { PreviousAddressFormRHF } from "./PreviousAddressFormRHF";
@@ -21,7 +21,6 @@ export function AddressHistory({ onValidationChange }: AddressHistoryProps) {
   const [addresses, setAddresses] = useState<AddressEntry[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftAddress, setDraftAddress] = useState<AddressEntry | null>(null);
-  const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const loaded = loadAddressHistory();
@@ -36,22 +35,16 @@ export function AddressHistory({ onValidationChange }: AddressHistoryProps) {
     }
   }, []);
 
-  const runValidation = useCallback(
-    (addressList: AddressEntry[]) => {
-      const validationErrors = validateAllAddresses(addressList);
-      setErrors(validationErrors);
-      onValidationChange?.(Object.keys(validationErrors).length === 0);
-    },
-    [onValidationChange]
-  );
-
   const saveAndValidate = useCallback(
     (newAddresses: AddressEntry[]) => {
       setAddresses(newAddresses);
       saveAddressHistory(newAddresses);
-      runValidation(newAddresses);
+      const hasCurrent = newAddresses.some((a) => a.isCurrent);
+      const overlaps = findOverlaps(newAddresses);
+      const isValid = newAddresses.length > 0 && hasCurrent && overlaps.length === 0;
+      onValidationChange?.(isValid);
     },
-    [runValidation]
+    [onValidationChange]
   );
 
   const handleAddressChange = useCallback(

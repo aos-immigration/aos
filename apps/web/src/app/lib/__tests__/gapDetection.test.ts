@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { detectGap, hasSignificantGap, findGaps } from "../gapDetection";
+import { detectGap, hasSignificantGap, findGaps, findOverlaps } from "../gapDetection";
 import type { AddressEntry } from "../intakeStorage";
 
 const createAddress = (overrides: Partial<AddressEntry> = {}): AddressEntry => ({
@@ -139,5 +139,50 @@ describe("findGaps", () => {
 
     const gaps = findGaps(addresses);
     expect(gaps).toHaveLength(0);
+  });
+});
+
+describe("findOverlaps", () => {
+  it("detects overlapping addresses (same month)", () => {
+    const addresses = [
+      createAddress({
+        id: "1",
+        startMonth: "01",
+        startYear: "2020",
+        endMonth: "06",
+        endYear: "2020",
+      }),
+      createAddress({
+        id: "2",
+        startMonth: "06",
+        startYear: "2020",
+        endMonth: "12",
+        endYear: "2020",
+      }),
+    ];
+    const overlaps = findOverlaps(addresses);
+    expect(overlaps).toHaveLength(1);
+    expect(overlaps[0]).toEqual({ id1: "1", id2: "2" });
+  });
+
+  it("does not detect adjacent non-overlapping addresses", () => {
+    const addresses = [
+      createAddress({
+        id: "1",
+        startMonth: "01",
+        startYear: "2020",
+        endMonth: "05",
+        endYear: "2020",
+      }),
+      createAddress({
+        id: "2",
+        startMonth: "06",
+        startYear: "2020",
+        endMonth: "12",
+        endYear: "2020",
+      }),
+    ];
+    const overlaps = findOverlaps(addresses);
+    expect(overlaps).toHaveLength(0);
   });
 });
