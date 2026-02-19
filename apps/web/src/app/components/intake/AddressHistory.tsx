@@ -15,26 +15,37 @@ import { PreviousAddressFormRHF } from "./PreviousAddressFormRHF";
 
 type AddressHistoryProps = {
   onValidationChange?: (isValid: boolean) => void;
+  addresses?: AddressEntry[];
+  onAddressesChange?: (addresses: AddressEntry[]) => void;
 };
 
-export function AddressHistory({ onValidationChange }: AddressHistoryProps) {
-  const [addresses, setAddresses] = useState<AddressEntry[]>([]);
+export function AddressHistory({
+  onValidationChange,
+  addresses: propAddresses,
+  onAddressesChange,
+}: AddressHistoryProps) {
+  const [internalAddresses, setInternalAddresses] = useState<AddressEntry[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftAddress, setDraftAddress] = useState<AddressEntry | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  useEffect(() => {
-    const loaded = loadAddressHistory();
-    const hasCurrent = loaded.some((a) => a.isCurrent);
+  const isControlled = propAddresses !== undefined;
+  const addresses = isControlled ? propAddresses : internalAddresses;
 
-    if (loaded.length === 0 || !hasCurrent) {
-      const initial = { ...createEmptyAddress(), isCurrent: true };
-      const filtered = loaded.filter((a) => a.street?.trim());
-      setAddresses([initial, ...filtered]);
-    } else {
-      setAddresses(loaded);
+  useEffect(() => {
+    if (!isControlled) {
+      const loaded = loadAddressHistory();
+      const hasCurrent = loaded.some((a) => a.isCurrent);
+
+      if (loaded.length === 0 || !hasCurrent) {
+        const initial = { ...createEmptyAddress(), isCurrent: true };
+        const filtered = loaded.filter((a) => a.street?.trim());
+        setInternalAddresses([initial, ...filtered]);
+      } else {
+        setInternalAddresses(loaded);
+      }
     }
-  }, []);
+  }, [isControlled]);
 
   const runValidation = useCallback(
     (addressList: AddressEntry[]) => {
@@ -45,13 +56,20 @@ export function AddressHistory({ onValidationChange }: AddressHistoryProps) {
     [onValidationChange]
   );
 
+  useEffect(() => {
+    runValidation(addresses);
+  }, [addresses, runValidation]);
+
   const saveAndValidate = useCallback(
     (newAddresses: AddressEntry[]) => {
-      setAddresses(newAddresses);
-      saveAddressHistory(newAddresses);
-      runValidation(newAddresses);
+      if (isControlled) {
+        onAddressesChange?.(newAddresses);
+      } else {
+        setInternalAddresses(newAddresses);
+        saveAddressHistory(newAddresses);
+      }
     },
-    [runValidation]
+    [isControlled, onAddressesChange]
   );
 
   const handleAddressChange = useCallback(
@@ -149,7 +167,6 @@ export function AddressHistory({ onValidationChange }: AddressHistoryProps) {
 
           {previousAddresses.map((address, index) => {
             const isEditing = editingId === address.id;
-            const olderAddress = previousAddresses[index + 1];
 
             return (
               <div
