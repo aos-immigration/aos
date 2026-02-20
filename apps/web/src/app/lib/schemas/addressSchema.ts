@@ -36,7 +36,23 @@ export const addressSchema = z.object({
   { message: "Start date must be before end date", path: ["startMonth"] }
 );
 
+export const mailingAddressSchema = z.object({
+  id: z.string().optional(),
+  street: z.string().min(1, "Street address is required"),
+  unit: z.string().optional(),
+  city: z.string().min(1, "City is required"),
+  state: z.string().min(1, "State is required"),
+  zip: z.string()
+    .min(1, "ZIP code is required")
+    .refine(
+      (val) => /^\d{5}(-\d{4})?$/.test(val),
+      "ZIP code must be 5 digits (or 5+4 format)"
+    ),
+  country: z.string().min(1, "Country is required"),
+});
+
 export type AddressFormData = z.infer<typeof addressSchema>;
+export type MailingAddressFormData = z.infer<typeof mailingAddressSchema>;
 
 export const currentAddressSchema = addressSchema;
 
