@@ -47,3 +47,20 @@ export const previousAddressSchema = addressSchema.refine(
   (data) => data.endYear && data.endYear.length > 0,
   { message: "End year is required for previous addresses", path: ["endYear"] }
 );
+
+export const mailingAddressSchema = z.object({
+  id: z.string().optional(),
+  street: z.string().min(1, "Street address is required"),
+  unit: z.string().optional(),
+  city: z.string().min(1, "City is required"),
+  state: z.string().min(1, "State is required"),
+  zip: z.string()
+    .min(1, "ZIP code is required")
+    .refine(
+      (val) => /^\d{5}(-\d{4})?$/.test(val),
+      "ZIP code must be 5 digits (or 5+4 format)"
+    ),
+  country: z.string().min(1, "Country is required"),
+});
+
+export type MailingAddressFormData = z.infer<typeof mailingAddressSchema>;
