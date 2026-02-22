@@ -1,8 +1,25 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { AddressHistory } from "@/app/components/intake/AddressHistory";
+import {
+  loadAddressHistory,
+  saveAddressHistory,
+  type AddressEntry,
+} from "@/app/lib/intakeStorage";
 
 export default function PetitionerAddressPage() {
+  const [addresses, setAddresses] = useState<AddressEntry[]>([]);
+
+  useEffect(() => {
+    setAddresses(loadAddressHistory());
+  }, []);
+
+  const handleAddressesChange = (newAddresses: AddressEntry[]) => {
+    setAddresses(newAddresses);
+    saveAddressHistory(newAddresses);
+  };
+
   return (
     <div className="max-w-5xl mx-auto space-y-8">
       <div className="flex justify-between items-end border-b border-border pb-6">
@@ -17,7 +34,10 @@ export default function PetitionerAddressPage() {
         </div>
       </div>
 
-      <AddressHistory />
+      <AddressHistory
+        addresses={addresses}
+        onAddressesChange={handleAddressesChange}
+      />
     </div>
   );
 }

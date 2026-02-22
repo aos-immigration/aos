@@ -1,10 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
-  loadAddressHistory,
-  saveAddressHistory,
   createEmptyAddress,
   type AddressEntry,
 } from "@/app/lib/intakeStorage";
@@ -14,27 +12,19 @@ import { CurrentAddressFormRHF } from "./CurrentAddressFormRHF";
 import { PreviousAddressFormRHF } from "./PreviousAddressFormRHF";
 
 type AddressHistoryProps = {
+  addresses: AddressEntry[];
+  onAddressesChange: (addresses: AddressEntry[]) => void;
   onValidationChange?: (isValid: boolean) => void;
 };
 
-export function AddressHistory({ onValidationChange }: AddressHistoryProps) {
-  const [addresses, setAddresses] = useState<AddressEntry[]>([]);
+export function AddressHistory({
+  addresses,
+  onAddressesChange,
+  onValidationChange,
+}: AddressHistoryProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftAddress, setDraftAddress] = useState<AddressEntry | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    const loaded = loadAddressHistory();
-    const hasCurrent = loaded.some((a) => a.isCurrent);
-
-    if (loaded.length === 0 || !hasCurrent) {
-      const initial = { ...createEmptyAddress(), isCurrent: true };
-      const filtered = loaded.filter((a) => a.street?.trim());
-      setAddresses([initial, ...filtered]);
-    } else {
-      setAddresses(loaded);
-    }
-  }, []);
 
   const runValidation = useCallback(
     (addressList: AddressEntry[]) => {
@@ -47,11 +37,10 @@ export function AddressHistory({ onValidationChange }: AddressHistoryProps) {
 
   const saveAndValidate = useCallback(
     (newAddresses: AddressEntry[]) => {
-      setAddresses(newAddresses);
-      saveAddressHistory(newAddresses);
+      onAddressesChange(newAddresses);
       runValidation(newAddresses);
     },
-    [runValidation]
+    [onAddressesChange, runValidation]
   );
 
   const handleAddressChange = useCallback(
@@ -66,6 +55,7 @@ export function AddressHistory({ onValidationChange }: AddressHistoryProps) {
     (id: string) => {
       const newAddresses = addresses.filter((a) => a.id !== id);
       if (newAddresses.length === 0) {
+        // Ensure there's always at least one (current) address
         const initial = { ...createEmptyAddress(), isCurrent: true };
         saveAndValidate([initial]);
       } else {
@@ -106,6 +96,7 @@ export function AddressHistory({ onValidationChange }: AddressHistoryProps) {
   }, []);
 
   const currentAddress = addresses.find((a) => a.isCurrent);
+  // Sort previous addresses: newest first
   const previousAddresses = addresses
     .filter((a) => !a.isCurrent)
     .sort((a, b) => {
@@ -149,7 +140,6 @@ export function AddressHistory({ onValidationChange }: AddressHistoryProps) {
 
           {previousAddresses.map((address, index) => {
             const isEditing = editingId === address.id;
-            const olderAddress = previousAddresses[index + 1];
 
             return (
               <div
