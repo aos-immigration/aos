@@ -1,6 +1,5 @@
 import { z } from "zod";
-
-const monthOptions = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"] as const;
+import { isDateInFuture } from "../dateUtils";
 
 export const addressSchema = z.object({
   id: z.string(),
@@ -25,6 +24,14 @@ export const addressSchema = z.object({
   gapExplanation: z.string().optional(),
   notes: z.string().optional(),
 }).refine(
+  (data) => {
+    if (data.startMonth && data.startYear) {
+      return !isDateInFuture(data.startMonth, data.startYear);
+    }
+    return true;
+  },
+  { message: "Start date cannot be in the future", path: ["startMonth"] }
+).refine(
   (data) => {
     if (!data.isCurrent && data.startMonth && data.startYear && data.endMonth && data.endYear) {
       const start = new Date(parseInt(data.startYear), parseInt(data.startMonth) - 1);
