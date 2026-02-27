@@ -1,0 +1,167 @@
+- generic:
+  - generic:
+    - complementary:
+      - generic:
+        - generic:
+          - img
+        - generic: Immigration OS
+      - navigation:
+        - generic:
+          - button:
+            - img
+            - generic: Petitioner Information
+          - generic:
+            - link:
+              - /url: /sections/petitioner
+              - img
+              - generic: Basic Information
+            - link:
+              - /url: /sections/petitioner/address
+              - img
+              - generic: Address History (5 years)
+            - link:
+              - /url: /sections/petitioner/employment
+              - img
+              - generic: Employment History (5 years)
+        - generic:
+          - button:
+            - img
+            - generic: Beneficiary Information
+          - generic:
+            - link:
+              - /url: /sections/beneficiary
+              - img
+              - generic: Basic Information
+            - link:
+              - /url: /sections/beneficiary/address
+              - img
+              - generic: Address History (5 years)
+            - link:
+              - /url: /sections/beneficiary/employment
+              - img
+              - generic: Employment History (5 years)
+            - link:
+              - /url: /sections/beneficiary/biographic
+              - img
+              - generic: Biographic Details
+        - generic:
+          - button:
+            - img
+            - generic: Marital History
+        - generic:
+          - button:
+            - img
+            - generic: Documents & Evidence
+      - generic:
+        - generic:
+          - generic: JD
+          - generic:
+            - generic: John Doe
+            - generic: APP-2024-0891
+          - button:
+            - img
+    - main:
+      - generic:
+        - generic:
+          - generic:
+            - link:
+              - /url: /sections
+              - text: Application
+          - generic:
+            - img
+            - generic: Petitioner Information
+        - generic:
+          - generic:
+            - generic: PROGRESS 64%
+          - generic:
+            - button:
+              - img
+            - button:
+              - img
+              - text: Export Fixture
+            - button:
+              - img
+              - text: Verify & Preview
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - heading [level=1]: Petitioner Information
+              - paragraph: Tell us about yourself. This information will be used across all required forms automatically.
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - generic: 👤
+                  - heading [level=3]: Legal Identity
+                - generic:
+                  - generic:
+                    - generic: Legal First Name
+                    - textbox:
+                      - /placeholder: John
+                      - text: Maria Elena
+                  - generic:
+                    - generic: Legal Last Name
+                    - textbox:
+                      - /placeholder: Doe
+                      - text: Rodriguez
+                  - generic:
+                    - generic: Middle Name (If any)
+                    - textbox:
+                      - /placeholder: Quincy
+                      - text: Sofia
+                  - generic:
+                    - generic: Place of Birth
+                    - textbox:
+                      - /placeholder: City, Country
+                      - text: San Juan, Puerto Rico
+                - generic:
+                  - generic: Date of Birth
+                  - generic:
+                    - combobox:
+                      - generic: March
+                      - img
+                    - combobox:
+                      - generic: "15"
+                      - img
+                    - combobox:
+                      - generic: "1990"
+                      - img
+                - generic:
+                  - generic:
+                    - generic: Citizenship Status
+                    - combobox:
+                      - generic: U.S. Citizen
+                      - img
+                  - generic:
+                    - generic: Relationship to Beneficiary
+                    - combobox:
+                      - generic: Spouse
+                      - img
+              - generic:
+                - generic:
+                  - generic: 📧
+                  - heading [level=3]: Contact Information
+                - generic:
+                  - generic:
+                    - generic: Email Address
+                    - textbox:
+                      - /placeholder: john@example.com
+                      - text: maria.rodriguez@example.com
+                  - generic:
+                    - generic: Phone Number
+                    - textbox:
+                      - /placeholder: (555) 123-4567
+                      - text: 217-555-0142
+  - button "Open Next.js Dev Tools" [ref=e117] [cursor=pointer]:
+    - img [ref=e118]
+  - alert
+  - dialog "PDF preview" [ref=e122]:
+    - generic [ref=e123]:
+      - heading "PDF preview" [level=2] [ref=e124]
+      - paragraph [ref=e125]: Generated I-130 from your application data.
+    - iframe [active] [ref=e127]:
+      
+    - button "Close" [ref=e128]:
+      - img [ref=e129]
+      - generic [ref=e132]: Close

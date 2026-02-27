@@ -11,6 +11,7 @@ import {
 } from "../../lib/schemas/petitionerBasicsSchema";
 import type { Resolver } from "react-hook-form";
 import { useApplicationId } from "../../lib/useApplicationId";
+import { savePetitionerBasicsDraft } from "../../lib/reviewDraft";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -143,6 +144,7 @@ export default function PetitionerPage() {
   // Watch all fields and auto-save on change
   useEffect(() => {
     const subscription = watch((data) => {
+      savePetitionerBasicsDraft(data);
       if (!hasLoadedRef.current && !existingData) {
         // Don't save until we've either loaded data or confirmed there's none
         return;

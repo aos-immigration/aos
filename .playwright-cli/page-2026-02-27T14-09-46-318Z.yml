@@ -1,0 +1,77 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - generic [ref=e4]:
+        - img [ref=e6]
+        - generic [ref=e8]: Immigration OS
+      - navigation [ref=e9]:
+        - generic [ref=e10]:
+          - button "Petitioner Information" [ref=e11]:
+            - img [ref=e12]
+            - generic [ref=e14]: Petitioner Information
+          - generic [ref=e16]:
+            - link "Basic Information" [ref=e17] [cursor=pointer]:
+              - /url: /sections/petitioner
+              - img [ref=e18]
+              - generic [ref=e21]: Basic Information
+            - link "Address History (5 years)" [ref=e22] [cursor=pointer]:
+              - /url: /sections/petitioner/address
+              - img [ref=e23]
+              - generic [ref=e26]: Address History (5 years)
+            - link "Employment History (5 years)" [ref=e27] [cursor=pointer]:
+              - /url: /sections/petitioner/employment
+              - img [ref=e28]
+              - generic [ref=e31]: Employment History (5 years)
+        - generic [ref=e32]:
+          - button "Beneficiary Information" [ref=e33]:
+            - img [ref=e34]
+            - generic [ref=e36]: Beneficiary Information
+          - generic [ref=e38]:
+            - link "Basic Information" [ref=e39] [cursor=pointer]:
+              - /url: /sections/beneficiary
+              - img [ref=e40]
+              - generic [ref=e45]: Basic Information
+            - link "Address History (5 years)" [ref=e46] [cursor=pointer]:
+              - /url: /sections/beneficiary/address
+              - img [ref=e47]
+              - generic [ref=e50]: Address History (5 years)
+            - link "Employment History (5 years)" [ref=e51] [cursor=pointer]:
+              - /url: /sections/beneficiary/employment
+              - img [ref=e52]
+              - generic [ref=e55]: Employment History (5 years)
+            - link "Biographic Details" [ref=e56] [cursor=pointer]:
+              - /url: /sections/beneficiary/biographic
+              - img [ref=e57]
+              - generic [ref=e60]: Biographic Details
+        - button "Marital History" [ref=e62]:
+          - img [ref=e63]
+          - generic [ref=e65]: Marital History
+        - button "Documents & Evidence" [ref=e68]:
+          - img [ref=e69]
+          - generic [ref=e71]: Documents & Evidence
+      - generic [ref=e74]:
+        - generic [ref=e75]: JD
+        - generic [ref=e76]:
+          - generic [ref=e77]: John Doe
+          - generic [ref=e78]: APP-2024-0891
+        - button [ref=e79]:
+          - img [ref=e80]
+    - main [ref=e83]:
+      - generic [ref=e84]:
+        - generic [ref=e85]:
+          - link "Application" [ref=e87] [cursor=pointer]:
+            - /url: /sections
+          - generic [ref=e88]:
+            - img [ref=e89]
+            - generic [ref=e91]: Petitioner Information
+        - generic [ref=e92]:
+          - generic [ref=e94]: PROGRESS 64%
+          - generic [ref=e97]:
+            - button "Export Fixture" [disabled] [ref=e98]:
+              - img [ref=e99]
+              - text: Export Fixture
+            - button "Verify & Preview" [disabled] [ref=e102]:
+              - img [ref=e103]
+              - text: Verify & Preview
+  - button "Open Next.js Dev Tools" [ref=e117] [cursor=pointer]:
+    - img [ref=e118]
