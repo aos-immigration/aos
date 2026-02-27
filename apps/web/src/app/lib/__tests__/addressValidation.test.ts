@@ -48,7 +48,7 @@ describe("validateRequiredFields", () => {
     expect(() => validateRequiredFields(address)).not.toThrow();
     const errors = validateRequiredFields(address);
     expect(errors.street).toBeDefined();
-    expect(errors.zip).toBeDefined();
+    expect(errors.country).toBeDefined();
   });
 
   it("handles null-ish values", () => {
@@ -63,8 +63,8 @@ describe("validateRequiredFields", () => {
 describe("validateZipCode", () => {
   it("accepts valid US zip codes", () => {
     expect(validateZipCode("10001", "United States")).toBeNull();
-    expect(validateZipCode("90210", "USA")).toBeNull();
-    expect(validateZipCode("12345-6789", "US")).toBeNull();
+    expect(validateZipCode("90210", "United States")).toBeNull();
+    expect(validateZipCode("12345-6789", "United States")).toBeNull();
   });
 
   it("rejects invalid US zip codes", () => {
@@ -72,14 +72,45 @@ describe("validateZipCode", () => {
     expect(validateZipCode("abcde", "United States")).toBe("ZIP code must be 5 digits");
   });
 
-  it("is flexible for international zip codes", () => {
-    expect(validateZipCode("SW1A 1AA", "United Kingdom")).toBeNull();
+  it("accepts valid Canadian postal codes", () => {
     expect(validateZipCode("M5V 3L9", "Canada")).toBeNull();
+    expect(validateZipCode("M5V3L9", "Canada")).toBeNull();
+    expect(validateZipCode("K1A 0B1", "Canada")).toBeNull();
   });
 
-  it("handles undefined zip", () => {
+  it("rejects invalid Canadian postal codes", () => {
+    expect(validateZipCode("12345", "Canada")).toBe("Postal code must be in format A1A 1A1");
+    expect(validateZipCode("ABCDEF", "Canada")).toBe("Postal code must be in format A1A 1A1");
+  });
+
+  it("accepts valid Mexican postal codes", () => {
+    expect(validateZipCode("06600", "Mexico")).toBeNull();
+    expect(validateZipCode("01000", "Mexico")).toBeNull();
+  });
+
+  it("rejects invalid Mexican postal codes", () => {
+    expect(validateZipCode("123", "Mexico")).toBe("Postal code must be 5 digits");
+    expect(validateZipCode("123456", "Mexico")).toBe("Postal code must be 5 digits");
+  });
+
+  it("is flexible for other international postal codes", () => {
+    expect(validateZipCode("SW1A 1AA", "United Kingdom")).toBeNull();
+    expect(validateZipCode("400001", "India")).toBeNull();
+    expect(validateZipCode("", "United Kingdom")).toBeNull();
+  });
+
+  it("handles undefined zip for US (required)", () => {
     expect(() => validateZipCode(undefined, "United States")).not.toThrow();
-    expect(validateZipCode(undefined, "United States")).toBe("ZIP code is required");
+    expect(validateZipCode(undefined, "United States")).toBe("ZIP Code is required");
+  });
+
+  it("handles undefined zip for Canada (required)", () => {
+    expect(validateZipCode(undefined, "Canada")).toBe("Postal Code is required");
+  });
+
+  it("handles undefined zip for other countries (optional)", () => {
+    expect(validateZipCode(undefined, "United Kingdom")).toBeNull();
+    expect(validateZipCode(undefined, "India")).toBeNull();
   });
 });
 

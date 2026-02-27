@@ -14,8 +14,15 @@ import {
 } from "@/components/ui/select";
 import { previousAddressSchema, type AddressFormData } from "@/app/lib/schemas/addressSchema";
 import { getMonthOptions, getYearOptions } from "@/app/lib/dateUtils";
-import { US_STATES } from "@/app/lib/constants";
+import {
+  ALL_COUNTRIES,
+  getCountryCode,
+  getLabelsForCountry,
+  getRegionsForCountry,
+  hasKnownRegions,
+} from "@/app/lib/countries";
 import type { AddressEntry, MonthValue } from "@/app/lib/intakeStorage";
+import { AddressAutocomplete } from "./AddressAutocomplete";
 
 type PreviousAddressFormRHFProps = {
   readonly address: AddressEntry;
@@ -65,11 +72,42 @@ export function PreviousAddressFormRHF({
     } as AddressEntry);
   };
 
+  const streetValue = watch("street");
   const stateValue = watch("state");
+  const countryValue = watch("country");
   const startMonthValue = watch("startMonth");
   const startYearValue = watch("startYear");
   const endMonthValue = watch("endMonth");
   const endYearValue = watch("endYear");
+
+  const countryCode = getCountryCode(countryValue) || "";
+  const showRegionDropdown = hasKnownRegions(countryCode);
+  const regions = getRegionsForCountry(countryCode);
+  const labels = getLabelsForCountry(countryCode);
+
+  const handleCountryChange = (newCountry: string) => {
+    setValue("country", newCountry, { shouldValidate: true });
+    const newCountryCode = getCountryCode(newCountry) || "";
+    const hadDropdown = hasKnownRegions(countryCode);
+    const willHaveDropdown = hasKnownRegions(newCountryCode);
+    if (hadDropdown !== willHaveDropdown) {
+      setValue("state", "", { shouldValidate: false });
+    }
+  };
+
+  const handleAddressSelect = (address: {
+    street: string;
+    city: string;
+    state: string;
+    zip: string;
+    country: string;
+  }) => {
+    setValue("street", address.street, { shouldValidate: true });
+    setValue("city", address.city, { shouldValidate: true });
+    setValue("state", address.state, { shouldValidate: true });
+    setValue("zip", address.zip, { shouldValidate: true });
+    setValue("country", address.country, { shouldValidate: true });
+  };
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -81,10 +119,12 @@ export function PreviousAddressFormRHF({
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-2 text-sm sm:col-span-2">
             <Label htmlFor="street">Street address</Label>
-            <Input
+            <AddressAutocomplete
               id="street"
-              {...register("street")}
-              placeholder="123 Main St"
+              value={streetValue}
+              onChange={(val) => setValue("street", val)}
+              onSelect={handleAddressSelect}
+              placeholder="Start typing address..."
               aria-invalid={!!errors.street}
             />
             {errors.street && (
@@ -115,48 +155,63 @@ export function PreviousAddressFormRHF({
           </div>
 
           <div className="flex flex-col gap-2 text-sm">
-            <Label>State</Label>
+            <Label>Country</Label>
             <Select
-              value={stateValue || undefined}
-              onValueChange={(v) => setValue("state", v, { shouldValidate: true })}
+              value={countryValue || undefined}
+              onValueChange={handleCountryChange}
             >
-              <SelectTrigger aria-invalid={!!errors.state}>
-                <SelectValue placeholder="Select state" />
+              <SelectTrigger aria-invalid={!!errors.country}>
+                <SelectValue placeholder="Select country" />
               </SelectTrigger>
               <SelectContent>
-                {US_STATES.map((st) => (
-                  <SelectItem key={st} value={st}>{st}</SelectItem>
+                {ALL_COUNTRIES.map((c) => (
+                  <SelectItem key={c.code} value={c.name}>{c.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {errors.country && (
+              <span className="text-xs text-red-500">{errors.country.message}</span>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-2 text-sm">
+            <Label>{labels.stateLabel}</Label>
+            {showRegionDropdown ? (
+              <Select
+                value={stateValue || undefined}
+                onValueChange={(v) => setValue("state", v, { shouldValidate: true })}
+              >
+                <SelectTrigger aria-invalid={!!errors.state}>
+                  <SelectValue placeholder={`Select ${labels.stateLabel.toLowerCase()}`} />
+                </SelectTrigger>
+                <SelectContent>
+                  {regions.map((r) => (
+                    <SelectItem key={r.code} value={r.code}>{r.code} - {r.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <Input
+                {...register("state")}
+                placeholder={labels.stateLabel}
+                aria-invalid={!!errors.state}
+              />
+            )}
             {errors.state && (
               <span className="text-xs text-red-500">{errors.state.message}</span>
             )}
           </div>
 
           <div className="flex flex-col gap-2 text-sm">
-            <Label htmlFor="zip">ZIP Code</Label>
+            <Label htmlFor="zip">{labels.postalLabel}</Label>
             <Input
               id="zip"
               {...register("zip")}
-              placeholder="95112"
+              placeholder={labels.postalPlaceholder}
               aria-invalid={!!errors.zip}
             />
             {errors.zip && (
               <span className="text-xs text-red-500">{errors.zip.message}</span>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-2 text-sm">
-            <Label htmlFor="country">Country</Label>
-            <Input
-              id="country"
-              {...register("country")}
-              placeholder="United States"
-              aria-invalid={!!errors.country}
-            />
-            {errors.country && (
-              <span className="text-xs text-red-500">{errors.country.message}</span>
             )}
           </div>
         </div>

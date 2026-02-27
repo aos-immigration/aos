@@ -109,25 +109,8 @@ export function AddressHistory({ applicationId, personRole = "petitioner", onVal
       ...createEmptyAddress(),
       isCurrent: false,
     };
-
-    const current = addresses.find((a) => a.isCurrent);
-    if (current?.startMonth && current?.startYear) {
-      const startMonth = parseInt(current.startMonth, 10);
-      const startYear = parseInt(current.startYear, 10);
-
-      let endMonth = startMonth - 1;
-      let endYear = startYear;
-      if (endMonth < 1) {
-        endMonth = 12;
-        endYear -= 1;
-      }
-
-      newAddress.endMonth = String(endMonth).padStart(2, "0") as AddressEntry["endMonth"];
-      newAddress.endYear = String(endYear);
-    }
-
     setDraftAddress(newAddress);
-  }, [addresses]);
+  }, []);
 
   const handleCancelDraft = useCallback(() => {
     setDraftAddress(null);

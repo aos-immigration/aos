@@ -1,10 +1,13 @@
 import type { AddressEntry } from "./intakeStorage";
 import { compareDates, isDateInFuture, monthYearToDate } from "./dateUtils";
+import { getCountryCode, isPostalRequired, getLabelsForCountry } from "./countries";
 
 export type ValidationErrors = Record<string, string>;
 
 export function validateRequiredFields(address: AddressEntry): ValidationErrors {
   const errors: ValidationErrors = {};
+  const countryCode = getCountryCode(address.country || "") || "";
+  const labels = getLabelsForCountry(countryCode);
 
   if (!address.street?.trim()) {
     errors.street = "Street address is required";
@@ -13,10 +16,10 @@ export function validateRequiredFields(address: AddressEntry): ValidationErrors 
     errors.city = "City is required";
   }
   if (!address.state?.trim()) {
-    errors.state = "State is required";
+    errors.state = `${labels.stateLabel} is required`;
   }
-  if (!address.zip?.trim()) {
-    errors.zip = "ZIP code is required";
+  if (isPostalRequired(countryCode) && !address.zip?.trim()) {
+    errors.zip = `${labels.postalLabel} is required`;
   }
   if (!address.country?.trim()) {
     errors.country = "Country is required";
@@ -56,13 +59,29 @@ export function validateDateRange(address: AddressEntry): string | null {
 }
 
 export function validateZipCode(zip: string | undefined, country: string): string | null {
+  const countryCode = getCountryCode(country) || "";
+  const labels = getLabelsForCountry(countryCode);
+
   if (!zip?.trim()) {
-    return "ZIP code is required";
+    if (isPostalRequired(countryCode)) {
+      return `${labels.postalLabel} is required`;
+    }
+    return null;
   }
 
-  if (country === "United States" || country === "USA" || country === "US") {
-    if (!/^\d{5}(-\d{4})?$/.test(zip.trim())) {
+  const trimmed = zip.trim();
+
+  if (countryCode === "US") {
+    if (!/^\d{5}(-\d{4})?$/.test(trimmed)) {
       return "ZIP code must be 5 digits";
+    }
+  } else if (countryCode === "CA") {
+    if (!/^[A-Za-z]\d[A-Za-z] ?\d[A-Za-z]\d$/.test(trimmed)) {
+      return "Postal code must be in format A1A 1A1";
+    }
+  } else if (countryCode === "MX") {
+    if (!/^\d{5}$/.test(trimmed)) {
+      return "Postal code must be 5 digits";
     }
   }
 

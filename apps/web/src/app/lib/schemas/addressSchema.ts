@@ -1,19 +1,13 @@
 import { z } from "zod";
-
-const monthOptions = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"] as const;
+import { getCountryCode, getPostalPattern, isPostalRequired } from "../countries";
 
 export const addressSchema = z.object({
   id: z.string(),
   street: z.string().min(1, "Street address is required"),
   unit: z.string().optional(),
   city: z.string().min(1, "City is required"),
-  state: z.string().min(1, "State is required"),
-  zip: z.string()
-    .min(1, "ZIP code is required")
-    .refine(
-      (val) => /^\d{5}(-\d{4})?$/.test(val),
-      "ZIP code must be 5 digits (or 5+4 format)"
-    ),
+  state: z.string().min(1, "State / Province is required"),
+  zip: z.string(),
   country: z.string().min(1, "Country is required"),
   startMonth: z.string().min(1, "Start month is required"),
   startYear: z.string().min(1, "Start year is required"),
@@ -24,6 +18,31 @@ export const addressSchema = z.object({
   isCurrent: z.boolean(),
   gapExplanation: z.string().optional(),
   notes: z.string().optional(),
+}).superRefine((data, ctx) => {
+  const countryCode = getCountryCode(data.country) || "";
+  const postalRequired = isPostalRequired(countryCode);
+  const postalPattern = getPostalPattern(countryCode);
+
+  if (postalRequired && !data.zip) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: countryCode === "US" ? "ZIP code is required" : "Postal code is required",
+      path: ["zip"],
+    });
+  } else if (data.zip && !postalPattern.test(data.zip)) {
+    const messages: Record<string, string> = {
+      US: "ZIP code must be 5 digits (or 5+4 format)",
+      CA: "Postal code must be in format A1A 1A1",
+      MX: "Postal code must be 5 digits",
+    };
+    if (messages[countryCode]) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: messages[countryCode],
+        path: ["zip"],
+      });
+    }
+  }
 }).refine(
   (data) => {
     if (!data.isCurrent && data.startMonth && data.startYear && data.endMonth && data.endYear) {
