@@ -44,7 +44,7 @@
     "form1[0].#subform[1].Pt2Line10_PostalCode[0]": "62704",
     "form1[0].#subform[1].Pt2Line10_Country[0]": "United States",
     "form1[0].#subform[0].Pt1Line1_Spouse[0]": "/Yes",
-    "form1[0].#subform[1].Pt2Line11_Yes[0]": "/Yes"
+    "form1[0].#subform[1].Pt2Line11_Yes[0]": "/Y"
   }
 }
 
