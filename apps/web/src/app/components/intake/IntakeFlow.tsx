@@ -763,7 +763,7 @@ export function IntakeFlow() {
     const url = globalThis.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "i-130-fixture.json";
+    a.download = `i-130-fixture-${Date.now()}.json`;
     a.click();
     globalThis.URL.revokeObjectURL(url);
   };
@@ -1124,7 +1124,7 @@ export function IntakeFlow() {
             </Button>
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               onClick={handleExportFixture}
             >
               Export Test Fixture
