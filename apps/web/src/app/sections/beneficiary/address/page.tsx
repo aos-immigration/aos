@@ -1,8 +1,15 @@
 "use client";
 
 import { AddressHistory } from "@/app/components/intake/AddressHistory";
+import { useApplicationId } from "@/app/lib/useApplicationId";
 
 export default function BeneficiaryAddressPage() {
+  const applicationId = useApplicationId();
+
+  if (!applicationId) {
+    return <div className="max-w-5xl mx-auto py-12 text-center text-muted-foreground">Loading…</div>;
+  }
+
   return (
     <div className="max-w-5xl mx-auto space-y-8">
       <div className="flex justify-between items-end border-b border-border pb-6">
@@ -17,7 +24,7 @@ export default function BeneficiaryAddressPage() {
         </div>
       </div>
 
-      <AddressHistory />
+      <AddressHistory applicationId={applicationId} personRole="beneficiary" />
     </div>
   );
 }
