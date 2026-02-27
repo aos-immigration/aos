@@ -155,12 +155,23 @@ def _print_report(fixture_name: str, results: List[Tuple[str, str, str, bool]]) 
 # ---------------------------------------------------------------------------
 
 def _load_fixture(path: Path) -> Dict[str, Any]:
-    """Load and validate a fixture JSON file."""
+    """Load and validate a fixture JSON file.
+
+    Supports two formats:
+      1. Flat: {fields: {...}, checkboxes: {...}, expected_values: {...}}
+      2. Wrapped: {payload: {fields: {...}, checkboxes: {...}}, expected_values: {...}}
+    """
     data = json.loads(path.read_text())
     if "expected_values" not in data:
         raise ValueError(f"Fixture {path.name} missing 'expected_values' key")
-    data.setdefault("fields", {})
-    data.setdefault("checkboxes", {})
+    # Unwrap payload if present
+    if "payload" in data:
+        payload = data["payload"]
+        data.setdefault("fields", payload.get("fields", {}))
+        data.setdefault("checkboxes", payload.get("checkboxes", {}))
+    else:
+        data.setdefault("fields", {})
+        data.setdefault("checkboxes", {})
     data.setdefault("slug", "i-130")
     return data
 
