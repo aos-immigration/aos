@@ -91,19 +91,22 @@ export default function PetitionerPage() {
 
   // Load existing data into form
   useEffect(() => {
-    if (existingData && !hasLoadedRef.current) {
+    if (existingData === undefined) return; // still loading from Convex
+    if (!hasLoadedRef.current) {
       hasLoadedRef.current = true;
-      reset({
-        givenName: existingData.givenName,
-        middleName: existingData.middleName ?? "",
-        familyName: existingData.familyName,
-        dateOfBirth: existingData.dateOfBirth as PetitionerBasicsFormData["dateOfBirth"],
-        placeOfBirth: existingData.placeOfBirth ?? "",
-        citizenshipStatus: existingData.citizenshipStatus as PetitionerBasicsFormData["citizenshipStatus"],
-        relationship: existingData.relationship as PetitionerBasicsFormData["relationship"],
-        email: existingData.email ?? "",
-        phone: existingData.phone ?? "",
-      });
+      if (existingData) {
+        reset({
+          givenName: existingData.givenName,
+          middleName: existingData.middleName ?? "",
+          familyName: existingData.familyName,
+          dateOfBirth: existingData.dateOfBirth as PetitionerBasicsFormData["dateOfBirth"],
+          placeOfBirth: existingData.placeOfBirth ?? "",
+          citizenshipStatus: existingData.citizenshipStatus as PetitionerBasicsFormData["citizenshipStatus"],
+          relationship: existingData.relationship as PetitionerBasicsFormData["relationship"],
+          email: existingData.email ?? "",
+          phone: existingData.phone ?? "",
+        });
+      }
     }
   }, [existingData, reset]);
 
