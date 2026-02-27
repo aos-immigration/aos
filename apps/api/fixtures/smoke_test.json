@@ -1,0 +1,14 @@
+{
+  "slug": "i-130",
+  "description": "Minimal smoke test — verifies eval pipeline works end-to-end",
+  "fields": {
+    "form1[0].#subform[0].Pt2Line4a_FamilyName[0]": "HOSSAIN",
+    "form1[0].#subform[0].Pt2Line4b_GivenName[0]": "MOSAMMAT"
+  },
+  "checkboxes": {},
+  "expected_values": {
+    "form1[0].#subform[0].Pt2Line4a_FamilyName[0]": "HOSSAIN",
+    "form1[0].#subform[0].Pt2Line4b_GivenName[0]": "MOSAMMAT"
+  }
+}
+

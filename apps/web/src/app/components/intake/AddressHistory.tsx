@@ -1,40 +1,52 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import {
-  loadAddressHistory,
-  saveAddressHistory,
   createEmptyAddress,
   type AddressEntry,
+  type MonthValue,
 } from "@/app/lib/intakeStorage";
 import { validateAllAddresses } from "@/app/lib/addressValidation";
 import { AddressCard } from "./AddressCard";
 import { CurrentAddressFormRHF } from "./CurrentAddressFormRHF";
 import { PreviousAddressFormRHF } from "./PreviousAddressFormRHF";
+import type { Id } from "../../../../convex/_generated/dataModel";
 
 type AddressHistoryProps = {
+  applicationId: Id<"applications">;
+  personRole?: string;
   onValidationChange?: (isValid: boolean) => void;
 };
 
-export function AddressHistory({ onValidationChange }: AddressHistoryProps) {
-  const [addresses, setAddresses] = useState<AddressEntry[]>([]);
+export function AddressHistory({ applicationId, personRole = "petitioner", onValidationChange }: AddressHistoryProps) {
+  const convexAddresses = useQuery(api.petitioner.listAddresses, { applicationId, personRole });
+  const saveAddressMutation = useMutation(api.petitioner.saveAddress);
+  const removeAddressMutation = useMutation(api.petitioner.removeAddress);
+
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftAddress, setDraftAddress] = useState<AddressEntry | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  useEffect(() => {
-    const loaded = loadAddressHistory();
-    const hasCurrent = loaded.some((a) => a.isCurrent);
-
-    if (loaded.length === 0 || !hasCurrent) {
-      const initial = { ...createEmptyAddress(), isCurrent: true };
-      const filtered = loaded.filter((a) => a.street?.trim());
-      setAddresses([initial, ...filtered]);
-    } else {
-      setAddresses(loaded);
-    }
-  }, []);
+  // Map Convex documents to AddressEntry type for UI components
+  const addresses: AddressEntry[] = convexAddresses
+    ? convexAddresses.map((doc) => ({
+        id: doc._id,
+        street: doc.street,
+        unit: doc.unit,
+        city: doc.city,
+        state: doc.state,
+        zip: doc.zip,
+        country: doc.country,
+        startMonth: doc.startMonth as MonthValue,
+        startYear: doc.startYear,
+        endMonth: (doc.endMonth ?? undefined) as MonthValue | undefined,
+        endYear: doc.endYear ?? undefined,
+        isCurrent: doc.isCurrent,
+      }))
+    : [];
 
   const runValidation = useCallback(
     (addressList: AddressEntry[]) => {
@@ -45,35 +57,51 @@ export function AddressHistory({ onValidationChange }: AddressHistoryProps) {
     [onValidationChange]
   );
 
-  const saveAndValidate = useCallback(
-    (newAddresses: AddressEntry[]) => {
-      setAddresses(newAddresses);
-      saveAddressHistory(newAddresses);
-      runValidation(newAddresses);
-    },
-    [runValidation]
+  // Run validation whenever Convex data changes
+  useEffect(() => {
+    if (convexAddresses) {
+      runValidation(addresses);
+    }
+  }, [convexAddresses]);
+
+  const toConvexArgs = useCallback(
+    (entry: AddressEntry, sortOrder: number) => ({
+      applicationId,
+      personRole,
+      street: entry.street,
+      unit: entry.unit || undefined,
+      city: entry.city,
+      state: entry.state,
+      zip: entry.zip,
+      country: entry.country,
+      startMonth: entry.startMonth,
+      startYear: entry.startYear,
+      endMonth: entry.endMonth || undefined,
+      endYear: entry.endYear || undefined,
+      isCurrent: entry.isCurrent,
+      addressType: "physical" as const,
+      sortOrder,
+    }),
+    [applicationId, personRole]
   );
 
   const handleAddressChange = useCallback(
-    (id: string, updated: AddressEntry) => {
-      const newAddresses = addresses.map((a) => (a.id === id ? updated : a));
-      saveAndValidate(newAddresses);
+    async (id: string, updated: AddressEntry) => {
+      const index = addresses.findIndex((a) => a.id === id);
+      await saveAddressMutation({
+        _id: id as Id<"addresses">,
+        ...toConvexArgs(updated, index >= 0 ? index : 0),
+      });
     },
-    [addresses, saveAndValidate]
+    [addresses, saveAddressMutation, toConvexArgs]
   );
 
   const handleRemoveAddress = useCallback(
-    (id: string) => {
-      const newAddresses = addresses.filter((a) => a.id !== id);
-      if (newAddresses.length === 0) {
-        const initial = { ...createEmptyAddress(), isCurrent: true };
-        saveAndValidate([initial]);
-      } else {
-        saveAndValidate(newAddresses);
-      }
+    async (id: string) => {
+      await removeAddressMutation({ id: id as Id<"addresses"> });
       setEditingId(null);
     },
-    [addresses, saveAndValidate]
+    [removeAddressMutation]
   );
 
   const handleStartAddPrevious = useCallback(() => {
@@ -105,6 +133,10 @@ export function AddressHistory({ onValidationChange }: AddressHistoryProps) {
     setDraftAddress(null);
   }, []);
 
+  // Show empty current address form if no current address exists
+  const showEmptyCurrentForm = !addresses.some((a) => a.isCurrent);
+  const emptyCurrentAddress = showEmptyCurrentForm ? { ...createEmptyAddress(), isCurrent: true } : null;
+
   const currentAddress = addresses.find((a) => a.isCurrent);
   const previousAddresses = addresses
     .filter((a) => !a.isCurrent)
@@ -123,11 +155,18 @@ export function AddressHistory({ onValidationChange }: AddressHistoryProps) {
   return (
     <div className="space-y-6">
       <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900">
-        {currentAddress && (isCurrentEditing || !currentAddress.street) ? (
+        {emptyCurrentAddress ? (
+          <CurrentAddressFormRHF
+            address={emptyCurrentAddress}
+            onSave={async (updated) => {
+              await saveAddressMutation(toConvexArgs({ ...updated, isCurrent: true }, 0));
+            }}
+          />
+        ) : currentAddress && (isCurrentEditing || !currentAddress.street) ? (
           <CurrentAddressFormRHF
             address={currentAddress}
-            onSave={(updated) => {
-              handleAddressChange(currentAddress.id, updated);
+            onSave={async (updated) => {
+              await handleAddressChange(currentAddress.id, updated);
               setEditingId(null);
             }}
           />
@@ -183,9 +222,8 @@ export function AddressHistory({ onValidationChange }: AddressHistoryProps) {
         <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900">
           <PreviousAddressFormRHF
             address={draftAddress}
-            onSave={(saved) => {
-              const newAddresses = [...addresses, saved];
-              saveAndValidate(newAddresses);
+            onSave={async (saved) => {
+              await saveAddressMutation(toConvexArgs(saved, addresses.length));
               setDraftAddress(null);
             }}
             onCancel={handleCancelDraft}

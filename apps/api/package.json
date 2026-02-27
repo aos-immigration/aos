@@ -2,6 +2,7 @@
   "name": "api",
   "private": true,
   "scripts": {
+    "postinstall": "uv sync",
     "dev": "uv run uvicorn app.main:app --reload --port 8000",
     "lint": "uv run python -m compileall app"
   }
