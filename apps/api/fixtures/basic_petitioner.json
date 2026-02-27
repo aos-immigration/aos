@@ -1,0 +1,50 @@
+{
+  "description": "Simple petitioner: name, DOB, spouse relationship, one address (mailing same as physical)",
+  "slug": "i-130",
+  "payload": {
+    "fields": {
+      "form1[0].#subform[0].Pt2Line4a_FamilyName[0]": "SMITH",
+      "form1[0].#subform[0].Pt2Line4b_GivenName[0]": "JOHN",
+      "form1[0].#subform[0].Pt2Line4c_MiddleName[0]": "MICHAEL",
+      "form1[0].#subform[1].Pt2Line8_DateofBirth[0]": "03/15/1985",
+      "form1[0].#subform[1].Pt2Line10_StreetNumberName[0]": "123 Main Street",
+      "form1[0].#subform[1].Pt2Line10_AptSteFlrNumber[0]": "",
+      "form1[0].#subform[1].Pt2Line10_CityOrTown[0]": "Springfield",
+      "form1[0].#subform[1].Pt2Line10_State[0]": "IL",
+      "form1[0].#subform[1].Pt2Line10_ZipCode[0]": "62704",
+      "form1[0].#subform[1].Pt2Line10_PostalCode[0]": "62704",
+      "form1[0].#subform[1].Pt2Line10_Country[0]": "United States",
+      "form1[0].#subform[1].Pt2Line14_StreetNumberName[0]": "",
+      "form1[0].#subform[1].Pt2Line14_AptSteFlrNumber[0]": "",
+      "form1[0].#subform[1].Pt2Line14_CityOrTown[0]": "",
+      "form1[0].#subform[1].Pt2Line14_State[0]": "",
+      "form1[0].#subform[1].Pt2Line14_ZipCode[0]": "",
+      "form1[0].#subform[1].Pt2Line14_PostalCode[0]": "",
+      "form1[0].#subform[1].Pt2Line14_Country[0]": "",
+      "form1[0].#subform[11].Pt9Line3a_PageNumber[0]": "",
+      "form1[0].#subform[11].Pt9Line3b_PartNumber[0]": "",
+      "form1[0].#subform[11].Pt9Line3c_ItemNumber[0]": "",
+      "form1[0].#subform[11].Pt9Line3d_AdditionalInfo[0]": ""
+    },
+    "checkboxes": {
+      "form1[0].#subform[0].Pt1Line1_Spouse[0]": true,
+      "form1[0].#subform[1].Pt2Line11_Yes[0]": true
+    }
+  },
+  "expected_values": {
+    "form1[0].#subform[0].Pt2Line4a_FamilyName[0]": "SMITH",
+    "form1[0].#subform[0].Pt2Line4b_GivenName[0]": "JOHN",
+    "form1[0].#subform[0].Pt2Line4c_MiddleName[0]": "MICHAEL",
+    "form1[0].#subform[1].Pt2Line8_DateofBirth[0]": "03/15/1985",
+    "form1[0].#subform[1].Pt2Line10_StreetNumberName[0]": "123 Main Street",
+    "form1[0].#subform[1].Pt2Line10_AptSteFlrNumber[0]": "",
+    "form1[0].#subform[1].Pt2Line10_CityOrTown[0]": "Springfield",
+    "form1[0].#subform[1].Pt2Line10_State[0]": "IL",
+    "form1[0].#subform[1].Pt2Line10_ZipCode[0]": "62704",
+    "form1[0].#subform[1].Pt2Line10_PostalCode[0]": "62704",
+    "form1[0].#subform[1].Pt2Line10_Country[0]": "United States",
+    "form1[0].#subform[0].Pt1Line1_Spouse[0]": "/Yes",
+    "form1[0].#subform[1].Pt2Line11_Yes[0]": "/Yes"
+  }
+}
+
