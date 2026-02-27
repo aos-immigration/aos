@@ -10,6 +10,7 @@ import { Verified, Download, Loader2 } from "lucide-react";
 import { useApplicationId } from "@/app/lib/useApplicationId";
 import { buildPdfPayload } from "@/app/lib/buildPdfPayload";
 import type { AddressRow, EmploymentRow } from "@/app/lib/buildPdfPayload";
+import { readPetitionerBasicsDraft } from "@/app/lib/reviewDraft";
 import {
   Dialog,
   DialogContent,
@@ -53,7 +54,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   }, [pdfUrl]);
 
   const handleReviewPackage = useCallback(async () => {
-    if (!basics) {
+    const basicsForPreview = readPetitionerBasicsDraft() ?? basics;
+    if (!basicsForPreview) {
       setError("No petitioner data found. Please fill in the basic information first.");
       return;
     }
@@ -63,7 +65,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
     try {
       const payload = buildPdfPayload(
-        basics,
+        basicsForPreview,
         (addresses ?? []) as AddressRow[],
         (employment ?? []) as EmploymentRow[],
       );
@@ -159,7 +161,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 ) : (
                   <Verified className="w-4 h-4" />
                 )}
-                {isGenerating ? "Generating..." : "Review Package"}
+                {isGenerating ? "Generating..." : "Verify & Preview"}
               </button>
             </div>
           </div>

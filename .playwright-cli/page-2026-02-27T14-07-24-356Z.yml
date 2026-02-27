@@ -1,0 +1,136 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - generic [ref=e4]:
+        - img [ref=e6]
+        - generic [ref=e8]: Immigration OS
+      - navigation [ref=e9]:
+        - generic [ref=e10]:
+          - button "Petitioner Information" [ref=e11]:
+            - img [ref=e12]
+            - generic [ref=e14]: Petitioner Information
+          - generic [ref=e16]:
+            - link "Basic Information" [ref=e17] [cursor=pointer]:
+              - /url: /sections/petitioner
+              - img [ref=e18]
+              - generic [ref=e21]: Basic Information
+            - link "Address History (5 years)" [ref=e22] [cursor=pointer]:
+              - /url: /sections/petitioner/address
+              - img [ref=e23]
+              - generic [ref=e26]: Address History (5 years)
+            - link "Employment History (5 years)" [ref=e27] [cursor=pointer]:
+              - /url: /sections/petitioner/employment
+              - img [ref=e28]
+              - generic [ref=e31]: Employment History (5 years)
+        - generic [ref=e32]:
+          - button "Beneficiary Information" [ref=e33]:
+            - img [ref=e34]
+            - generic [ref=e36]: Beneficiary Information
+          - generic [ref=e38]:
+            - link "Basic Information" [ref=e39] [cursor=pointer]:
+              - /url: /sections/beneficiary
+              - img [ref=e40]
+              - generic [ref=e45]: Basic Information
+            - link "Address History (5 years)" [ref=e46] [cursor=pointer]:
+              - /url: /sections/beneficiary/address
+              - img [ref=e47]
+              - generic [ref=e50]: Address History (5 years)
+            - link "Employment History (5 years)" [ref=e51] [cursor=pointer]:
+              - /url: /sections/beneficiary/employment
+              - img [ref=e52]
+              - generic [ref=e55]: Employment History (5 years)
+            - link "Biographic Details" [ref=e56] [cursor=pointer]:
+              - /url: /sections/beneficiary/biographic
+              - img [ref=e57]
+              - generic [ref=e60]: Biographic Details
+        - button "Marital History" [ref=e62]:
+          - img [ref=e63]
+          - generic [ref=e65]: Marital History
+        - button "Documents & Evidence" [ref=e68]:
+          - img [ref=e69]
+          - generic [ref=e71]: Documents & Evidence
+      - generic [ref=e74]:
+        - generic [ref=e75]: JD
+        - generic [ref=e76]:
+          - generic [ref=e77]: John Doe
+          - generic [ref=e78]: APP-2024-0891
+        - button [ref=e79]:
+          - img [ref=e80]
+    - main [ref=e83]:
+      - generic [ref=e84]:
+        - generic [ref=e85]:
+          - link "Application" [ref=e87] [cursor=pointer]:
+            - /url: /sections
+          - generic [ref=e88]:
+            - img [ref=e89]
+            - generic [ref=e91]: Petitioner Information
+        - generic [ref=e92]:
+          - generic [ref=e94]: PROGRESS 64%
+          - generic [ref=e97]:
+            - button "Toggle theme" [ref=e98]:
+              - img [ref=e99]
+            - button "Export Fixture" [ref=e101]:
+              - img [ref=e102]
+              - text: Export Fixture
+            - button "Verify & Preview" [ref=e105]:
+              - img [ref=e106]
+              - text: Verify & Preview
+      - generic [ref=e110]:
+        - generic [ref=e112]:
+          - heading "Petitioner Information" [level=1] [ref=e116]
+          - paragraph [ref=e117]: Tell us about yourself. This information will be used across all required forms automatically.
+        - generic [ref=e119]:
+          - generic [ref=e120]:
+            - generic [ref=e121]:
+              - generic [ref=e122]: 👤
+              - heading "Legal Identity" [level=3] [ref=e123]
+            - generic [ref=e124]:
+              - generic [ref=e125]:
+                - generic [ref=e126]: Legal First Name
+                - textbox "John" [ref=e127]: Maria Elena
+              - generic [ref=e128]:
+                - generic [ref=e129]: Legal Last Name
+                - textbox "Doe" [ref=e130]: Rodriguez
+              - generic [ref=e131]:
+                - generic [ref=e132]: Middle Name (If any)
+                - textbox "Quincy" [ref=e133]: Sofia
+              - generic [ref=e134]:
+                - generic [ref=e135]: Place of Birth
+                - textbox "City, Country" [ref=e136]: San Juan, Puerto Rico
+            - generic [ref=e137]:
+              - generic [ref=e138]: Date of Birth
+              - generic [ref=e139]:
+                - combobox [ref=e140]:
+                  - generic: March
+                  - img
+                - combobox [ref=e141]:
+                  - generic: "15"
+                  - img
+                - combobox [ref=e142]:
+                  - generic: "1990"
+                  - img
+            - generic [ref=e143]:
+              - generic [ref=e144]:
+                - generic [ref=e145]: Citizenship Status
+                - combobox [ref=e146]:
+                  - generic: U.S. Citizen
+                  - img
+              - generic [ref=e147]:
+                - generic [ref=e148]: Relationship to Beneficiary
+                - combobox [ref=e149]:
+                  - generic: Spouse
+                  - img
+          - generic [ref=e150]:
+            - generic [ref=e151]:
+              - generic [ref=e152]: 📧
+              - heading "Contact Information" [level=3] [ref=e153]
+            - generic [ref=e154]:
+              - generic [ref=e155]:
+                - generic [ref=e156]: Email Address
+                - textbox "john@example.com" [ref=e157]: maria.rodriguez@example.com
+              - generic [ref=e158]:
+                - generic [ref=e159]: Phone Number
+                - textbox "(555) 123-4567" [ref=e160]: 217-555-0142
+  - button "Open Next.js Dev Tools" [ref=e166] [cursor=pointer]:
+    - img [ref=e167]
+  - alert [ref=e115]
