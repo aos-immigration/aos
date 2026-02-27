@@ -4,7 +4,7 @@ const employmentStatusOptions = ["employed", "unemployed", "student", "other"] a
 
 const monthOptions = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"] as const;
 
-export const employmentSchema = z.object({
+export const employmentBaseSchema = z.object({
   id: z.string(),
   status: z.enum(employmentStatusOptions, {
     message: "Employment status is required",
@@ -20,7 +20,9 @@ export const employmentSchema = z.object({
   toYear: z.string().default(""),
   isCurrent: z.boolean(),
   notes: z.string().optional().default(""),
-}).refine(
+});
+
+export const employmentSchema = employmentBaseSchema.refine(
   (data) => {
     if (data.status === "employed" && (!data.employerName || data.employerName.trim().length === 0)) {
       return false;
