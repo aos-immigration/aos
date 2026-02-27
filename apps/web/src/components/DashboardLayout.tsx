@@ -1,15 +1,16 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Sidebar } from "./Sidebar";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { ThemeToggle } from "./ThemeToggle";
-import { Verified, Download, Loader2 } from "lucide-react";
+import { Verified, Download, Loader2, Bug } from "lucide-react";
 import { useApplicationId } from "@/app/lib/useApplicationId";
 import { buildPdfPayload } from "@/app/lib/buildPdfPayload";
 import type { AddressRow, EmploymentRow } from "@/app/lib/buildPdfPayload";
+import { fillAllMockData } from "@/lib/mockData";
 import {
   Dialog,
   DialogContent,
@@ -37,6 +38,28 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     api.petitioner.listEmploymentEntries,
     applicationId ? { applicationId, personRole: "petitioner" } : "skip",
   );
+
+  // Debug auto-fill mutations
+  const savePetitionerBasics = useMutation(api.petitioner.savePetitionerBasics);
+  const saveAddress = useMutation(api.petitioner.saveAddress);
+  const saveEmploymentEntry = useMutation(api.petitioner.saveEmploymentEntry);
+  const [isFilling, setIsFilling] = useState(false);
+
+  const handleFillMockData = useCallback(async () => {
+    if (!applicationId || isFilling) return;
+    setIsFilling(true);
+    try {
+      await fillAllMockData(applicationId, {
+        savePetitionerBasics,
+        saveAddress,
+        saveEmploymentEntry,
+      });
+    } catch (err) {
+      console.error("Failed to fill mock data:", err);
+    } finally {
+      setIsFilling(false);
+    }
+  }, [applicationId, isFilling, savePetitionerBasics, saveAddress, saveEmploymentEntry]);
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
@@ -140,14 +163,28 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             <div className="flex items-center gap-3">
               <ThemeToggle />
               {process.env.NODE_ENV === "development" && (
-                <button
-                  onClick={handleExportFixture}
-                  disabled={!basics}
-                  className="text-muted-foreground hover:text-foreground text-xs font-medium px-3 py-2 rounded border border-border transition-all flex items-center gap-2 disabled:opacity-50"
-                >
-                  <Download className="w-3 h-3" />
-                  Export Fixture
-                </button>
+                <>
+                  <button
+                    onClick={handleFillMockData}
+                    disabled={!applicationId || isFilling}
+                    className="text-muted-foreground hover:text-foreground text-xs font-medium px-3 py-2 rounded border border-border transition-all flex items-center gap-2 disabled:opacity-50"
+                  >
+                    {isFilling ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <Bug className="w-3 h-3" />
+                    )}
+                    {isFilling ? "Filling..." : "Fill Mock Data"}
+                  </button>
+                  <button
+                    onClick={handleExportFixture}
+                    disabled={!basics}
+                    className="text-muted-foreground hover:text-foreground text-xs font-medium px-3 py-2 rounded border border-border transition-all flex items-center gap-2 disabled:opacity-50"
+                  >
+                    <Download className="w-3 h-3" />
+                    Export Fixture
+                  </button>
+                </>
               )}
               <button
                 onClick={handleReviewPackage}
