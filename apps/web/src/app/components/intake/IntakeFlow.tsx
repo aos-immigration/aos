@@ -749,6 +749,25 @@ export function IntakeFlow() {
       setIsGenerating(false);
     }
   };
+  const handleExportFixture = () => {
+    const payload = buildPdfPayload();
+    const fixture = {
+      description: `i-130 fixture exported on ${new Date().toISOString().slice(0, 10)}`,
+      slug: "i-130",
+      payload,
+      expected_values: { ...payload.fields },
+    };
+    const blob = new Blob([JSON.stringify(fixture, null, 2)], {
+      type: "application/json",
+    });
+    const url = globalThis.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "i-130-fixture.json";
+    a.click();
+    globalThis.URL.revokeObjectURL(url);
+  };
+
   const goBack = () => {
     setStepIndex((prev) => Math.max(prev - 1, 0));
   };
@@ -1102,6 +1121,13 @@ export function IntakeFlow() {
             </Button>
             <Button type="button" onClick={handleGenerate} disabled={isGenerating}>
               {isGenerating ? "Generating..." : "Preview PDF"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleExportFixture}
+            >
+              Export Test Fixture
             </Button>
           </div>
 
