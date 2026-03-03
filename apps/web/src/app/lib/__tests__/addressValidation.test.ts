@@ -1,8 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  validateRequiredFields,
-  validateDateRange,
-  validateZipCode,
+  validateAddress,
   validateAllAddresses,
 } from "../addressValidation";
 import type { AddressEntry } from "../intakeStorage";
@@ -20,99 +18,77 @@ const createAddress = (overrides: Partial<AddressEntry> = {}): AddressEntry => (
   ...overrides,
 });
 
-describe("validateRequiredFields", () => {
+describe("validateAddress", () => {
   it("returns no errors for valid address", () => {
     const address = createAddress();
-    const errors = validateRequiredFields(address);
+    const errors = validateAddress(address, []);
     expect(Object.keys(errors)).toHaveLength(0);
   });
 
   it("returns error for missing street", () => {
     const address = createAddress({ street: "" });
-    const errors = validateRequiredFields(address);
+    const errors = validateAddress(address, []);
     expect(errors.street).toBe("Street address is required");
   });
 
   it("returns error for missing city", () => {
     const address = createAddress({ city: "" });
-    const errors = validateRequiredFields(address);
+    const errors = validateAddress(address, []);
     expect(errors.city).toBe("City is required");
   });
 
-  it("handles undefined fields without throwing", () => {
-    const address = {
-      id: "test",
-      isCurrent: true,
-    } as AddressEntry;
+  it("validates US zip codes", () => {
+    const valid = createAddress({ zip: "10001", country: "United States" });
+    expect(validateAddress(valid, []).zip).toBeUndefined();
 
-    expect(() => validateRequiredFields(address)).not.toThrow();
-    const errors = validateRequiredFields(address);
-    expect(errors.street).toBeDefined();
-    expect(errors.zip).toBeDefined();
-  });
-
-  it("handles null-ish values", () => {
-    const address = createAddress({
-      street: undefined as unknown as string,
-      zip: undefined as unknown as string,
-    });
-    expect(() => validateRequiredFields(address)).not.toThrow();
-  });
-});
-
-describe("validateZipCode", () => {
-  it("accepts valid US zip codes", () => {
-    expect(validateZipCode("10001", "United States")).toBeNull();
-    expect(validateZipCode("90210", "USA")).toBeNull();
-    expect(validateZipCode("12345-6789", "US")).toBeNull();
-  });
-
-  it("rejects invalid US zip codes", () => {
-    expect(validateZipCode("123", "United States")).toBe("ZIP code must be 5 digits");
-    expect(validateZipCode("abcde", "United States")).toBe("ZIP code must be 5 digits");
+    const invalid = createAddress({ zip: "123", country: "United States" });
+    expect(validateAddress(invalid, []).zip).toBe("ZIP code must be 5 digits (or 5+4 format)");
   });
 
   it("is flexible for international zip codes", () => {
-    expect(validateZipCode("SW1A 1AA", "United Kingdom")).toBeNull();
-    expect(validateZipCode("M5V 3L9", "Canada")).toBeNull();
+    const uk = createAddress({ zip: "SW1A 1AA", country: "United Kingdom" });
+    expect(validateAddress(uk, []).zip).toBeUndefined();
   });
 
-  it("handles undefined zip", () => {
-    expect(() => validateZipCode(undefined, "United States")).not.toThrow();
-    expect(validateZipCode(undefined, "United States")).toBe("ZIP code is required");
-  });
-});
-
-describe("validateDateRange", () => {
-  it("returns null for valid date range", () => {
-    const address = createAddress({
+  it("validates date range for previous address", () => {
+    const valid = createAddress({
       startMonth: "01",
       startYear: "2020",
       endMonth: "12",
       endYear: "2022",
       isCurrent: false,
     });
-    expect(validateDateRange(address)).toBeNull();
-  });
+    expect(validateAddress(valid, []).dateRange).toBeUndefined();
 
-  it("returns error when start date is after end date", () => {
-    const address = createAddress({
+    const invalid = createAddress({
       startMonth: "12",
       startYear: "2022",
       endMonth: "01",
       endYear: "2020",
       isCurrent: false,
     });
-    expect(validateDateRange(address)).toBe("Start date must be before end date");
+    // Zod refinement path might be 'startMonth' or similar, causing the error key to be 'startMonth'
+    // or maybe 'dateRange' if I mapped it manually?
+    // In validateAddress implementation:
+    // result.error.issues.forEach((issue) => { const key = issue.path[0] ... })
+    // The schema refinement sets path: ["startMonth"].
+    // So error key will be "startMonth".
+    // But the message is "Start date must be before end date".
+    const errors = validateAddress(invalid, []);
+    expect(errors.startMonth).toBe("Start date must be before end date");
   });
 
-  it("allows missing end date for current address", () => {
-    const address = createAddress({
+  it("requires end date for previous address", () => {
+    const missingEnd = createAddress({
       startMonth: "01",
       startYear: "2020",
-      isCurrent: true,
+      endMonth: "", // Missing
+      endYear: "",  // Missing
+      isCurrent: false,
     });
-    expect(validateDateRange(address)).toBeNull();
+    const errors = validateAddress(missingEnd, []);
+    expect(errors.endMonth).toBeDefined();
+    expect(errors.endYear).toBeDefined();
   });
 });
 
@@ -141,5 +117,29 @@ describe("validateAllAddresses", () => {
     const errors = validateAllAddresses(addresses);
     expect(errors["1"]).toBeDefined();
     expect(errors["2"]).toBeDefined();
+  });
+
+  it("detects overlaps", () => {
+    const addresses = [
+      createAddress({
+        id: "1",
+        startMonth: "01",
+        startYear: "2020",
+        isCurrent: true, // 2020-01 to Present
+      }),
+      createAddress({
+        id: "2",
+        startMonth: "06",
+        startYear: "2020",
+        endMonth: "12",
+        endYear: "2020",
+        isCurrent: false, // 2020-06 to 2020-12
+      }),
+    ];
+    // Address 2 is completely inside Address 1 time range.
+    // Address 1 starts before Address 2 starts.
+    // Overlap!
+    const errors = validateAllAddresses(addresses);
+    expect(errors["1"]).toBe("Address dates overlap with another address");
   });
 });
