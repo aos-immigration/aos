@@ -6,7 +6,8 @@ import { api } from "../../convex/_generated/api";
 import { Sidebar } from "./Sidebar";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { ThemeToggle } from "./ThemeToggle";
-import { Verified, Download, Loader2 } from "lucide-react";
+import { Verified, Download, Loader2, Bug } from "lucide-react";
+import * as Sentry from "@sentry/nextjs";
 import { useApplicationId } from "@/app/lib/useApplicationId";
 import { buildPdfPayload } from "@/app/lib/buildPdfPayload";
 import type { AddressRow, EmploymentRow } from "@/app/lib/buildPdfPayload";
@@ -149,6 +150,25 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 >
                   <Download className="w-3 h-3" />
                   Export Fixture
+                </button>
+              )}
+              {process.env.NODE_ENV === "development" && (
+                <button
+                  onClick={async () => {
+                    try {
+                      const res = await fetch("/api/sentry-test", { method: "POST" });
+                      const data = await res.json();
+                      if (data.success) {
+                        alert("Sentry test error sent! Check your Sentry dashboard.");
+                      }
+                    } catch (e) {
+                      alert("Failed to send test error: " + e);
+                    }
+                  }}
+                  className="text-destructive hover:bg-destructive/10 text-xs font-medium px-3 py-2 rounded border border-destructive/30 transition-all flex items-center gap-2"
+                >
+                  <Bug className="w-3 h-3" />
+                  Test Sentry
                 </button>
               )}
               <button

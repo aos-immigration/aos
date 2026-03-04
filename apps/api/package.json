@@ -2,8 +2,8 @@
   "name": "api",
   "private": true,
   "scripts": {
-    "postinstall": "uv sync",
-    "dev": "uv run uvicorn app.main:app --reload --port 8000",
+    "postinstall": "UV_INDEX_URL=https://pypi.org/simple uv sync",
+    "dev": "UV_INDEX_URL=https://pypi.org/simple uv run uvicorn app.main:app --reload --port 8000",
     "lint": "uv run python -m compileall app"
   }
 }
