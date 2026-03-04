@@ -1,6 +1,7 @@
 import * as Sentry from "@sentry/nextjs";
 import { datadogRum } from "@datadog/browser-rum";
 import { reactPlugin } from "@datadog/browser-rum-react";
+import { datadogLogs } from "@datadog/browser-logs";
 
 // ── Sentry ──────────────────────────────────────────────
 Sentry.init({
@@ -33,4 +34,17 @@ datadogRum.init({
     trackUserInteractions: true,
     trackLongTasks: true,
     plugins: [reactPlugin({ router: false })],
+});
+
+// ── Datadog Browser Logs ────────────────────────────────
+datadogLogs.init({
+    clientToken: "pubc4ab71f67047b2b985731299e8e82664",
+    site: "us5.datadoghq.com",
+    service: "aos-web",
+    env: process.env.NODE_ENV || "development",
+    version: "0.1.0",
+    forwardErrorsToLogs: true,
+    forwardConsoleLogs: ["error", "warn", "info"],
+    forwardReports: "all",
+    sessionSampleRate: 100,
 });

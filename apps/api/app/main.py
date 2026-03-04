@@ -1,14 +1,61 @@
 from __future__ import annotations
 
+import json
+import logging
+import os
+import time
+import threading
+import urllib.request
 from io import BytesIO
 from pathlib import Path
 from typing import Dict, List, Optional
 
 import pikepdf
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
+
+DD_API_KEY = os.environ.get("DD_API_KEY", "")
+DD_SITE = os.environ.get("DD_SITE", "us5.datadoghq.com")
+DD_SERVICE = os.environ.get("DD_SERVICE", "aos-api")
+DD_ENV = os.environ.get("DD_ENV", "development")
+
+logger = logging.getLogger("aos-api")
+logger.setLevel(logging.INFO)
+
+
+def _send_dd_log(message: str, status: str = "info", extra: dict = None):
+    if not DD_API_KEY:
+        return
+    payload = {
+        "message": message,
+        "ddsource": "python",
+        "service": DD_SERVICE,
+        "hostname": os.environ.get("HOSTNAME", "cloudtop-dev"),
+        "ddtags": f"env:{DD_ENV},version:0.1.0",
+        "status": status,
+    }
+    if extra:
+        payload.update(extra)
+
+    def _post():
+        try:
+            data = json.dumps([payload]).encode()
+            req = urllib.request.Request(
+                f"https://http-intake.logs.{DD_SITE}/api/v2/logs",
+                data=data,
+                headers={
+                    "DD-API-KEY": DD_API_KEY,
+                    "Content-Type": "application/json",
+                },
+            )
+            urllib.request.urlopen(req, timeout=5)
+        except Exception:
+            pass
+
+    threading.Thread(target=_post, daemon=True).start()
+
 
 app = FastAPI(title="AOS PDF Service")
 
@@ -23,6 +70,25 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def datadog_logging_middleware(request: Request, call_next):
+    start = time.time()
+    response = await call_next(request)
+    duration_ms = (time.time() - start) * 1000
+    status = "error" if response.status_code >= 400 else "info"
+    _send_dd_log(
+        f"{request.method} {request.url.path} → {response.status_code} in {duration_ms:.0f}ms",
+        status=status,
+        extra={
+            "http.method": request.method,
+            "http.url": str(request.url),
+            "http.status_code": response.status_code,
+            "duration_ms": round(duration_ms, 2),
+        },
+    )
+    return response
 
 
 class FillRequest(BaseModel):
