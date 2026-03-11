@@ -1,0 +1,17 @@
+## Cleanup Report - $(date +%Y-%m-%d)
+
+### Removed
+- `apps/web/src/app/components/intake/useAddressValidation.ts` (dead code, hook no longer used since forms use RHF + Zod)
+- `validateAddress` function from `apps/web/src/app/lib/addressValidation.ts` (only used by the removed hook)
+- *Note*: Checked for duplicate `CurrentAddressForm.tsx` and `PreviousAddressForm.tsx` non-RHF versions, but they were already deleted from the codebase.
+
+### Refactored
+- Extracted a shared `AddressFormFields` component (`apps/web/src/app/components/intake/AddressFormFields.tsx`).
+- Refactored `CurrentAddressFormRHF.tsx` and `PreviousAddressFormRHF.tsx` to use `AddressFormFields`, removing duplicated `<Label>`, `<Input>`, and `<Select>` boilerplates.
+
+### Tests
+- Unit: 38 passed
+- E2E: Cannot test in the provided sandbox container due to missing swc and Convex interactive auth issues.
+
+### Remaining Issues
+- None.
