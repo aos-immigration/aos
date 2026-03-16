@@ -1,7 +1,7 @@
 import type { AddressEntry } from "./intakeStorage";
 import { compareDates, isDateInFuture, monthYearToDate } from "./dateUtils";
 
-export type ValidationErrors = Record<string, string>;
+type ValidationErrors = Record<string, string>;
 
 export function validateRequiredFields(address: AddressEntry): ValidationErrors {
   const errors: ValidationErrors = {};
@@ -132,32 +132,3 @@ export function validateAllAddresses(
   return errors;
 }
 
-export function validateAddress(
-  address: AddressEntry,
-  allAddresses: AddressEntry[]
-): ValidationErrors {
-  const errors: ValidationErrors = {};
-
-  const required = validateRequiredFields(address);
-  Object.assign(errors, required);
-
-  const dateError = validateDateRange(address);
-  if (dateError) {
-    errors.dateRange = dateError;
-  }
-
-  const zipError = validateZipCode(address.zip, address.country);
-  if (zipError) {
-    errors.zip = zipError;
-  }
-
-  const otherAddresses = allAddresses.filter((a) => a.id !== address.id);
-  for (const other of otherAddresses) {
-    if (checkOverlap(address, other)) {
-      errors.overlap = "Address dates overlap with another address";
-      break;
-    }
-  }
-
-  return errors;
-}
