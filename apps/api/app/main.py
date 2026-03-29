@@ -62,6 +62,8 @@ app = FastAPI(title="AOS PDF Service")
 ACROFORM_KEY = "/AcroForm"
 FIELDS_KEY = "/Fields"
 PDF_NOT_FOUND = "PDF not found"
+OFF_NAME = pikepdf.Name("/Off")
+YES_NAME = pikepdf.Name("/Yes")
 
 app.add_middleware(
     CORSMiddleware,
@@ -152,16 +154,16 @@ def _checkbox_on_value(obj) -> pikepdf.Name:
                 down = _deref(down)
                 if hasattr(down, "keys"):
                     for key in down.keys():
-                        if str(key) != "/Off":
-                            return pikepdf.Name(str(key))
+                        if key != OFF_NAME:
+                            return key
             normal = ap.get("/N")
             if normal:
                 normal = _deref(normal)
                 if hasattr(normal, "keys"):
                     for key in normal.keys():
-                        if str(key) != "/Off":
-                            return pikepdf.Name(str(key))
-    return pikepdf.Name("/Yes")
+                        if key != OFF_NAME:
+                            return key
+    return YES_NAME
 
 
 def _ap_debug(ap):
@@ -209,12 +211,12 @@ def _field_debug(obj):
 
 
 def _apply_checkbox_group(obj, kids, checked: bool) -> None:
-    value = _checkbox_on_value(_deref(kids[0])) if kids else pikepdf.Name("/Yes")
-    target = value if checked else pikepdf.Name("/Off")
+    value = _checkbox_on_value(_deref(kids[0])) if kids else YES_NAME
+    target = value if checked else OFF_NAME
     obj["/V"] = target
     for kid in kids:
         kid_obj = _deref(kid)
-        kid_obj["/AS"] = target if checked else pikepdf.Name("/Off")
+        kid_obj["/AS"] = target if checked else OFF_NAME
 
 
 def _apply_leaf_value(
@@ -227,11 +229,11 @@ def _apply_leaf_value(
     if checkbox_value is None:
         return
     if "_Yes[0]" in full:
-        value = pikepdf.Name("/Y") if checkbox_value else pikepdf.Name("/Off")
+        value = pikepdf.Name("/Y") if checkbox_value else OFF_NAME
     elif "_No[0]" in full:
-        value = pikepdf.Name("/N") if checkbox_value else pikepdf.Name("/Off")
+        value = pikepdf.Name("/N") if checkbox_value else OFF_NAME
     else:
-        value = _checkbox_on_value(obj) if checkbox_value else pikepdf.Name("/Off")
+        value = _checkbox_on_value(obj) if checkbox_value else OFF_NAME
     obj["/V"] = value
     obj["/AS"] = value
     parent = obj.get(PARENT_KEY)
@@ -245,9 +247,9 @@ def _apply_leaf_value(
     for kid in kids:
         kid_obj = _deref(kid)
         if kid_obj == obj:
-            kid_obj["/AS"] = value if checkbox_value else pikepdf.Name("/Off")
+            kid_obj["/AS"] = value if checkbox_value else OFF_NAME
         else:
-            kid_obj["/AS"] = pikepdf.Name("/Off")
+            kid_obj["/AS"] = OFF_NAME
 
 
 def _walk_fields(
