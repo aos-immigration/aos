@@ -1,0 +1,96 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - generic [active]:
+    - generic [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - navigation [ref=e7]:
+            - button "previous" [disabled] [ref=e8]:
+              - img "previous" [ref=e9]
+            - generic [ref=e11]:
+              - generic [ref=e12]: 1/
+              - text: "1"
+            - button "next" [disabled] [ref=e13]:
+              - img "next" [ref=e14]
+          - img
+        - generic [ref=e16]:
+          - link "Next.js 16.1.4 (stale) Turbopack" [ref=e17] [cursor=pointer]:
+            - /url: https://nextjs.org/docs/messages/version-staleness
+            - img [ref=e18]
+            - generic "There is a newer version (16.2.3) available, upgrade recommended!" [ref=e20]: Next.js 16.1.4 (stale)
+            - generic [ref=e21]: Turbopack
+          - img
+      - dialog "Runtime Error" [ref=e23]:
+        - generic [ref=e26]:
+          - generic [ref=e27]:
+            - generic [ref=e28]:
+              - generic [ref=e30]: Runtime Error
+              - generic [ref=e31]:
+                - button "Copy Error Info" [ref=e32] [cursor=pointer]:
+                  - img [ref=e33]
+                - button "No related documentation found" [disabled] [ref=e35]:
+                  - img [ref=e36]
+                - button "Attach Node.js inspector" [ref=e38] [cursor=pointer]:
+                  - img [ref=e39]
+            - generic [ref=e48]:
+              - text: "Could not find Convex client! `useMutation` must be used in the React component tree under `ConvexProvider`. Did you forget it? See"
+              - link "https://docs.convex.dev/quick-start#set-up-convex-in-your-react-app" [ref=e49] [cursor=pointer]:
+                - /url: https://docs.convex.dev/quick-start#set-up-convex-in-your-react-app
+          - generic [ref=e50]:
+            - generic [ref=e51]:
+              - paragraph [ref=e53]:
+                - img [ref=e55]
+                - generic [ref=e59]: src/app/lib/useApplicationId.ts (9:34) @ useApplicationId
+                - button "Open in editor" [ref=e60] [cursor=pointer]:
+                  - img [ref=e62]
+              - generic [ref=e65]:
+                - generic [ref=e66]: "7 | export function useApplicationId() {"
+                - generic [ref=e67]: 8 | const [applicationId, setApplicationId] = useState<Id<"applications"> | null>(null);
+                - generic [ref=e68]: "> 9 | const getOrCreate = useMutation(api.petitioner.getOrCreateApplication);"
+                - generic [ref=e69]: "| ^"
+                - generic [ref=e70]: "10 | useEffect(() => {"
+                - generic [ref=e71]: 11 | getOrCreate().then(setApplicationId);
+                - generic [ref=e72]: "12 | }, []);"
+            - generic [ref=e73]:
+              - generic [ref=e74]:
+                - paragraph [ref=e75]:
+                  - text: Call Stack
+                  - generic [ref=e76]: "15"
+                - button "Show 12 ignore-listed frame(s)" [ref=e77] [cursor=pointer]:
+                  - text: Show 12 ignore-listed frame(s)
+                  - img [ref=e78]
+              - generic [ref=e80]:
+                - generic [ref=e81]:
+                  - text: useApplicationId
+                  - button "Open useApplicationId in editor" [ref=e82] [cursor=pointer]:
+                    - img [ref=e83]
+                - text: src/app/lib/useApplicationId.ts (9:34)
+              - generic [ref=e85]:
+                - generic [ref=e86]:
+                  - text: DashboardLayout
+                  - button "Open DashboardLayout in editor" [ref=e87] [cursor=pointer]:
+                    - img [ref=e88]
+                - text: src/components/DashboardLayout.tsx (28:41)
+              - generic [ref=e90]:
+                - generic [ref=e91]:
+                  - text: SectionsLayout
+                  - button "Open SectionsLayout in editor" [ref=e92] [cursor=pointer]:
+                    - img [ref=e93]
+                - text: src/app/sections/layout.tsx (8:10)
+        - generic [ref=e95]: "1"
+        - generic [ref=e96]: "2"
+    - generic [ref=e101] [cursor=pointer]:
+      - button "Open Next.js Dev Tools" [ref=e102]:
+        - img [ref=e103]
+      - generic [ref=e106]:
+        - button "Open issues overlay" [ref=e107]:
+          - generic [ref=e108]:
+            - generic [ref=e109]: "0"
+            - generic [ref=e110]: "1"
+          - generic [ref=e111]: Issue
+        - button "Collapse issues badge" [ref=e112]:
+          - img [ref=e113]
+  - heading "Something went wrong!" [level=2] [ref=e115]
+```
