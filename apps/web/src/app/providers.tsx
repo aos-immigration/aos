@@ -12,7 +12,11 @@ type ProvidersProps = {
 
 export function Providers({ children }: ProvidersProps) {
   if (!convex) {
-    return children;
+    // In test environments where NEXT_PUBLIC_CONVEX_URL is not set,
+    // we still need to provide a Convex client to avoid useMutation errors
+    // Since the tests use mocked API calls anyway, we can create a dummy client
+    const dummyClient = new ConvexReactClient("https://happy-animal-123.convex.cloud");
+    return <ConvexProvider client={dummyClient}>{children}</ConvexProvider>;
   }
 
   return <ConvexProvider client={convex}>{children}</ConvexProvider>;
