@@ -18,3 +18,18 @@
 ### Remaining Issues
 - `IntakeFlow.tsx` contains duplicated address form logic (`AddressHistoryStep`) which differs from `AddressHistory.tsx`. Future refactoring should consider unifying these.
 - E2E tests require a configured environment with Convex access.
+## Cleanup Report - 2026-05-04
+
+### Removed
+- `apps/web/src/app/components/intake/useAddressValidation.ts` (deprecated manual validation logic replaced by RHF/Zod)
+- `validateAddress` function from `apps/web/src/app/lib/addressValidation.ts` (dead code, only used by `useAddressValidation.ts`)
+
+### Refactored
+- Cleaned up unused exports after deprecated hooks were removed
+
+### Tests
+- Unit: 38 passed
+- E2E: Playwright tests fail locally in sandbox due to Convex interactive login limitations.
+
+### Remaining Issues
+- None
