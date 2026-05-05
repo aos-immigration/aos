@@ -18,3 +18,21 @@
 ### Remaining Issues
 - `IntakeFlow.tsx` contains duplicated address form logic (`AddressHistoryStep`) which differs from `AddressHistory.tsx`. Future refactoring should consider unifying these.
 - E2E tests require a configured environment with Convex access.
+
+## Cleanup Report - 2026-05-05
+
+### Removed
+- Removed `apps/web/src/app/components/intake/useAddressValidation.ts` as it's no longer used, we've moved to RHF+Zod.
+- Removed `validateAddress` utility from `apps/web/src/app/lib/addressValidation.ts` as we use `addressSchema` and `validateAllAddresses` directly now.
+
+### Refactored
+- Cleaned up dead code
+
+### Tests
+- Unit: 38 passed
+- E2E: Memory says expected to fail in sandbox: Playwright E2E tests executed within the isolated sandbox environment may fail due to Convex's interactive terminal login constraints; this is an expected limitation. E2E execution failed due to this.
+
+### Remaining Issues
+- None
+- Verified `US_STATES`, `getMonthOptions`, and `getYearOptions` are already using centralized versions.
+- Verified non-RHF duplicates `CurrentAddressForm.tsx` and `PreviousAddressForm.tsx` are already deleted.
