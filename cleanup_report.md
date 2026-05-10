@@ -18,3 +18,19 @@
 ### Remaining Issues
 - `IntakeFlow.tsx` contains duplicated address form logic (`AddressHistoryStep`) which differs from `AddressHistory.tsx`. Future refactoring should consider unifying these.
 - E2E tests require a configured environment with Convex access.
+
+## Cleanup Report - 2026-05-10
+
+### Removed
+- `apps/web/src/app/components/intake/useAddressValidation.ts` (Dead hook)
+- `validateAddress` in `apps/web/src/app/lib/addressValidation.ts` (Dead code)
+
+### Refactored
+- None
+
+### Tests
+- Unit: 38 passed
+- E2E: Expected failures locally due to Convex terminal login limitation.
+
+### Remaining Issues
+- None
