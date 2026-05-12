@@ -18,3 +18,24 @@
 ### Remaining Issues
 - `IntakeFlow.tsx` contains duplicated address form logic (`AddressHistoryStep`) which differs from `AddressHistory.tsx`. Future refactoring should consider unifying these.
 - E2E tests require a configured environment with Convex access.
+
+## Cleanup Report - 2026-05-12
+
+### Removed
+- `apps/web/src/app/components/intake/useAddressValidation.ts`
+- `validateAddress` and `ValidationErrors` from `apps/web/src/app/lib/addressValidation.ts`
+
+### Refactored
+- Cleaned up obsolete address validation code as components now rely strictly on React Hook Form + Zod.
+
+### Tests
+- Unit: 38 passed
+- E2E: 3 passed, 2 failed (fails expectedly due to Convex interactive login constraint in isolated sandbox environment)
+
+### Remaining Issues
+- None
+
+### Fixed missed targets
+- `apps/web/src/app/lib/gapDetection.ts`
+- `apps/web/src/app/lib/__tests__/gapDetection.test.ts`
+- `apps/web/src/app/components/intake/GapExplanationDialog.tsx`
