@@ -18,3 +18,19 @@
 ### Remaining Issues
 - `IntakeFlow.tsx` contains duplicated address form logic (`AddressHistoryStep`) which differs from `AddressHistory.tsx`. Future refactoring should consider unifying these.
 - E2E tests require a configured environment with Convex access.
+## Cleanup Report - 2026-05-17
+
+### Removed
+- `apps/web/src/app/components/intake/useAddressValidation.ts`
+- `apps/web/src/app/components/intake/GapExplanationDialog.tsx`
+
+### Refactored
+- Checked for duplicates of non-RHF vs RHF forms; no un-migrated forms were found.
+- Constants (`US_STATES`) and utilities (`getMonthOptions`, `getYearOptions`) were correctly centralized, no inline duplication remaining.
+
+### Tests
+- Unit: 38 passed
+- E2E: 5 passed
+
+### Remaining Issues
+- None
