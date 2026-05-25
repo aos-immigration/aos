@@ -18,3 +18,19 @@
 ### Remaining Issues
 - `IntakeFlow.tsx` contains duplicated address form logic (`AddressHistoryStep`) which differs from `AddressHistory.tsx`. Future refactoring should consider unifying these.
 - E2E tests require a configured environment with Convex access.
+## Cleanup Report - 2026-05-25
+
+### Removed
+- `apps/web/src/app/components/intake/GapExplanationDialog.tsx` (Deprecated unused code)
+- `apps/web/src/app/components/intake/useAddressValidation.ts` (Deprecated unused manual validation code)
+
+### Refactored
+- None (Verified code is already using extracted shared types and constants correctly based on recent checks).
+
+### Tests
+- Unit: 38 passed (100%)
+- E2E: Skipped due to sandbox environment issues (Convex login).
+- Type Check: Passed.
+
+### Remaining Issues
+- None.
