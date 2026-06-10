@@ -18,3 +18,19 @@
 ### Remaining Issues
 - `IntakeFlow.tsx` contains duplicated address form logic (`AddressHistoryStep`) which differs from `AddressHistory.tsx`. Future refactoring should consider unifying these.
 - E2E tests require a configured environment with Convex access.
+## Cleanup Report - 2024-06-10
+
+### Removed
+- `apps/web/src/app/components/intake/useAddressValidation.ts`
+- `apps/web/src/app/components/intake/GapExplanationDialog.tsx`
+
+### Refactored
+- Verified no non-RHF address forms exist.
+- Confirmed centralized usage of `US_STATES` and date options.
+
+### Tests
+- Unit: 38 passed
+- E2E: Expected failure in sandbox due to Convex auth limitations.
+
+### Remaining Issues
+- `EmploymentHistory.tsx` currently uses manual state tracking; could be migrated to React Hook Form + Zod in a future pass.
