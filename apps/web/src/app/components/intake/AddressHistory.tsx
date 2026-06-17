@@ -134,7 +134,9 @@ export function AddressHistory({ applicationId, personRole = "petitioner", onVal
   }, []);
 
   // Show empty current address form if no current address exists
-  const showEmptyCurrentForm = !addresses.some((a) => a.isCurrent);
+  const isLoading = convexAddresses === undefined;
+
+  const showEmptyCurrentForm = !isLoading && !addresses.some((a) => a.isCurrent);
   const emptyCurrentAddress = showEmptyCurrentForm ? { ...createEmptyAddress(), isCurrent: true } : null;
 
   const currentAddress = addresses.find((a) => a.isCurrent);
