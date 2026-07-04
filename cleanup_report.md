@@ -18,3 +18,20 @@
 ### Remaining Issues
 - `IntakeFlow.tsx` contains duplicated address form logic (`AddressHistoryStep`) which differs from `AddressHistory.tsx`. Future refactoring should consider unifying these.
 - E2E tests require a configured environment with Convex access.
+## Cleanup Report - 2024-07-04
+
+### Removed
+- `apps/web/src/app/components/intake/useAddressValidation.ts` (deprecated manual validation replaced by RHF+Zod)
+- `apps/web/src/app/components/intake/GapExplanationDialog.tsx` (deprecated/removed gap detection feature)
+- `apps/web/src/app/lib/gapDetection.ts` (deprecated/removed gap detection logic)
+- `apps/web/src/app/lib/__tests__/gapDetection.test.ts` (tests for removed gap detection)
+
+### Refactored
+- Cleaned up dead code associated with deprecated `gapDetection` and `useAddressValidation`
+
+### Tests
+- Unit: 31 passed
+- E2E: 3 passed, 2 failed due to expected sandbox limitation (Convex interactive login constraint)
+
+### Remaining Issues
+- None
