@@ -29,7 +29,9 @@ against the baseline rather than assuming you caused them.
 1. Logic change → `npm run test:unit`
 2. Any TypeScript change → `./node_modules/.bin/tsc --noEmit`
 3. PDF fill change → `uv run python scripts/eval_fill.py fixtures/`
-4. UI change → `npm run test:e2e` if the environment supports it
+4. PDF mapping change → `uv run python scripts/render_fields.py fixtures/<f>.json`
+   then view the PNG crops to confirm values render in the right boxes
+5. UI change → `npm run test:e2e` if the environment supports it
 
 ## Code patterns
 

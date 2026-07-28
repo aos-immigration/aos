@@ -169,7 +169,18 @@ When a checkbox won't tick, hit `GET /debug/field/i-130?name=...` and read the
 `apps/api/scripts/eval_fill.py` fills the PDF, reads every value back out, and
 diffs against `expected_values` in the fixtures. It runs the same code path as
 the API by default, or against a live server with `--http`. Three i-130 fixtures
-in `apps/api/fixtures/`; the other four forms have none.
+in `apps/api/fixtures/`; the other four forms have none. For checkboxes it also
+asserts the written `/V`/`/AS` is a legal `/AP` appearance state — a value
+outside `/AP` reads back "fine" but prints as an unchecked box.
+
+`apps/api/scripts/render_fields.py` is the visual layer: it fills a fixture,
+renders the pages with pdfium (form drawing on), and writes one PNG crop per
+filled field (plus `--pages` for full pages). An agent or human can eyeball
+the crops to confirm values land in the right boxes — no browser needed.
+
+```bash
+cd apps/api && uv run python scripts/render_fields.py fixtures/basic_petitioner.json --pages
+```
 
 `apps/api/scripts/extract_fields.py` regenerates the field catalogs in
 `apps/api/data/` when a PDF template changes.
