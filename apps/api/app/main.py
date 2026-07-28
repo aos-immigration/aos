@@ -139,28 +139,28 @@ def _list_fields(pdf_file: Path) -> List[Dict[str, str]]:
 
 
 def _checkbox_on_value(obj) -> pikepdf.Name:
+    """Return the widget's real "on" appearance state, sniffed from /AP.
+
+    Checkbox on-states vary per form (/Y, /N, /1, /Yes, ...). Setting /V
+    to a name that is not a key of the appearance dictionary leaves the
+    box visually unchecked in every viewer, so /AP is the ground truth.
+    """
     ap = obj.get("/AP")
-    if not ap:
+    if ap is None:
         parent = obj.get("/Parent")
-        if parent:
+        if parent is not None:
             ap = _deref(parent).get("/AP")
-    if ap:
+    if ap is not None:
         ap = _deref(ap)
-        if isinstance(ap, dict):
-            down = ap.get("/D")
-            if down:
-                down = _deref(down)
-                if hasattr(down, "keys"):
-                    for key in down.keys():
-                        if str(key) != "/Off":
-                            return pikepdf.Name(str(key))
-            normal = ap.get("/N")
-            if normal:
-                normal = _deref(normal)
-                if hasattr(normal, "keys"):
-                    for key in normal.keys():
-                        if str(key) != "/Off":
-                            return pikepdf.Name(str(key))
+        for state_key in ("/D", "/N"):
+            states = ap.get(state_key) if hasattr(ap, "get") else None
+            if states is None:
+                continue
+            states = _deref(states)
+            if hasattr(states, "keys"):
+                for key in states.keys():
+                    if str(key) != "/Off":
+                        return pikepdf.Name(str(key))
     return pikepdf.Name("/Yes")
 
 
@@ -171,7 +171,7 @@ def _ap_debug(ap):
     ap = _deref(ap)
     info["ap_deref_type"] = str(type(ap))
     info["ap_str"] = str(ap)
-    normal = ap.get("/N") if isinstance(ap, dict) else None
+    normal = ap.get("/N") if hasattr(ap, "get") else None
     if normal is None:
         return info
     normal = _deref(normal)
@@ -226,12 +226,7 @@ def _apply_leaf_value(
     checkbox_value = checkbox_values.get(full)
     if checkbox_value is None:
         return
-    if "_Yes[0]" in full:
-        value = pikepdf.Name("/Y") if checkbox_value else pikepdf.Name("/Off")
-    elif "_No[0]" in full:
-        value = pikepdf.Name("/N") if checkbox_value else pikepdf.Name("/Off")
-    else:
-        value = _checkbox_on_value(obj) if checkbox_value else pikepdf.Name("/Off")
+    value = _checkbox_on_value(obj) if checkbox_value else pikepdf.Name("/Off")
     obj["/V"] = value
     obj["/AS"] = value
     parent = obj.get(PARENT_KEY)

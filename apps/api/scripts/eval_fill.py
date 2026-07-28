@@ -78,6 +78,78 @@ def _read_field_values(pdf_bytes: bytes) -> Dict[str, str]:
     return results
 
 
+def _checkbox_ap_states(obj) -> List[str]:
+    """Collect the legal appearance states for a checkbox widget (from /AP /N and /D)."""
+    states: List[str] = []
+    ap = obj.get("/AP")
+    if ap is None:
+        return states
+    ap = _deref(ap)
+    for key in ("/N", "/D"):
+        sub = ap.get(key)
+        if sub is None:
+            continue
+        sub = _deref(sub)
+        if hasattr(sub, "keys"):
+            for state in sub.keys():
+                if str(state) not in states:
+                    states.append(str(state))
+    return states
+
+
+def _validate_appearance_states(
+    pdf_bytes: bytes, checkboxes: Dict[str, bool]
+) -> List[Tuple[str, str, str, bool]]:
+    """Verify every checked box's /V and /AS are legal /AP states, so the tick renders.
+
+    A /V that is not a key of the widget's appearance dictionary reads back
+    "fine" but prints as an unchecked box in every PDF viewer.
+    """
+    results: List[Tuple[str, str, str, bool]] = []
+    if not checkboxes:
+        return results
+    pdf = pikepdf.Pdf.open(BytesIO(pdf_bytes))
+    acro = pdf.Root.get("/AcroForm", None)
+    if not acro:
+        return results
+
+    def walk(arr: Any, prefix: str = "") -> None:
+        for f in arr:
+            obj = _deref(f)
+            name = obj.get("/T", "")
+            kids = obj.get("/Kids", None)
+            full = f"{prefix}{name}" if name else prefix
+            if full in checkboxes:
+                widgets = [_deref(k) for k in kids] if kids else [obj]
+                checked = checkboxes[full]
+                value = obj.get("/V")
+                value = str(value) if value is not None else None
+                for widget in widgets:
+                    states = _checkbox_ap_states(widget)
+                    aps = widget.get("/AS")
+                    aps = str(aps) if aps is not None else None
+                    if checked:
+                        ok = (
+                            value is not None
+                            and value in states
+                            and value != "/Off"
+                            and aps == value
+                        )
+                        expected = f"V=AS∈{states}"
+                    else:
+                        ok = value in (None, "/Off") and aps in (None, "/Off")
+                        expected = "V=AS=/Off"
+                    results.append(
+                        (f"{full} [renders]", expected, f"V={value} AS={aps}", ok)
+                    )
+                continue
+            if kids:
+                walk(kids, prefix=full + ".")
+
+    walk(acro.get("/Fields", []))
+    return results
+
+
 def _fill_direct(slug: str, fields: Dict[str, str], checkboxes: Dict[str, bool]) -> bytes:
     """Fill PDF in-memory using pikepdf (same logic as the API)."""
     pdf_path = FORMS_DIR / f"{slug}.pdf"
@@ -191,6 +263,7 @@ def _run_fixture(path: Path, *, http: bool = False, base_url: str = "http://loca
 
     actual = _read_field_values(pdf_bytes)
     results = _compare(actual, expected)
+    results.extend(_validate_appearance_states(pdf_bytes, checkboxes))
     return _print_report(path.name, results)
 
 

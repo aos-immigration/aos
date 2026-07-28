@@ -12,6 +12,11 @@ dependencies = [
   "uvicorn[standard]==0.32.1",
 ]
 
+[dependency-groups]
+dev = [
+  "pypdfium2==4.30.1",
+  "pillow==11.1.0",
+]
+
 [tool.uv]
-dev-dependencies = []
 index-url = "https://pypi.org/simple"
