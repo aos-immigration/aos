@@ -12,6 +12,9 @@
 
 # testing
 /coverage
+test-results/
+playwright-report/
+playwright/.cache/
 
 # next.js
 /.next/
@@ -45,8 +48,11 @@ venv/
 # misc
 .DS_Store
 *.pem
+*.swp
+*.swo
 
 # debug
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
