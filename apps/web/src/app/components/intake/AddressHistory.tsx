@@ -28,8 +28,6 @@ export function AddressHistory({ applicationId, personRole = "petitioner", onVal
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftAddress, setDraftAddress] = useState<AddressEntry | null>(null);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-
   // Map Convex documents to AddressEntry type for UI components
   const addresses: AddressEntry[] = convexAddresses
     ? convexAddresses.map((doc) => ({
@@ -48,19 +46,11 @@ export function AddressHistory({ applicationId, personRole = "petitioner", onVal
       }))
     : [];
 
-  const runValidation = useCallback(
-    (addressList: AddressEntry[]) => {
-      const validationErrors = validateAllAddresses(addressList);
-      setErrors(validationErrors);
-      onValidationChange?.(Object.keys(validationErrors).length === 0);
-    },
-    [onValidationChange]
-  );
-
   // Run validation whenever Convex data changes
   useEffect(() => {
     if (convexAddresses) {
-      runValidation(addresses);
+      const validationErrors = validateAllAddresses(addresses);
+      onValidationChange?.(Object.keys(validationErrors).length === 0);
     }
   }, [convexAddresses]);
 
