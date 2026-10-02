@@ -26,9 +26,16 @@ runs `convex dev`, which prints the URL and needs you to be logged into Convex.
 `NEXT_PUBLIC_API_URL` is optional and defaults to `http://localhost:8000`.
 
 **Without `NEXT_PUBLIC_CONVEX_URL` the production build fails.** `providers.tsx`
-drops `ConvexProvider` when the variable is missing, and prerendering
-`/forms/i-130/beneficiary` then dies on a `useMutation` call. Any non-empty URL
-is enough to get a build through.
+drops `ConvexProvider` when the variable is missing, and the shared
+`DashboardLayout` calls `useMutation` (via `useApplicationId()`), so prerendering
+the first `/sections` or `/forms` page (currently `/forms/i-130/beneficiary`)
+dies. Any non-empty URL is enough to get a build through.
+
+Datadog is wired into both apps. The web app initializes RUM and browser logs
+in `src/instrumentation-client.ts` with a hardcoded client token, so it sends
+data whenever the app runs. The API ships a log line per request from an HTTP
+middleware, but only when `DD_API_KEY` is set (`DD_SITE`, `DD_SERVICE` and
+`DD_ENV` are optional overrides).
 
 ### Checks
 
@@ -60,8 +67,9 @@ apps/api/     FastAPI + pikepdf. One module: app/main.py
 Forms/        the USCIS PDF templates (i-130, i-130a, i-131, i-485, i-765)
 ```
 
-Bun workspaces driven by Turborepo. Root scripts (`dev`, `build`, `test:unit`)
-fan out to both apps.
+Bun workspaces driven by Turborepo. Root scripts run the matching script in
+each app that defines it: `dev` and `lint` exist in both apps, while `build`,
+`test:unit` and `test:e2e` only exist in `apps/web`.
 
 ---
 
@@ -83,6 +91,7 @@ unwired mockups.
 **Mockups with no data behind them:** `/sections/beneficiary`,
 `/sections/beneficiary/employment`, `/sections/beneficiary/biographic`,
 `/sections/marital`, `/sections` overview, and everything under `/forms/*`.
+Nothing links to `/forms/*`; those pages are reachable only by typing the URL.
 
 **Dead links:** the sidebar points at `/sections/documents` and `/sections/proof`,
 neither of which exists.
@@ -115,6 +124,9 @@ overlapping date ranges — that check is hand-written, not Zod.
 employment out of Convex, prefers the `sessionStorage` draft so unsaved typing
 still shows up, runs `buildPdfPayload()` to turn all of it into USCIS field
 names, POSTs to `/fill/i-130`, and drops the returned blob into an iframe.
+In development the header also shows an "Export Fixture" button that downloads
+the current payload in the `apps/api/fixtures/` format, with `expected_values`
+copied from the text fields.
 
 ### Convex schema (`apps/web/convex/schema.ts`)
 
@@ -128,7 +140,7 @@ why those pages are still mockups.
 
 ## The PDF pipeline
 
-`apps/api/app/main.py` is the whole backend, about 340 lines. Four routes:
+`apps/api/app/main.py` is the whole backend, about 330 lines. Four routes:
 
 | Route | Purpose |
 | --- | --- |
@@ -147,19 +159,25 @@ where names are full dotted AcroForm paths like
 
 ### Checkbox handling, the part that will bite you
 
-Checkbox "on" values vary per form and per field. The rules encoded in
-`_apply_leaf_value`:
+Checkbox "on" values vary per form and per field (`/Y`, `/N`, `/1`, `/Yes`, …).
+There is no name-based rule; the `/AP` appearance dictionary is the only source
+of truth. On the I-130, `_Yes[0]` fields happen to use `/Y` and `_No[0]` fields
+`/N`, but that comes out of `/AP`, not the field name. The rules in
+`_apply_leaf_value` and `_checkbox_on_value()`:
 
-- Fields whose name contains `_Yes[0]` use `/Y`; `_No[0]` uses `/N`. Off is
-  always `/Off`. This is an I-130 naming convention and it overrides everything
-  below.
-- Otherwise `_checkbox_on_value()` sniffs the on-value out of the widget's `/AP`
-  appearance dictionary: look at `/D` then `/N`, take the first key that isn't
-  `/Off`, fall back to `/Yes`.
+- The on-value is sniffed from the widget's `/AP` (or its parent's `/AP` if the
+  widget has none): look at `/D` then `/N`, take the first key that isn't
+  `/Off`, fall back to `/Yes`. Off is always `/Off`.
 - Both `/V` and `/AS` get set, and for radio groups the parent's `/V` is set
   while every sibling's `/AS` is forced to `/Off`.
+- If a `checkboxes` key names a parent field (one with `/Kids`) rather than a
+  leaf, `_apply_checkbox_group` sets the parent's `/V` and every kid's `/AS`
+  to the first kid's on-value, or to `/Off`.
 - `/NeedAppearances` is set to true on the AcroForm root before saving so
   viewers regenerate the visuals.
+
+A `/V` that isn't one of the `/AP` states reads back as set but renders as an
+unchecked box in every viewer.
 
 When a checkbox won't tick, hit `GET /debug/field/i-130?name=...` and read the
 `/AP` states. URL-encode the brackets as `%5B` and `%5D`.
@@ -182,8 +200,9 @@ the crops to confirm values land in the right boxes — no browser needed.
 cd apps/api && uv run python scripts/render_fields.py fixtures/basic_petitioner.json --pages
 ```
 
-`apps/api/scripts/extract_fields.py` regenerates the field catalogs in
-`apps/api/data/` when a PDF template changes.
+`apps/api/scripts/extract_fields.py` regenerates `apps/api/data/i-130.fields.json`
+and `.csv` when the template changes. The I-130 path is hardcoded; there are no
+catalogs for the other four forms.
 
 ---
 
@@ -201,8 +220,9 @@ cd apps/api && uv run python scripts/render_fields.py fixtures/basic_petitioner.
 
 ## Known rough edges
 
-- `npm run lint` fails: 12 errors, 21 warnings. Ten are unescaped apostrophes in
-  JSX; two are `set-state-in-effect` in `ThemeToggle.tsx`.
+- `npm run lint` fails: 12 errors, 20 warnings. Ten are unescaped apostrophes
+  and quotes in JSX (`react/no-unescaped-entities`); two are
+  `set-state-in-effect`, one in `ThemeToggle.tsx` and one in `AddressHistory.tsx`.
 - No CI. Nothing checks builds, types or tests on a pull request.
 - Employment data is passed into `buildPdfPayload()` and then ignored, so it
   never reaches the PDF.
@@ -212,7 +232,9 @@ cd apps/api && uv run python scripts/render_fields.py fixtures/basic_petitioner.
   component is otherwise reusable.
 - `getOrCreateApplication` returns the first draft application in the whole
   database. There is no auth or per-user scoping yet.
-- Sidebar progress percentages and the user name are hardcoded.
-- `PdfFillDemo.tsx`, the `listForms` query and the `createApplication` mutation
-  have no callers.
-- `pypdf` is in the API dependencies but never imported.
+- Sidebar progress percentages, the header's "PROGRESS 64%" bar and the user
+  name are hardcoded.
+- The `listForms` query and the `createApplication` mutation have no callers,
+  and nothing populates the `forms` table.
+- Unused dependencies: `pdf-lib` in `apps/web`; `pypdf`, `cryptography` and
+  `ipykernel` in `apps/api`.
