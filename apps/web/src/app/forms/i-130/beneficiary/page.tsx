@@ -7,7 +7,7 @@ export default function BeneficiaryPage() {
             Beneficiary Information
           </h1>
           <p className="text-muted-foreground text-sm max-w-xl">
-            Gather details about the relative you're petitioning for. We'll
+            Gather details about the relative you&apos;re petitioning for. We&apos;ll
             format this data to meet USCIS requirements automatically.
           </p>
         </div>

@@ -7,7 +7,7 @@ export default function BeneficiaryPage() {
             Beneficiary Information
           </h1>
           <p className="text-muted-foreground text-sm max-w-xl">
-            Tell us about the person you're sponsoring. This information will
+            Tell us about the person you&apos;re sponsoring. This information will
             be used across all required forms automatically.
           </p>
         </div>
