@@ -1,6 +1,8 @@
 import { action, internalQuery, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
+import { isPublicDemo } from "../src/app/lib/demoPolicy";
+import { demoIntake } from "../src/app/lib/intake/demo";
 import { parseIntake, type Intake } from "../src/app/lib/intake/schema";
 import { requireOwnedApplication, requireUserId } from "./authz";
 import { isEncryptedField, stripStoredIds } from "./storedIds";
@@ -35,6 +37,7 @@ async function sealOne(
 }
 
 async function sealPerson(person: Intake["petitioner"], previous: unknown): Promise<PersonIds> {
+  if (isPublicDemo()) return { ssn: "", aNumber: "" };
   const prior =
     previous && typeof previous === "object" ? (previous as Record<string, unknown>) : {};
   return {
@@ -148,6 +151,11 @@ export const loadDecryptedIntake = internalQuery({
   },
 });
 
+async function pdfIntake(loadSaved: () => Promise<Intake | null>): Promise<Intake | null> {
+  if (isPublicDemo()) return demoIntake();
+  return loadSaved();
+}
+
 async function postOwned(userId: string, path: string, body: unknown): Promise<Response> {
   const secret = process.env.PDF_FILL_SECRET ?? "";
   if (!secret) throw new Error("PDF fill is not configured");
@@ -174,7 +182,7 @@ export const previewOwnedIntake = action({
   args: {},
   handler: async (ctx) => {
     const userId = await requireUserId(ctx);
-    const intake = await ctx.runQuery(internal.intake.loadDecryptedIntake, {});
+    const intake = await pdfIntake(() => ctx.runQuery(internal.intake.loadDecryptedIntake, {}));
     if (!intake) throw new Error("Save your answers before preview");
     const response = await postOwned(userId, "/preview-intake", { intake });
     if (!response.ok) throw new Error("PDF fill failed");
@@ -186,7 +194,7 @@ export const packetOwnedIntake = action({
   args: {},
   handler: async (ctx) => {
     const userId = await requireUserId(ctx);
-    const intake = await ctx.runQuery(internal.intake.loadDecryptedIntake, {});
+    const intake = await pdfIntake(() => ctx.runQuery(internal.intake.loadDecryptedIntake, {}));
     if (!intake) throw new Error("Save your answers before preview");
     const response = await postOwned(userId, "/packet", { intake, acknowledged: true });
     if (!response.ok) throw new Error("PDF fill failed");
@@ -198,7 +206,7 @@ export const fillOwnedIntake = action({
   args: { slug: v.string() },
   handler: async (ctx, args) => {
     const userId = await requireUserId(ctx);
-    const intake = await ctx.runQuery(internal.intake.loadDecryptedIntake, {});
+    const intake = await pdfIntake(() => ctx.runQuery(internal.intake.loadDecryptedIntake, {}));
     if (!intake) throw new Error("Save your answers before preview");
     const response = await postOwned(userId, `/fill-intake/${args.slug}`, {
       intake,

@@ -3,6 +3,7 @@ import { dark } from "@clerk/themes";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Newsreader } from "next/font/google";
 import "./globals.css";
+import { PublicDemoBanner } from "@/components/PublicDemoBanner";
 import { Providers } from "./providers";
 import { RuntimeConfigProvider } from "./lib/runtimeConfigContext";
 import { convexUrl, isClerkConfigured } from "./lib/runtimeConfig";
@@ -40,6 +41,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${newsreader.variable} antialiased`}
       >
+        <PublicDemoBanner />
         <RuntimeConfigProvider clerk={isClerkConfigured()} convex={Boolean(convexUrl())}>
           {isClerkConfigured() ? (
             <ClerkProvider appearance={{ theme: dark }}>

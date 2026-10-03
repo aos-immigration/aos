@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { DEMO_COOKIE } from "@/app/lib/demoCouple";
 import { demoIntake } from "@/app/lib/intake/demo";
+import { isPublicDemo } from "@/app/lib/demoPolicy";
 import { convexUrl, fillSecret, isClerkConfigured } from "@/app/lib/runtimeConfig";
 
 type Kind = "preview" | "packet" | "fill";
@@ -76,7 +77,7 @@ export async function proxyPdf(kind: Kind, slug?: string) {
   if (clerk && !userId && !demoCookie) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (userId) {
+  if (!isPublicDemo() && userId) {
     if (!convexUrl() || !session.getToken) {
       return NextResponse.json({ error: "Auth is not configured" }, { status: 503 });
     }
