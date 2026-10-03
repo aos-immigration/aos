@@ -1,9 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation } from "convex/react";
-import { useUser } from "@clerk/nextjs";
-import { api } from "../../../convex/_generated/api";
 import { useRuntimeConfig } from "@/app/lib/runtimeConfigContext";
 import { AuthNotConfigured } from "@/app/components/AuthNotConfigured";
 
@@ -14,27 +11,34 @@ export default function AccountPage() {
 }
 
 function AccountSettings() {
-  const deleteApplication = useMutation(api.petitioner.deleteMyApplication);
-  const { user } = useUser();
   const [confirming, setConfirming] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
 
   async function onDelete() {
     setStatus(null);
-    await deleteApplication();
-    if (user) await user.delete();
-    setStatus("Your application data has been deleted.");
-    setConfirming(false);
+    try {
+      const response = await fetch("/api/account/delete", { method: "POST" });
+      if (!response.ok) {
+        setStatus("Could not delete the account. Try again.");
+        return;
+      }
+      setStatus("Your application data and sign-in have been deleted.");
+      setConfirming(false);
+    } catch {
+      setStatus("Could not delete the account. Try again.");
+    }
   }
 
   return (
     <main className="max-w-xl mx-auto px-6 py-16 space-y-6">
       <h1 className="text-3xl font-semibold">Account</h1>
       <p className="text-sm text-muted-foreground">
-        Deleting removes your application, petitioner details, addresses, and
-        employment from this app, then deletes the Clerk sign-in if you confirm.
-        Convex backups age out on the plan retention window. Set that window in
-        the Convex dashboard and mention it in the privacy policy.
+        Deleting asks the server to remove your application, petitioner details,
+        addresses, and employment, then delete the Clerk sign-in. A Clerk
+        user.deleted webhook removes the same rows if the user is deleted in
+        the Clerk dashboard. Convex backups age out on the plan retention
+        window. Set that window in the Convex dashboard and mention it in the
+        privacy policy.
       </p>
       {confirming ? (
         <div className="space-y-3">

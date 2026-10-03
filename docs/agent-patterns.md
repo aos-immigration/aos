@@ -204,3 +204,16 @@ arguments were the plaintext number would still be the wrong place to put
 it, because a later `console.log(args)` would ship it. Encrypt in the
 mutation, then store ciphertext. HTTP actions omit even the byte count;
 they are not required here, because the value is not in the execution log.
+
+## Account deletion does not run in the browser
+
+`/account` called `user.delete()` from the Clerk client after a Convex
+mutation. A user deleted in the Clerk dashboard left their rows behind, and
+a retried browser call could stop after one of the two steps.
+
+Guard: `deleteAccount` purges Convex rows, then deletes the Clerk user, and
+treats HTTP 404 as already done. `handleClerkWebhook` checks the Svix
+signature and purges on `user.deleted`. `deleteAccount.test.ts` covers the
+order, the retry, the second webhook delivery, and that `account/page.tsx`
+does not call `user.delete`. `purgeOwner` in `sensitive.test.ts` deletes one
+owner twice and leaves the other.

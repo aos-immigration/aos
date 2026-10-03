@@ -86,11 +86,11 @@ Verify: Open /sign-up. bun run check does not boot Clerk.
 
 Status: wired.
 
-Signed-in deletion. It deletes the caller's application, petitioner basics (including encrypted ids), addresses, and employment, then deletes the Clerk user.
+Signed-in deletion. The page POSTs /api/account/delete. That route deletes the caller's Convex rows and then the Clerk user, with retries. A svix-verified user.deleted webhook purges the same rows.
 
 Reach it from the home page Account link while signed in.
 
-Verify: bun run check runs the delete case in apps/web/convex/sensitive.test.ts. The page itself is not opened by that test.
+Verify: bun run check runs deleteAccount.test.ts and the purgeOwner case in apps/web/convex/sensitive.test.ts. The page itself is not opened by that test.
 
 ### `/start`
 

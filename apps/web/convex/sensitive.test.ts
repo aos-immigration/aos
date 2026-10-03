@@ -184,4 +184,17 @@ describe("sensitive ids", () => {
     expect(remaining.basicsRows).toHaveLength(1);
     expect(JSON.stringify(remaining)).not.toContain("123-45-6789");
   });
+
+  test("purgeOwner is idempotent and leaves the other user", async () => {
+    const { t, bob } = await seeded();
+    const bobId = await bob.mutation(api.petitioner.getOrCreateApplication, {});
+    expect(await t.mutation(internal.petitioner.purgeOwner, { ownerId: "user_alice" })).toEqual({
+      deleted: 1,
+    });
+    expect(await t.mutation(internal.petitioner.purgeOwner, { ownerId: "user_alice" })).toEqual({
+      deleted: 0,
+    });
+    const remaining = await t.run(async (ctx) => ctx.db.query("applications").collect());
+    expect(remaining.map((row) => row._id)).toEqual([bobId]);
+  });
 });

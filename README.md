@@ -247,8 +247,13 @@ Their ID numbers are the fictional placeholders in `demoIntake()`. That mode
 does not write Convex. Signing in clears the cookie. `/sign-in` and `/sign-up` are the Clerk components. Each Clerk
 user gets one application; `ownerId` on that row is the Clerk subject
 (`identity.subject`). Reads, writes, and deletes on a record the caller does
-not own fail the same way a missing record does. `/account` deletes that
-user's rows and then the Clerk user.
+not own fail the same way a missing record does. `/account` POSTs to
+`/api/account/delete`, which deletes that user's Convex rows and then the
+Clerk user through the backend API. A repeat is safe: missing rows and a
+missing Clerk user both count as already deleted. Clerk sends `user.deleted`
+to `/api/webhooks/clerk`. The route checks the Svix signature
+(`CLERK_WEBHOOK_SECRET`) and purges that owner's rows with
+`CONVEX_DEPLOY_KEY`. The browser does not call `user.delete()`.
 
 Social Security numbers and A-Numbers are encrypted in Convex with AES-256-GCM.
 The key is `SENSITIVE_ID_KEY` (32 bytes, base64) on the Convex deployment, with
