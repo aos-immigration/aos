@@ -51,6 +51,13 @@ write Convex. `apps/web` starts `convex dev` only when `NEXT_PUBLIC_CONVEX_URL`
 is already set. `NEXT_PUBLIC_API_URL` is optional and defaults to
 `http://localhost:8000`.
 
+Public demo hosting is [docs/deploy.md](docs/deploy.md). The web Vercel
+project root is `apps/web`. The PDF API is a second Vercel project with root
+`apps/api`. `NEXT_PUBLIC_DEMO_ONLY=1` on the web, and `DEMO_ONLY=1` on
+Convex, force every fill, preview, and packet onto the server-built Sampleton
+intake and block new SSN, A-Number, passport, and I-94 saves. With both
+unset, signed-in fills still use the saved intake.
+
 `bun run check` runs `next build` with Clerk, Convex, and `PDF_FILL_SECRET`
 unset. The demo pages render. Sign-in routes show “Auth is not configured”.
 Local dev fills use the fixed secret `dev-only-fill-secret` when

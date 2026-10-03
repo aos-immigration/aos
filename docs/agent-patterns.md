@@ -145,7 +145,9 @@ browser posts to `/api/preview-intake` and `/api/packet` with no body.
 
 Guard: `apps/web/src/app/api/fill/[slug]/route.test.ts` posts a hostile body
 and expects the upstream intake to be Jordan Sampleton, and expects a signed-in
-call to pass `{ slug }` into the Convex action. `apps/api/tests/test_fill_auth.py`
+call to pass `{ slug }` into the Convex action. With `NEXT_PUBLIC_DEMO_ONLY=1`,
+that same file expects a signed-in fill, preview, and packet to post the
+Sampleton intake and not call Convex. `apps/api/tests/test_fill_auth.py`
 rejects `/fill-intake`, `/preview-intake`, and `/packet` with no
 `X-Fill-Secret`. `bun run check` runs both tests.
 
