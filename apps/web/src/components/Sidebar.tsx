@@ -3,9 +3,11 @@
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { ChevronRight, User, Users, Home, Briefcase, Heart, FileText, Stamp, ShieldQuestion, Wallet, ListChecks } from "lucide-react";
+import { ChevronRight, User, Users, Home, Briefcase, Heart, FileText, Stamp, ShieldQuestion, Wallet, ListChecks, Scale, Receipt, FolderOpen } from "lucide-react";
+import { FORM_IDS } from "@/app/lib/intake/schema";
 import { Disclaimer } from "@/components/system/Disclaimer";
 import { cn } from "@/lib/utils";
+import { useIntake } from "@/components/intake/IntakeProvider";
 
 export type SectionItem = {
   id: string;
@@ -21,6 +23,30 @@ export type SidebarSection = {
 };
 
 const sidebarData: SidebarSection[] = [
+  {
+    id: "prepare",
+    title: "Prepare",
+    items: [
+      {
+        id: "start",
+        label: "Before you file",
+        href: "/start",
+        icon: <Scale className="w-[18px] h-[18px]" />,
+      },
+      {
+        id: "cost",
+        label: "USCIS fees",
+        href: "/cost",
+        icon: <Receipt className="w-[18px] h-[18px]" />,
+      },
+      {
+        id: "documents",
+        label: "Documents",
+        href: "/sections/documents",
+        icon: <FolderOpen className="w-[18px] h-[18px]" />,
+      },
+    ],
+  },
   {
     id: "petitioner",
     title: "Petitioner Information",
@@ -121,9 +147,11 @@ const sidebarData: SidebarSection[] = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { intake } = useIntake();
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
-    new Set(["petitioner", "beneficiary", "case"])
+    new Set(["prepare", "petitioner", "beneficiary", "case"])
   );
+  const packet = FORM_IDS.filter((id) => intake.selectedForms.includes(id));
 
   const toggleSection = (sectionId: string) => {
     setExpandedSections((prev) => {
@@ -202,6 +230,20 @@ export function Sidebar() {
             </div>
           );
         })}
+        <div className="px-3 pt-4 pb-2">
+          <p className="px-3 text-xs font-medium text-muted-foreground">In this packet</p>
+          {packet.length === 0 ? (
+            <p className="px-3 py-2 text-xs text-muted-foreground">No forms selected yet.</p>
+          ) : (
+            <ul className="py-1">
+              {packet.map((id) => (
+                <li key={id} className="px-3 py-1 text-xs uppercase text-foreground">
+                  {id}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </nav>
 
       <div className="border-t border-sidebar-border p-4">

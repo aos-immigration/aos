@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { Sidebar } from "./Sidebar";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { ThemeToggle } from "./ThemeToggle";
 import { Eye, Download, Loader2 } from "lucide-react";
 import { LifecycleRail } from "@/components/system/LifecycleRail";
+import type { StageId } from "@/components/system/stages";
 import { ErrorState } from "@/components/system/States";
 import { SiteFooter } from "@/components/system/SiteFooter";
 import { DISCLAIMER } from "@/components/system/copy";
@@ -22,7 +24,14 @@ type DashboardLayoutProps = {
   children: React.ReactNode;
 };
 
+function stageFor(pathname: string): StageId {
+  if (pathname === "/start" || pathname === "/cost") return "start";
+  if (pathname.startsWith("/sections/review")) return "review";
+  return "collect";
+}
+
 export function DashboardLayout({ children }: DashboardLayoutProps) {
+  const pathname = usePathname();
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar />
@@ -38,7 +47,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             </div>
           </div>
           <div className="border-t border-border px-6 py-4">
-            <LifecycleRail current="collect" />
+            <LifecycleRail current={stageFor(pathname)} />
           </div>
         </header>
         <div className="flex-1 overflow-y-auto custom-scrollbar bg-background">

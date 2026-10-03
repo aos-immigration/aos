@@ -16,7 +16,7 @@ Verifying agents start here, then run the command named on the row.
 
 Status: wired.
 
-Landing page. It links to /sections, states a $0 service fee, and does not read or write intake data.
+Landing page. It links to /start, states a $0 service fee, and links the USCIS fee table. It does not read or write intake data.
 
 Reach it from the site root.
 
@@ -41,6 +41,26 @@ Privacy notes that are true today. Lines that depend on auth, encryption, or ana
 Reach it from the Privacy link in the site footer.
 
 Verify: bun run check runs apps/web/src/components/system/system.test.tsx, which asserts encryption and sign-in claims are hidden.
+
+### `/start`
+
+Status: wired.
+
+A short list of topics people take to an attorney before filing. It does not say whether the person can file, and it does not store a result.
+
+Reach it from Sidebar, Prepare, Before you file, or the home page button Start filling out my forms.
+
+Verify: bun run check runs apps/web/src/components/intake/prepare.test.tsx, which asserts the page has no eligibility verdict.
+
+### `/cost`
+
+Status: wired.
+
+Itemized USCIS fees from Form G-1055, edition 10/01/26, for the forms the person selected. Paper and online amounts are a toggle stored on the intake. The service fee is $0. No form is preselected.
+
+Reach it from Sidebar, Prepare, USCIS fees, or the home page USCIS fees link.
+
+Verify: bun run check runs apps/web/src/components/intake/prepare.test.tsx, which expects the demo packet to total $3,005 on paper and $2,855 online.
 
 ### `/sections`
 
@@ -161,6 +181,16 @@ I-864 household size and income. The screen records the numbers and does not jud
 Reach it from Sidebar, Case, Sponsor.
 
 Verify: bun run check runs apps/web/src/app/lib/intake/path.test.ts, which includes the sponsor paths.
+
+### `/sections/documents`
+
+Status: wired.
+
+Document checklist driven by the answers and the selected forms. Choosing a file stores the file name with status uploaded. The screen never marks a file accepted.
+
+Reach it from Sidebar, Prepare, Documents.
+
+Verify: bun run check runs apps/web/src/components/intake/prepare.test.tsx and apps/web/src/app/lib/intake/intake.test.ts.
 
 ### `/sections/review`
 
