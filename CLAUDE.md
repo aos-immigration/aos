@@ -14,7 +14,7 @@ cd apps/api && npm run dev                         # FastAPI on :8000
 npm run test:unit                                  # vitest, from the repo root
 cd apps/web && ./node_modules/.bin/tsc --noEmit    # NOT `npx tsc`
 cd apps/web && npm run lint
-cd apps/web && npm run test:e2e                    # needs Convex login + browsers
+cd apps/web && npm run test:e2e                    # needs Convex + browsers, see below
 cd apps/api && uv run python scripts/eval_fill.py fixtures/
 ```
 
@@ -57,6 +57,38 @@ curl 'http://localhost:8000/debug/field/i-130?name=<urlencoded-name>'
 ```
 
 Brackets encode as `%5B` and `%5D`. Full explanation in `README.md`.
+
+## Testing as an agent
+
+On a Cursor Cloud Agent VM the environment's `start` script already runs both
+servers in tmux sessions: `api` (FastAPI on :8000, log `/tmp/api.log`) and
+`web` (Convex + Next.js on :3000, log `/tmp/web.log`). Check before starting
+anything:
+
+```bash
+curl -fs localhost:8000/health && curl -fs -o /dev/null localhost:3000 && echo up
+```
+
+If they are down, start them yourself in tmux:
+
+```bash
+(cd apps/api && npm run dev)
+(cd apps/web && CONVEX_AGENT_MODE=anonymous npm run dev)
+```
+
+Convex runs as a local anonymous backend on `127.0.0.1:3210`, with no login or
+deploy key. The pinned CLI (1.32) still prompts for a login unless
+`CONVEX_AGENT_MODE=anonymous` is set. The environment's `install` writes
+`apps/web/.env.local`. Only one local backend can run at a time, so do not run
+`convex dev --once` while `web` is up. The CLI also generates untracked
+`convex/README.md` and `convex/tsconfig.json`; do not commit them.
+
+- **e2e:** `cd apps/web && npm run test:e2e`. Playwright reuses the server
+  already on :3000. Chromium is preinstalled.
+- **Video proof for UI changes:** drive the desktop Chrome at
+  `http://localhost:3000` with computer use while recording the screen. Save the
+  recording under `/opt/cursor/artifacts/` and embed it in the PR description.
+  Never commit videos.
 
 ## Housekeeping
 
