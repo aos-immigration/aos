@@ -3,11 +3,17 @@
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { ChevronRight, User, Users, Home, Briefcase, Heart, FileText, Stamp, ShieldQuestion, Wallet, ListChecks, Scale, Receipt, FolderOpen } from "lucide-react";
+import { ChevronRight, User, Users, Home, Briefcase, Heart, FileText, Stamp, ShieldQuestion, Wallet, ListChecks, Scale, Receipt, FolderOpen, Shield } from "lucide-react";
 import { FORM_IDS } from "@/app/lib/intake/schema";
 import { Disclaimer } from "@/components/system/Disclaimer";
 import { cn } from "@/lib/utils";
 import { useIntake } from "@/components/intake/IntakeProvider";
+import {
+  groupSaveState,
+  sectionSaveState,
+  type GroupSaveState,
+  type IntakeSnapshot,
+} from "@/app/lib/sectionSaveState";
 
 export type SectionItem = {
   id: string;
@@ -143,15 +149,47 @@ const sidebarData: SidebarSection[] = [
       },
     ],
   },
+  {
+    id: "evidence",
+    title: "Documents & Evidence",
+    items: [
+      {
+        id: "documents",
+        label: "Document Vault",
+        href: "/sections/documents",
+        icon: <Shield className="w-[18px] h-[18px]" />,
+      },
+      {
+        id: "proof",
+        label: "Bona Fide Proof",
+        href: "/sections/proof",
+        icon: <FileText className="w-[18px] h-[18px]" />,
+      },
+    ],
+  },
 ];
 
-export function Sidebar({
-  open,
-  onNavigate,
-}: {
+const statusDot: Record<GroupSaveState | "not-saved", string> = {
+  saved: "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]",
+  partial: "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]",
+  empty: "bg-slate-400",
+  "not-saved": "bg-slate-400",
+};
+
+const statusLabel: Record<GroupSaveState | "not-saved", string> = {
+  saved: "Saved",
+  partial: "Partly saved",
+  empty: "Not saved yet",
+  "not-saved": "Not saved yet",
+};
+
+type SidebarProps = {
   open: boolean;
   onNavigate: () => void;
-}) {
+  snapshot: IntakeSnapshot;
+};
+
+export function Sidebar({ open, onNavigate, snapshot }: SidebarProps) {
   const pathname = usePathname();
   const { intake } = useIntake();
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
@@ -196,6 +234,10 @@ export function Sidebar({
         {sidebarData.map((section) => {
           const isExpanded = expandedSections.has(section.id);
           const isActive = isSectionActive(section);
+          const groupState = groupSaveState(
+            section.items.map((item) => item.href),
+            snapshot,
+          );
 
           return (
             <div key={section.id}>
@@ -215,11 +257,16 @@ export function Sidebar({
                   )}
                 />
                 <span className="flex-1">{section.title}</span>
+                <span
+                  aria-label={statusLabel[groupState]}
+                  className={cn("w-1.5 h-1.5 rounded-full", statusDot[groupState])}
+                />
               </button>
               {isExpanded && (
                 <div className="ml-4 pl-3 border-l border-border space-y-1 py-1">
                   {section.items.map((item) => {
                     const itemActive = isItemActive(item.href);
+                    const itemState = sectionSaveState(item.href, snapshot);
                     return (
                       <Link
                         key={item.id}
@@ -233,7 +280,11 @@ export function Sidebar({
                         )}
                       >
                         {item.icon}
-                        <span>{item.label}</span>
+                        <span className="flex-1">{item.label}</span>
+                        <span
+                          aria-label={statusLabel[itemState]}
+                          className={cn("w-1.5 h-1.5 rounded-full", statusDot[itemState])}
+                        />
                       </Link>
                     );
                   })}

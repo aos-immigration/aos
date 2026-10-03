@@ -12,10 +12,17 @@ from typing import Any, Dict, List, Optional
 
 import pikepdf
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
+from app.http_policy import (
+    FORMS_DIR,
+    form_pdf,
+    parse_allowed_origins,
+    validation_errors_for_client,
+)
 from app.pdf_access import pdf_get
 
 DD_API_KEY = os.environ.get("DD_API_KEY", "")
@@ -71,11 +78,21 @@ PDF_NOT_FOUND = "PDF not found"
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=parse_allowed_origins(os.environ.get("ALLOWED_ORIGINS")),
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
 )
+
+
+@app.exception_handler(RequestValidationError)
+async def hide_validation_input(
+    _request: Request, exc: RequestValidationError
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=422,
+        content={"detail": validation_errors_for_client(exc.errors())},
+    )
 
 
 @app.middleware("http")
@@ -103,8 +120,10 @@ class FillRequest(BaseModel):
 
 
 def _pdf_path(slug: str) -> Path:
-    base = Path(__file__).resolve().parents[3]
-    return base / "Forms" / f"{slug}.pdf"
+    path = form_pdf(slug, FORMS_DIR)
+    if path is None:
+        raise HTTPException(status_code=404, detail=PDF_NOT_FOUND)
+    return path
 
 
 def _deref(obj):
@@ -312,6 +331,25 @@ def debug_field(slug: str, name: str):
 
 class IntakeFillRequest(BaseModel):
     intake: Dict[str, Any] = Field(default_factory=dict)
+    acknowledged: Optional[bool] = None
+
+
+def _require_acknowledgement(body: IntakeFillRequest) -> None:
+    if body.acknowledged is not True:
+        raise HTTPException(
+            status_code=400,
+            detail="Acknowledgement is required before a PDF can be downloaded.",
+        )
+
+
+def _selected_forms(intake: Dict[str, Any]) -> List[str]:
+    selected = intake.get("selectedForms", None)
+    if not isinstance(selected, list) or len(selected) == 0:
+        raise HTTPException(status_code=400, detail="selectedForms is empty")
+    slugs = [slug for slug in selected if isinstance(slug, str) and slug.strip()]
+    if not slugs:
+        raise HTTPException(status_code=400, detail="selectedForms is empty")
+    return slugs
 
 
 def _filled_pdf(slug: str, fields: Dict[str, str], checkboxes: Dict[str, bool]) -> BytesIO:
@@ -333,28 +371,75 @@ def _filled_pdf(slug: str, fields: Dict[str, str], checkboxes: Dict[str, bool]) 
 @app.post("/fill/{slug}")
 def fill_pdf(slug: str, payload: FillRequest):
     output = _filled_pdf(slug, dict(payload.fields), dict(payload.checkboxes))
+    filename = f"{slug}-filled.pdf"
     return StreamingResponse(
         output,
         media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="{slug}-filled.pdf"'},
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Cache-Control": "no-store",
+        },
     )
 
 
-@app.post("/fill-intake/{slug}")
-def fill_intake(slug: str, body: IntakeFillRequest):
+def _map_or_404(slug: str, intake: Dict[str, Any]) -> Dict[str, Any]:
     from app.map_intake import map_intake
 
     try:
-        mapped = map_intake(slug, body.intake)
+        return map_intake(slug, intake)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.post("/fill-intake/{slug}")
+def fill_intake(slug: str, body: IntakeFillRequest):
+    _require_acknowledgement(body)
+    mapped = _map_or_404(slug, body.intake)
     output = _filled_pdf(slug, mapped["fields"], mapped["checkboxes"])
+    filename = f"{slug}-filled.pdf"
     return StreamingResponse(
         output,
         media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="{slug}-filled.pdf"'},
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Cache-Control": "no-store",
+        },
+    )
+
+
+@app.post("/preview-intake")
+def preview_intake(body: IntakeFillRequest):
+    from app.map_intake import MAPPED_SLUGS
+
+    from app.preview_pages import render_pdf_pages
+
+    selected = _selected_forms(body.intake)
+    forms: List[Dict[str, Any]] = []
+    notes: List[str] = []
+    for slug in selected:
+        if slug not in MAPPED_SLUGS:
+            notes.append(f"{slug}: not filled. This packet does not map that form yet.")
+            continue
+        try:
+            mapped = _map_or_404(slug, body.intake)
+        except HTTPException as exc:
+            if exc.status_code == 404:
+                notes.append(f"{slug}: not filled. The official PDF is not in this checkout.")
+                continue
+            raise
+        pdf = _filled_pdf(slug, mapped["fields"], mapped["checkboxes"])
+        forms.append(
+            {
+                "slug": slug,
+                "title": f"Form {slug.upper()}",
+                "pages": render_pdf_pages(pdf.getvalue()),
+            }
+        )
+    return JSONResponse(
+        {"forms": forms, "notes": notes},
+        headers={"Cache-Control": "no-store"},
     )
 
 
@@ -363,11 +448,10 @@ def packet(body: IntakeFillRequest):
     import io
     import zipfile
 
-    from app.map_intake import MAPPED_SLUGS, map_intake
+    from app.map_intake import MAPPED_SLUGS
 
-    selected = body.intake.get("selectedForms") or list(MAPPED_SLUGS)
-    if not isinstance(selected, list):
-        selected = list(MAPPED_SLUGS)
+    _require_acknowledgement(body)
+    selected = _selected_forms(body.intake)
     buffer = io.BytesIO()
     notes: List[str] = [
         "These are drafts. Check every answer against the form instructions before you sign.",
@@ -375,18 +459,18 @@ def packet(body: IntakeFillRequest):
     ]
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
         for slug in selected:
-            if not isinstance(slug, str):
-                continue
             if slug not in MAPPED_SLUGS:
                 notes.append(f"{slug}: not filled. This packet does not map that form yet.")
                 continue
             try:
-                mapped = map_intake(slug, body.intake)
-            except FileNotFoundError:
-                notes.append(
-                    f"{slug}: not filled. The official PDF is not in this checkout."
-                )
-                continue
+                mapped = _map_or_404(slug, body.intake)
+            except HTTPException as exc:
+                if exc.status_code == 404:
+                    notes.append(
+                        f"{slug}: not filled. The official PDF is not in this checkout."
+                    )
+                    continue
+                raise
             pdf = _filled_pdf(slug, mapped["fields"], mapped["checkboxes"])
             archive.writestr(f"{slug}-filled.pdf", pdf.getvalue())
         archive.writestr("read-me.txt", "\n".join(notes) + "\n")
@@ -394,5 +478,8 @@ def packet(body: IntakeFillRequest):
     return StreamingResponse(
         buffer,
         media_type="application/zip",
-        headers={"Content-Disposition": 'attachment; filename="aos-packet.zip"'},
+        headers={
+            "Content-Disposition": 'attachment; filename="aos-packet.zip"',
+            "Cache-Control": "no-store",
+        },
     )

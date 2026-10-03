@@ -40,13 +40,13 @@ const LINES: Record<FormId, { label: string; paper: number; online: number; sour
     label: "Form I-765",
     paper: 260,
     online: 260,
-    source: `${SOURCE}. Pending Form I-485 filed with a fee on or after April 1, 2024.`,
+    source: `${SOURCE}, Appendix C. I-765 is $260 with a pending I-485 filed on or after 4/1/2024.`,
   },
   "i-131": {
     label: "Form I-131",
     paper: 630,
     online: 580,
-    source: `${SOURCE}. Advance parole with a pending Form I-485.`,
+    source: `${SOURCE}, Appendix B. I-131 is $630 paper / $580 online with a pending I-485.`,
   },
   "g-1145": {
     label: "Form G-1145",
