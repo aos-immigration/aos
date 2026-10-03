@@ -76,32 +76,6 @@ export default function PetitionerPage() {
 
         <div className="space-y-6">
           <div className="border border-border p-6 rounded-xl space-y-4 bg-card">
-            <div className="flex items-center justify-between">
-              <h3 className="font-medium text-sm">System Metadata</h3>
-              <span className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]" />
-            </div>
-            <div className="space-y-3 font-mono text-[11px]">
-              <div className="flex justify-between border-b border-border pb-2">
-                <span className="text-muted-foreground">A-Number:</span>
-                <span className="text-foreground">A-234 567 890</span>
-              </div>
-              <div className="flex justify-between border-b border-border pb-2">
-                <span className="text-muted-foreground">SSN:</span>
-                <span className="text-foreground">XXX-XX-4421</span>
-              </div>
-              <div className="flex justify-between border-b border-border pb-2">
-                <span className="text-muted-foreground">Last Validated:</span>
-                <span className="text-foreground">2024-05-12 14:22</span>
-              </div>
-            </div>
-            <div className="pt-4">
-              <button className="w-full text-[11px] py-2 border border-border rounded hover:bg-accent transition-colors">
-                Generate Preview PDF
-              </button>
-            </div>
-          </div>
-
-          <div className="border border-border p-6 rounded-xl space-y-4 bg-card">
             <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
               Required Proof
             </h3>

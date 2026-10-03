@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { ChevronRight, User, Users, Home, Briefcase, Heart, FileText, Image, Settings, Shield } from "lucide-react";
+import { ChevronRight, User, Users, Home, Briefcase, Heart, FileText } from "lucide-react";
+import { Disclaimer } from "@/components/system/Disclaimer";
 import { cn } from "@/lib/utils";
 
 export type SectionItem = {
@@ -17,8 +18,6 @@ export type SidebarSection = {
   id: string;
   title: string;
   items: SectionItem[];
-  status?: "complete" | "in-progress" | "pending";
-  progress?: number;
 };
 
 const sidebarData: SidebarSection[] = [
@@ -45,8 +44,6 @@ const sidebarData: SidebarSection[] = [
         icon: <Briefcase className="w-[18px] h-[18px]" />,
       },
     ],
-    status: "complete",
-    progress: 100,
   },
   {
     id: "beneficiary",
@@ -77,8 +74,6 @@ const sidebarData: SidebarSection[] = [
         icon: <FileText className="w-[18px] h-[18px]" />,
       },
     ],
-    status: "in-progress",
-    progress: 45,
   },
   {
     id: "marital",
@@ -91,41 +86,8 @@ const sidebarData: SidebarSection[] = [
         icon: <Heart className="w-[18px] h-[18px]" />,
       },
     ],
-    status: "in-progress",
-    progress: 60,
-  },
-  {
-    id: "evidence",
-    title: "Documents & Evidence",
-    items: [
-      {
-        id: "documents",
-        label: "Document Vault",
-        href: "/sections/documents",
-        icon: <Shield className="w-[18px] h-[18px]" />,
-      },
-      {
-        id: "proof",
-        label: "Bona Fide Proof",
-        href: "/sections/proof",
-        icon: <Image className="w-[18px] h-[18px]" />,
-      },
-    ],
-    status: "in-progress",
-    progress: 60,
   },
 ];
-
-const getStatusDot = (status?: string) => {
-  switch (status) {
-    case "complete":
-      return "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]";
-    case "in-progress":
-      return "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]";
-    default:
-      return "bg-slate-400";
-  }
-};
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -154,12 +116,11 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="w-64 border-r border-border bg-sidebar flex flex-col shrink-0 z-20">
-      <div className="p-6 flex items-center gap-3">
-        <div className="w-8 h-8 bg-primary rounded flex items-center justify-center text-white">
-          <Shield className="w-4 h-4" />
-        </div>
-        <span className="font-semibold text-sm tracking-tight">Immigration OS</span>
+    <aside className="flex w-72 shrink-0 flex-col border-r border-sidebar-border bg-sidebar z-20">
+      <div className="px-6 py-5">
+        <Link href="/" className="type-title">
+          AOS
+        </Link>
       </div>
 
       <nav className="flex-1 px-4 space-y-1 overflow-y-auto custom-scrollbar">
@@ -185,14 +146,6 @@ export function Sidebar() {
                   )}
                 />
                 <span className="flex-1">{section.title}</span>
-                {section.status && (
-                  <span
-                    className={cn(
-                      "w-1.5 h-1.5 rounded-full",
-                      getStatusDot(section.status)
-                    )}
-                  />
-                )}
               </button>
               {isExpanded && (
                 <div className="ml-4 pl-3 border-l border-border space-y-1 py-1">
@@ -221,21 +174,8 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="p-4 border-t border-border">
-        <div className="flex items-center gap-3 px-2">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-purple-500 flex items-center justify-center text-[10px] font-bold text-white uppercase">
-            JD
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-xs font-semibold truncate">John Doe</div>
-            <div className="text-[10px] text-muted-foreground truncate font-mono uppercase">
-              APP-2024-0891
-            </div>
-          </div>
-          <button className="text-muted-foreground hover:text-foreground transition-colors">
-            <Settings className="w-4 h-4" />
-          </button>
-        </div>
+      <div className="border-t border-sidebar-border p-4">
+        <Disclaimer />
       </div>
     </aside>
   );

@@ -35,12 +35,12 @@ test.describe("Verify and preview", () => {
     });
 
     const verifyButton = page.getByRole("button", {
-      name: /Verify & Preview|Review Package/,
+      name: /Preview my forms/,
     });
     await expect(verifyButton).toBeEnabled();
     await verifyButton.click();
 
-    await expect(page.getByRole("heading", { name: "PDF preview" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Preview: Form I-130" })).toBeVisible();
     await expect(page.locator('iframe[title="I-130 preview"]')).toBeVisible();
 
     const payload = capturedPayload as {
