@@ -20,7 +20,8 @@ page, FastAPI route, or sidebar href changes without a matching entry.
 
 ## Setup and check
 
-`bun` 1.3.10 and `uv` must be on `PATH`.
+`bun` 1.3.10 and `uv` must be on `PATH`. The fictional demo walkthrough is
+`docs/demo-script.md`.
 
 ```bash
 bun run setup   # bun install, which uv-syncs apps/api

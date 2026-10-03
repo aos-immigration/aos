@@ -25,6 +25,10 @@ runs `convex dev`, which prints the URL and needs you to be logged into Convex.
 
 `NEXT_PUBLIC_API_URL` is optional and defaults to `http://localhost:8000`.
 
+The click-through for the fictional Sampleton demo is `docs/demo-script.md`.
+Without `NEXT_PUBLIC_CONVEX_URL`, run the API and `npx next dev` in
+`apps/web`. Answers stay in that browser tab.
+
 **Without `NEXT_PUBLIC_CONVEX_URL` the production build fails.** `providers.tsx`
 drops `ConvexProvider` when the variable is missing, and the shared
 `DashboardLayout` calls `useMutation` (via `useApplicationId()`), so prerendering
