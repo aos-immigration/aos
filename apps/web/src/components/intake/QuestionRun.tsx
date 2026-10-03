@@ -6,6 +6,7 @@ import { ChoiceCard } from "@/components/system/ChoiceCard";
 import { QuestionFrame } from "@/components/system/QuestionFrame";
 import { ErrorState, LoadingState } from "@/components/system/States";
 import { Input } from "@/components/ui/input";
+import { isPublicDemo } from "@/app/lib/demoPolicy";
 import { checkIntake } from "@/app/lib/intake/checks";
 import { readPath, writePath } from "@/app/lib/intake/path";
 import type { Intake } from "@/app/lib/intake/schema";
@@ -214,29 +215,38 @@ function FieldControl({
   type?: "text" | "email" | "tel";
 }) {
   const [shown, setShown] = useState(false);
+  const locked = Boolean(sensitive && isPublicDemo());
   return (
-    <label className="block space-y-2">
-      <span className="flex items-center justify-between text-sm font-medium">
-        {label}
-        {sensitive ? (
-          <button
-            type="button"
-            className="font-normal underline decoration-foreground/30 underline-offset-4"
-            onClick={() => setShown((open) => !open)}
-          >
-            {shown ? "Hide" : "Show"}
-          </button>
-        ) : null}
-      </span>
-      <Input
-        className="h-12 text-base"
-        type={sensitive && !shown ? "password" : type}
-        value={value}
-        autoComplete="off"
-        spellCheck={false}
-        data-dd-privacy={sensitive ? "hidden" : undefined}
-        onChange={(event) => onValue(event.target.value)}
-      />
-    </label>
+    <div className="space-y-2">
+      <label className="block space-y-2">
+        <span className="flex items-center justify-between text-sm font-medium">
+          {label}
+          {sensitive && !locked ? (
+            <button
+              type="button"
+              className="font-normal underline decoration-foreground/30 underline-offset-4"
+              onClick={() => setShown((open) => !open)}
+            >
+              {shown ? "Hide" : "Show"}
+            </button>
+          ) : null}
+        </span>
+        <Input
+          className="h-12 text-base"
+          type={sensitive && !shown ? "password" : type}
+          value={value}
+          autoComplete="off"
+          spellCheck={false}
+          disabled={locked}
+          data-dd-privacy={sensitive ? "hidden" : undefined}
+          onChange={(event) => {
+            if (!locked) onValue(event.target.value);
+          }}
+        />
+      </label>
+      {locked ? (
+        <p className="text-sm text-muted-foreground">This public demo does not collect this number.</p>
+      ) : null}
+    </div>
   );
 }

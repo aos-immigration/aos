@@ -2,6 +2,8 @@ import { auth } from "@clerk/nextjs/server";
 import { fetchAction } from "convex/nextjs";
 import { cookies } from "next/headers";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { POST as postPacket } from "../../packet/route";
+import { POST as postPreview } from "../../preview-intake/route";
 import { POST } from "./route";
 
 vi.mock("@clerk/nextjs/server", () => ({
@@ -92,6 +94,70 @@ describe("POST /api/fill/[slug]", () => {
       { slug: "i-130" },
       { token: "convex-token" },
     );
+  });
+
+  it("uses the sample packet for a signed-in caller when the public demo flag is on", async () => {
+    enableClerk();
+    authMock.mockResolvedValue({
+      userId: "user_123",
+      getToken: async () => "convex-token",
+    } as never);
+    vi.stubEnv("NEXT_PUBLIC_CONVEX_URL", "https://example.convex.cloud");
+    vi.stubEnv("NEXT_PUBLIC_DEMO_ONLY", "1");
+    vi.stubEnv("PDF_FILL_SECRET", "test-secret");
+    const fetchMock = vi.fn().mockResolvedValue(new Response("%PDF", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await callFill("i-130", JSON.stringify({ fields: { sample: "Lovelace" } }));
+
+    expect(response.status).toBe(200);
+    expect(fetchActionMock).not.toHaveBeenCalled();
+    const forwarded = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body)) as {
+      intake: { petitioner: { familyName: string; givenName: string } };
+    };
+    expect(forwarded.intake.petitioner.familyName).toBe("Sampleton");
+    expect(forwarded.intake.petitioner.givenName).toBe("Jordan");
+    expect(JSON.stringify(forwarded)).not.toContain("Lovelace");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:8000/fill-intake/i-130",
+      expect.objectContaining({
+        headers: expect.objectContaining({ "X-Fill-Caller": "demo" }),
+      }),
+    );
+  });
+
+  it("previews and packets the sample couple for a signed-in public demo", async () => {
+    enableClerk();
+    authMock.mockResolvedValue({
+      userId: "user_123",
+      getToken: async () => "convex-token",
+    } as never);
+    vi.stubEnv("NEXT_PUBLIC_DEMO_ONLY", "1");
+    vi.stubEnv("PDF_FILL_SECRET", "test-secret");
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ forms: [], notes: [] }), { status: 200 }))
+      .mockResolvedValueOnce(new Response("PK", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const preview = await postPreview();
+    const packet = await postPacket();
+
+    expect(preview.status).toBe(200);
+    expect(packet.status).toBe(200);
+    expect(fetchActionMock).not.toHaveBeenCalled();
+    const previewBody = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body)) as {
+      intake: { petitioner: { familyName: string } };
+    };
+    const packetBody = JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body)) as {
+      intake: { beneficiary: { familyName: string } };
+      acknowledged: boolean;
+    };
+    expect(previewBody.intake.petitioner.familyName).toBe("Sampleton");
+    expect(packetBody.intake.beneficiary.familyName).toBe("Exampleton");
+    expect(packetBody.acknowledged).toBe(true);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("http://localhost:8000/preview-intake");
+    expect(fetchMock.mock.calls[1]?.[0]).toBe("http://localhost:8000/packet");
   });
 
   it("builds the demo I-130 on the server and ignores the client body", async () => {

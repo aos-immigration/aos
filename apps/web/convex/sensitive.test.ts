@@ -166,6 +166,22 @@ describe("sensitive ids", () => {
     vi.unstubAllGlobals();
   });
 
+  test("public demo refuses to store an SSN or A-Number", async () => {
+    process.env.DEMO_ONLY = "1";
+    try {
+      const { alice, applicationId } = await seeded();
+      await expect(
+        alice.mutation(api.sensitive.saveSensitiveIds, {
+          applicationId,
+          ssn: "123-45-6789",
+          aNumber: "A123456789",
+        }),
+      ).rejects.toThrow("Identity numbers are not saved in the public demo");
+    } finally {
+      delete process.env.DEMO_ONLY;
+    }
+  });
+
   test("delete removes every row for that owner only", async () => {
     const { t, alice, bob, applicationId } = await seeded();
     await alice.mutation(api.sensitive.saveSensitiveIds, {

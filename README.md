@@ -312,6 +312,9 @@ require email verification, and set the session lifetime to 7 days or less
 5. Export the same `PDF_FILL_SECRET` for the API process.
 6. Optional: enable MFA in the Clerk dashboard.
 
+A public demo link uses the same apps with `NEXT_PUBLIC_DEMO_ONLY=1`. The
+env vars and the `vercel --prod` commands are in `docs/deploy.md`.
+
 ### Reset anonymous drafts
 
 Applications saved before accounts existed have no owner. They are dev-only

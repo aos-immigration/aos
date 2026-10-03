@@ -125,4 +125,62 @@ describe("stored id writes", () => {
     expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/preview-intake");
     vi.unstubAllGlobals();
   });
+
+  test("public demo stores no identity numbers and previews the sample couple", async () => {
+    process.env.DEMO_ONLY = "1";
+    process.env.PDF_FILL_SECRET = "fill-secret";
+    try {
+      const t = convexTest(schema, modules);
+      const alice = t.withIdentity({ subject: "user_alice" });
+      const applicationId = await alice.mutation(api.petitioner.getOrCreateApplication, {});
+      const intake = emptyIntake();
+      intake.petitioner.ssn = "123-45-6789";
+      intake.petitioner.aNumber = "A123456789";
+      intake.petitioner.familyName = "Lovelace";
+      intake.beneficiary.ssn = "999-99-9999";
+      intake.immigration.i94Number = "PLAIN-i94";
+      intake.immigration.passportNumber = "PLAIN-passport";
+      await alice.mutation(api.intake.saveIntake, {
+        applicationId,
+        payload: JSON.stringify(intake),
+      });
+      const stored = await t.run(async (ctx) => {
+        const row = await ctx.db.query("intakes").first();
+        return row?.payload ?? "";
+      });
+      const parsed = JSON.parse(stored) as {
+        petitioner: { ssn: string; aNumber: string; familyName: string };
+        beneficiary: { ssn: string };
+        immigration: { i94Number: string; passportNumber: string };
+      };
+      expect(stored).not.toContain("123-45-6789");
+      expect(stored).not.toContain("999-99-9999");
+      expect(stored).not.toContain("A123456789");
+      expect(stored).not.toContain("PLAIN-i94");
+      expect(stored).not.toContain("PLAIN-passport");
+      expect(parsed.petitioner.ssn).toBe("");
+      expect(parsed.petitioner.aNumber).toBe("");
+      expect(parsed.beneficiary.ssn).toBe("");
+      expect(parsed.immigration.i94Number).toBe("");
+      expect(parsed.immigration.passportNumber).toBe("");
+      expect(parsed.petitioner.familyName).toBe("Lovelace");
+
+      const fetchMock = vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ forms: [], notes: [] }), { status: 200 }),
+      );
+      vi.stubGlobal("fetch", fetchMock);
+      await alice.action(api.intake.previewOwnedIntake, {});
+      const init = fetchMock.mock.calls[0]?.[1] as { body?: string };
+      const body = JSON.parse(init.body ?? "{}") as {
+        intake: { petitioner: { familyName: string; givenName: string; ssn: string } };
+      };
+      expect(body.intake.petitioner.familyName).toBe("Sampleton");
+      expect(body.intake.petitioner.givenName).toBe("Jordan");
+      expect(JSON.stringify(body)).not.toContain("Lovelace");
+      expect(JSON.stringify(body)).not.toContain("123-45-6789");
+      vi.unstubAllGlobals();
+    } finally {
+      delete process.env.DEMO_ONLY;
+    }
+  });
 });

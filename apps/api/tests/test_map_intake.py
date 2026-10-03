@@ -248,6 +248,7 @@ def test_preview_returns_images_without_acknowledgement() -> None:
     assert slugs == ["i-130", "i-130a", "i-485", "i-765", "i-131"]
     page = base64.b64decode(body["forms"][0]["pages"][0])
     assert page.startswith(b"\xff\xd8\xff")
+    assert len(response.content) < 4_500_000
     assert not response.content.startswith(b"%PDF")
     assert "i-864" in " ".join(body["notes"])
 

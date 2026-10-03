@@ -1,6 +1,7 @@
 import { action, internalMutation, internalQuery, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
+import { isPublicDemo } from "../src/app/lib/demoPolicy";
 import { requireOwnedApplication, requireUserId } from "./authz";
 import { buildPdfPayload, type AddressRow, type EmploymentRow } from "../src/app/lib/buildPdfPayload";
 import {
@@ -38,6 +39,9 @@ export const saveSensitiveIds = mutation({
     aNumber: v.optional(v.union(v.string(), v.null())),
   },
   handler: async (ctx, args) => {
+    if (isPublicDemo()) {
+      throw new Error("Identity numbers are not saved in the public demo");
+    }
     await requireOwnedApplication(ctx, args.applicationId);
     const existing = await ctx.db
       .query("petitionerBasics")
@@ -179,6 +183,9 @@ export const reencryptAll = internalMutation({
 export const fillI130 = action({
   args: {},
   handler: async (ctx) => {
+    if (isPublicDemo()) {
+      throw new Error("The public demo fills the fictional packet from the web server");
+    }
     const userId = await requireUserId(ctx);
     const owned = await ctx.runQuery(internal.sensitive.loadOwnedI130, {});
     if (!owned) throw new Error("Save petitioner basics before preview");

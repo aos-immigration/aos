@@ -9,6 +9,7 @@ import { api } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { isPublicDemo } from "@/app/lib/demoPolicy";
 import { maskANumberLast4, maskSsnLast4, normalizeANumber, normalizeSsn } from "@/app/lib/sensitiveId";
 
 const schema = z.object({
@@ -32,6 +33,7 @@ export function SensitiveIdForm({
   aNumberLast4: string | null;
 }) {
   const save = useMutation(api.sensitive.saveSensitiveIds);
+  const locked = isPublicDemo();
   const [visible, setVisible] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const {
@@ -45,6 +47,10 @@ export function SensitiveIdForm({
   });
 
   const onSubmit = handleSubmit(async (values) => {
+    if (locked) {
+      setStatus("This public demo does not collect this number.");
+      return;
+    }
     setStatus(null);
     try {
       const saved = await save({
@@ -65,7 +71,9 @@ export function SensitiveIdForm({
       <div>
         <h3 className="font-medium">Identity numbers</h3>
         <p className="text-sm text-muted-foreground">
-          Saved encrypted. This screen only shows the last four digits.
+          {locked
+            ? "This public demo does not collect this number."
+            : "Saved encrypted. This screen only shows the last four digits."}
         </p>
       </div>
       <p className="text-sm" data-dd-privacy="hidden">
@@ -82,6 +90,7 @@ export function SensitiveIdForm({
             data-dd-privacy="hidden"
             spellCheck={false}
             placeholder="Enter to replace the saved value"
+            disabled={locked}
             {...register("ssn")}
           />
           {errors.ssn && <p className="text-xs text-red-500">{errors.ssn.message}</p>}
@@ -95,6 +104,7 @@ export function SensitiveIdForm({
             data-dd-privacy="hidden"
             spellCheck={false}
             placeholder="Enter to replace the saved value"
+            disabled={locked}
             {...register("aNumber")}
           />
           {errors.aNumber && <p className="text-xs text-red-500">{errors.aNumber.message}</p>}
@@ -104,7 +114,11 @@ export function SensitiveIdForm({
         <button type="button" className="text-xs underline" onClick={() => setVisible((value) => !value)}>
           {visible ? "Hide" : "Show"}
         </button>
-        <button type="submit" className="text-xs font-medium bg-primary text-primary-foreground px-3 py-2 rounded">
+        <button
+          type="submit"
+          disabled={locked}
+          className="text-xs font-medium bg-primary text-primary-foreground px-3 py-2 rounded disabled:opacity-50"
+        >
           Save numbers
         </button>
       </div>

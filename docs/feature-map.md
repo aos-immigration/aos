@@ -350,7 +350,7 @@ Status: wired.
 
 Fills one mapped form from a canonical intake and returns PDF bytes only when acknowledged is true. The caller must send X-Fill-Secret. The rate limit key is X-Fill-Caller. Mapped slugs are i-130, i-130a, i-485, i-765, and i-131. I-765 writes category (c)(9) only when I-485 is also selected. I-131 checks advance parole for a pending I-485 only in that same case. I-864 is not mapped until the official PDF is in Forms/.
 
-Reach it from POST /api/fill-intake/i-130 on the web app. The browser does not call this API route's upstream. Demo mode builds the Sampleton intake on the server..
+Reach it from POST /api/fill-intake/i-130 on the web app. The browser does not call this API route's upstream. A demo cookie builds the Sampleton intake on the server. NEXT_PUBLIC_DEMO_ONLY=1 does that for every caller, including a signed-in one..
 
 Verify: bun run check runs apps/api/tests/test_map_intake.py and the intake_*.json fixtures in eval_fill.py.
 
@@ -384,7 +384,7 @@ None.
 
 Status: partial.
 
-The header Preview button posts to /api/preview-intake with no field map and shows page images. Demo mode builds the Jordan Sampleton intake on the server and ignores the client body. A signed-in preview loads that caller's saved intake, decrypts SSN and A-Number, and does not return those numbers to the browser. Download my forms (PDF) stays off until every acknowledgement box is checked, then posts to /api/packet.
+The header Preview button posts to /api/preview-intake with no field map and shows page images. A demo cookie, or NEXT_PUBLIC_DEMO_ONLY=1, builds the Jordan Sampleton intake on the server and ignores the client body. A signed-in preview loads that caller's saved intake only when that flag is unset, decrypts SSN and A-Number, and does not return those numbers to the browser. Download my forms (PDF) stays off until every acknowledgement box is checked, then posts to /api/packet.
 
 Reach it from the Preview button in the app header, on any /sections or /forms page.
 

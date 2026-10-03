@@ -24,6 +24,9 @@ dev = [
 [tool.uv]
 index-url = "https://pypi.org/simple"
 
+[tool.vercel]
+entrypoint = "app.main:app"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
