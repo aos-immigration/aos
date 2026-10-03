@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "pip install -r requirements.txt && python scripts/stage_forms.py",
+  "functions": {
+    "app/main.py": {
+      "includeFiles": "forms/**",
+      "excludeFiles": "{tests/**,scripts/**,.venv/**,fixtures/**,**/__pycache__/**}"
+    }
+  }
+}

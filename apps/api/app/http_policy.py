@@ -1,12 +1,30 @@
 from __future__ import annotations
 
+import os
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
 DEFAULT_WEB_ORIGIN = "http://localhost:3000"
 ALLOWED_FORM_SLUGS = frozenset({"i-130", "i-130a", "i-131", "i-485", "i-765"})
-FORMS_DIR = Path(__file__).resolve().parents[3] / "Forms"
+
+
+def forms_dir() -> Path:
+    override = os.environ.get("FORMS_DIR", "").strip()
+    if override:
+        return Path(override)
+    here = Path(__file__).resolve()
+    candidates: list[Path] = []
+    if len(here.parents) > 3:
+        candidates.append(here.parents[3] / "Forms")
+    if len(here.parents) > 1:
+        candidates.append(here.parents[1] / "forms")
+    candidates.append(Path.cwd() / "forms")
+    candidates.append(Path.cwd() / "Forms")
+    for candidate in candidates:
+        if candidate.is_dir() and any(candidate.glob("*.pdf")):
+            return candidate
+    return candidates[0]
 
 
 def parse_allowed_origins(raw: str | None) -> list[str]:

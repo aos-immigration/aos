@@ -12,11 +12,15 @@ from typing import Any
 
 import pikepdf
 
+from app.http_policy import form_pdf, forms_dir
 from app.pdf_access import pdf_get
 
 
 def _pdf_path(slug: str) -> Path:
-    return Path(__file__).resolve().parents[3] / "Forms" / f"{slug}.pdf"
+    path = form_pdf(slug, forms_dir())
+    if path is None:
+        return forms_dir() / f"{slug}.pdf"
+    return path
 
 
 def _deref(obj: Any) -> Any:

@@ -21,8 +21,8 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from app.http_policy import (
-    FORMS_DIR,
     form_pdf,
+    forms_dir,
     parse_allowed_origins,
     validation_errors_for_client,
 )
@@ -124,7 +124,7 @@ class FillRequest(BaseModel):
 
 
 def _pdf_path(slug: str) -> Path:
-    path = form_pdf(slug, FORMS_DIR)
+    path = form_pdf(slug, forms_dir())
     if path is None:
         raise HTTPException(status_code=404, detail=PDF_NOT_FOUND)
     return path

@@ -4,6 +4,7 @@ from pathlib import Path
 
 from app.http_policy import (
     form_pdf,
+    forms_dir,
     parse_allowed_origins,
     validation_errors_for_client,
 )
@@ -18,6 +19,32 @@ def test_unset_origins_default_to_local_web() -> None:
 def test_star_origin_is_dropped() -> None:
     assert parse_allowed_origins("*") == []
     assert parse_allowed_origins(" https://app.example , * ") == ["https://app.example"]
+
+
+def test_forms_dir_finds_the_checkout_templates() -> None:
+    found = forms_dir()
+    assert (found / "i-130.pdf").is_file()
+
+
+def test_forms_dir_honors_an_explicit_directory(tmp_path: Path, monkeypatch) -> None:
+    target = tmp_path / "forms"
+    target.mkdir()
+    (target / "i-130.pdf").write_bytes(b"%PDF")
+    monkeypatch.setenv("FORMS_DIR", str(target))
+    assert forms_dir() == target
+
+
+def test_stage_forms_copies_pdfs_only(tmp_path: Path) -> None:
+    from scripts.stage_forms import stage_forms
+
+    source = tmp_path / "Forms"
+    source.mkdir()
+    (source / "i-130.pdf").write_bytes(b"%PDF-1.4")
+    (source / "notes.txt").write_text("skip")
+    dest = tmp_path / "forms"
+    assert stage_forms(source, dest) == 1
+    assert (dest / "i-130.pdf").read_bytes() == b"%PDF-1.4"
+    assert not (dest / "notes.txt").exists()
 
 
 def test_known_slug_stays_inside_forms() -> None:
