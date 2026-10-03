@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { checkIntake } from "@/app/lib/intake/checks";
 import { sectionProgress } from "@/app/lib/intake/progress";
 import { toggleForm } from "@/app/lib/intake/path";
 import { FORM_IDS, type FormId } from "@/app/lib/intake/schema";
@@ -8,6 +9,7 @@ import { LoadingState } from "@/components/system/States";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { DemoBanner } from "./DemoBanner";
+import { FixList } from "./FixList";
 import { LoadDemoButton } from "./LoadDemoButton";
 import { useIntake } from "./IntakeProvider";
 
@@ -25,8 +27,11 @@ export function SectionsHome() {
   const { intake, ready, status, error, update } = useIntake();
   if (!ready) return <LoadingState label="Loading your answers" />;
 
-  const sections = sectionProgress(intake, new Date());
-  const next = sections.find((section) => !section.complete) ?? sections[0];
+  const asOf = new Date();
+  const sections = sectionProgress(intake, asOf);
+  const issues = checkIntake(intake, asOf);
+  const next = sections.find((section) => !section.complete);
+  const readyForReview = sections.every((section) => section.complete);
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-8">
@@ -81,6 +86,10 @@ export function SectionsHome() {
           );
         })}
       </ul>
+      <section className="space-y-3">
+        <h2 className="text-sm font-medium">Automated check</h2>
+        <FixList issues={issues} />
+      </section>
       <ol className="divide-y divide-border rounded-lg border border-border">
         {sections.map((section) => (
           <li key={section.id}>
@@ -93,7 +102,11 @@ export function SectionsHome() {
       </ol>
       {next && next.id !== "forms" ? (
         <Link href={next.href} className={buttonVariants({ size: "cta" })}>
-          {next.complete ? "Review answers" : `Continue with ${next.label.toLowerCase()}`}
+          {`Continue with ${next.label.toLowerCase()}`}
+        </Link>
+      ) : readyForReview ? (
+        <Link href="/sections/review" className={buttonVariants({ size: "cta" })}>
+          Review answers
         </Link>
       ) : null}
     </div>

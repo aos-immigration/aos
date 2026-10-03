@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { ChevronRight, User, Users, Home, Briefcase, Heart, FileText, Stamp, ShieldQuestion, Wallet, Shield } from "lucide-react";
+import { ChevronRight, User, Users, Home, Briefcase, Heart, FileText, Stamp, ShieldQuestion, Wallet, ListChecks, Shield } from "lucide-react";
 import { Disclaimer } from "@/components/system/Disclaimer";
 import { cn } from "@/lib/utils";
 import {
@@ -114,6 +114,12 @@ const sidebarData: SidebarSection[] = [
         label: "Sponsor",
         href: "/sections/sponsor",
         icon: <Wallet className="w-[18px] h-[18px]" />,
+      },
+      {
+        id: "review",
+        label: "Review",
+        href: "/sections/review",
+        icon: <ListChecks className="w-[18px] h-[18px]" />,
       },
     ],
   },

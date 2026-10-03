@@ -172,6 +172,16 @@ Reach it from Sidebar, Case, Sponsor.
 
 Verify: bun run check runs apps/web/src/app/lib/intake/path.test.ts, which includes the sponsor paths.
 
+### `/sections/review`
+
+Status: wired.
+
+Key facts with their source, the live automated-check list, and five-year address and employment timelines. Review stays locked until required sections are filled and checkIntake is empty. Specialist and attorney review are labeled coming soon.
+
+Reach it from Sidebar, Case, Review.
+
+Verify: bun run check runs apps/web/src/app/lib/intake/timeline.test.ts and apps/web/src/components/intake/review.test.tsx.
+
 ### `/forms`
 
 Status: mocked.
