@@ -5,8 +5,8 @@ export default function SectionsPage() {
         Your Application
       </h1>
       <p className="text-muted-foreground text-sm max-w-xl mb-8">
-        Fill out your information step by step. We&apos;ll use this data to
-        automatically complete all required immigration forms for you.
+        Fill out your information step by step. The header counts only the
+        sections that store what you enter.
       </p>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
         <div className="p-6 border border-border rounded-xl bg-card">
@@ -24,7 +24,7 @@ export default function SectionsPage() {
         <div className="p-6 border border-border rounded-xl bg-card">
           <h3 className="font-medium mb-2">Documents & Evidence</h3>
           <p className="text-sm text-muted-foreground">
-            Upload and organize supporting documents.
+            Document vault and bona fide proof are not available yet.
           </p>
         </div>
       </div>

@@ -20,9 +20,9 @@ describe("disclaimer copy", () => {
   it("hides privacy lines that still need a security fix", () => {
     const visible = visibleCopy(PRIVACY_LINES).map((line) => line.text).join(" ");
     expect(visible).toContain("don't sell your information");
+    expect(visible).toContain("don't record your screen");
     expect(visible).not.toContain("encrypt");
     expect(visible).not.toContain("signed in");
-    expect(visible).not.toContain("record your screen");
   });
 });
 
