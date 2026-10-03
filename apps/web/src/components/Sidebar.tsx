@@ -145,7 +145,13 @@ const sidebarData: SidebarSection[] = [
   },
 ];
 
-export function Sidebar() {
+export function Sidebar({
+  open,
+  onNavigate,
+}: {
+  open: boolean;
+  onNavigate: () => void;
+}) {
   const pathname = usePathname();
   const { intake } = useIntake();
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
@@ -174,7 +180,12 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="flex w-72 shrink-0 flex-col border-r border-sidebar-border bg-sidebar z-20">
+    <aside
+      className={cn(
+        "fixed inset-y-0 left-0 z-40 w-72 shrink-0 flex-col border-r border-sidebar-border bg-sidebar md:static md:flex",
+        open ? "flex" : "hidden",
+      )}
+    >
       <div className="px-6 py-5">
         <Link href="/" className="type-title">
           AOS
@@ -213,6 +224,7 @@ export function Sidebar() {
                       <Link
                         key={item.id}
                         href={item.href}
+                        onClick={onNavigate}
                         className={cn(
                           "flex items-center gap-3 px-3 py-1.5 text-xs rounded-md transition-colors",
                           itemActive

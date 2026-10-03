@@ -32,13 +32,23 @@ function stageFor(pathname: string): StageId {
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname();
+  const [navOpen, setNavOpen] = useState(false);
   return (
     <div className="flex h-screen overflow-hidden">
-      <Sidebar />
+      <Sidebar open={navOpen} onNavigate={() => setNavOpen(false)} />
       <main className="flex-1 flex flex-col overflow-hidden relative">
         <header className="z-10 border-b border-border bg-background">
           <div className="flex min-h-14 flex-wrap items-center justify-between gap-3 px-4 py-2 sm:px-6">
-            <Breadcrumbs />
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                className="text-sm underline decoration-foreground/30 underline-offset-4 md:hidden"
+                onClick={() => setNavOpen((open) => !open)}
+              >
+                {navOpen ? "Close" : "Menu"}
+              </button>
+              <Breadcrumbs />
+            </div>
             <div className="flex items-center gap-3">
               <SaveStatus />
               <LoadDemoButton />
