@@ -9,6 +9,7 @@
  */
 
 import type * as forms from "../forms.js";
+import type * as intake from "../intake.js";
 import type * as petitioner from "../petitioner.js";
 
 import type {
@@ -19,6 +20,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   forms: typeof forms;
+  intake: typeof intake;
   petitioner: typeof petitioner;
 }>;
 

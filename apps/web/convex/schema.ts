@@ -50,6 +50,12 @@ export default defineSchema({
     sortOrder: v.number(),
   }).index("by_application_role", ["applicationId", "personRole"]),
 
+  intakes: defineTable({
+    applicationId: v.id("applications"),
+    payload: v.string(),
+    updatedAt: v.number(),
+  }).index("by_application", ["applicationId"]),
+
   employmentEntries: defineTable({
     applicationId: v.id("applications"),
     personRole: v.string(),
