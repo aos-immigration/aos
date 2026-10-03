@@ -24,8 +24,8 @@ The API is `http://localhost:8000`. The site is `http://localhost:3000`.
 Leave `NEXT_PUBLIC_CONVEX_URL` unset. Answers then stay in the browser tab.
 A full reload clears them. Load demo again.
 
-`bun run dev` from the repo root also starts Convex, which needs a Convex
-login. The path above does not.
+`bun run dev` from the repo root starts the API and Next.js. It starts
+Convex only when `NEXT_PUBLIC_CONVEX_URL` is already set.
 
 ## Walkthrough
 
@@ -67,7 +67,8 @@ login. The path above does not.
 - Do not say the person is eligible, recommended, or ready to file.
 - Do not say a document was accepted.
 - Do not say the packet was submitted to USCIS.
-- Do not say Social Security numbers are encrypted. Preview and download
-  post the answers, including the SSN and A-Number, to the local PDF service
-  in plaintext. The account work that routes fills through a server proxy is
-  not in this demo.
+- Do not say the browser sends a Social Security number or A-Number to the
+  PDF service. Preview posts to `/api/preview-intake` and download posts to
+  `/api/packet`, both with no body. Demo mode builds the Sampleton intake on
+  the server and does not write Convex. A signed-in save encrypts a real SSN
+  and A-Number in Convex.
