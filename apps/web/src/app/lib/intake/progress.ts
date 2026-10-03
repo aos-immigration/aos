@@ -36,7 +36,7 @@ export function sectionProgress(intake: Intake, asOf: Date): SectionProgress[] {
   push({
     id: "forms",
     label: "Forms",
-    href: "/start",
+    href: "/sections",
     complete: intake.selectedForms.length > 0,
   });
   push({

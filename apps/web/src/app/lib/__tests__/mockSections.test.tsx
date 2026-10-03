@@ -1,6 +1,5 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import BeneficiaryBiographicPage from "@/app/sections/beneficiary/biographic/page";
 import FormBeneficiaryPage from "@/app/forms/i-130/beneficiary/page";
 import FormPetitionerPage from "@/app/forms/i-130/petitioner/page";
 import I485BiographicPage from "@/app/forms/i-485/biographic/page";
@@ -9,13 +8,6 @@ import DocumentsPage from "@/app/sections/documents/page";
 const NOT_SAVED = "Not saved yet. This section does not store what you type.";
 
 describe("mock sections", () => {
-  it("does not prefill an eye color and says the biographic section is not saved", () => {
-    const html = renderToStaticMarkup(<BeneficiaryBiographicPage />);
-    expect(html).toContain(NOT_SAVED);
-    expect(html).not.toContain("✓");
-    expect(html).not.toContain("bg-primary/10");
-  });
-
   it("does not prefill a beneficiary name or date of birth", () => {
     const html = renderToStaticMarkup(<FormBeneficiaryPage />);
     expect(html).toContain(NOT_SAVED);

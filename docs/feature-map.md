@@ -42,95 +42,135 @@ Reach it from the Privacy link in the site footer.
 
 Verify: bun run check runs apps/web/src/components/system/system.test.tsx, which asserts encryption and sign-in claims are hidden.
 
+### `/start`
+
+Status: wired.
+
+A short list of situations people take to an attorney before filing. It does not say whether the person can file, and it does not store a result. The intake modal links here as Find legal help instead.
+
+Reach it from Find legal help instead on the intake modal, or the URL /start.
+
+Verify: bun run check runs apps/web/src/components/intake/intake-ui.test.tsx, which expects that link.
+
 ### `/sections`
 
-Status: mocked.
+Status: wired.
 
-Application overview made of static cards. Nothing on the page is loaded from Convex.
+Answer hub. The person picks forms with nothing preselected, sees which sections are still open, and can load the fictional Sampleton demo. Answers autosave through the intake store.
 
 Reach it from the home page link Start filling out my forms, or the URL.
 
-Verify: Open /sections and confirm the cards do not change after saving petitioner data. No automated test covers this page.
+Verify: bun run check runs apps/web/src/components/intake/intake-ui.test.tsx and apps/web/src/app/lib/intake/intake.test.ts.
 
 ### `/sections/petitioner`
 
 Status: wired.
 
-Petitioner basics. React Hook Form validates petitionerBasicsSchema, writes a sessionStorage draft immediately, and debounces savePetitionerBasics to Convex once given name, family name, citizenship status, and relationship are filled in.
+Petitioner questions, one screen at a time, bound to the canonical intake. Choices can advance on tap. Sensitive fields stay masked until shown.
 
 Reach it from Sidebar, Petitioner Information, Basic Information.
 
-Verify: bun run check runs apps/web/src/app/lib/__tests__/petitionerBasicsSchema.test.ts. The preview flow is apps/web/e2e/review-package.spec.ts, which needs a Convex login and Playwright.
+Verify: bun run check runs apps/web/src/components/intake/intake-ui.test.tsx and apps/web/src/app/lib/intake/path.test.ts.
 
 ### `/sections/petitioner/address`
 
 Status: wired.
 
-Petitioner address history. AddressHistory saves on submit through saveAddress with personRole petitioner. Every saved row uses addressType physical, so the mailing-address branch in buildPdfPayload is unreachable from this screen.
+Petitioner physical addresses on the canonical intake. Gaps and overlaps from checkIntake render on this page.
 
 Reach it from Sidebar, Petitioner Information, Address History (5 years).
 
-Verify: bun run check runs addressSchema.test.ts and addressValidation.test.ts. Browser coverage is apps/web/e2e/address-history.spec.ts, which needs Convex and Playwright.
+Verify: bun run check runs apps/web/src/app/lib/intake/intake.test.ts, which asserts address gap links to this URL.
 
 ### `/sections/petitioner/employment`
 
-Status: partial.
+Status: wired.
 
-Petitioner employment history. EmploymentHistory persists rows to Convex, but both the save and the list query hardcode personRole petitioner. buildPdfPayload accepts the rows and does not write them into the PDF.
+Petitioner employment rows on the canonical intake, including unemployment and school.
 
 Reach it from Sidebar, Petitioner Information, Employment History (5 years).
 
-Verify: bun run check runs employmentSchema.test.ts. Nothing asserts the role or the PDF mapping. See docs/agent-patterns.md.
+Verify: bun run check runs apps/web/src/app/lib/intake/intake.test.ts. PDF mapping of these rows is still a later slice.
 
 ### `/sections/beneficiary`
 
-Status: mocked.
+Status: wired.
 
-Static beneficiary basics. There is no Convex table for this section and the form does not save. The page says it is not saved yet and does not preselect gender or an other-names answer.
+Beneficiary questions on the canonical intake, including parents.
 
 Reach it from Sidebar, Beneficiary Information, Basic Information.
 
-Verify: Open /sections/beneficiary. The page module does not call useQuery or useMutation. No unit test covers the screen.
+Verify: bun run check runs apps/web/src/app/lib/intake/path.test.ts, which reads every beneficiary question path.
 
 ### `/sections/beneficiary/address`
 
 Status: wired.
 
-Beneficiary address history. The same AddressHistory component as the petitioner page, with personRole beneficiary. Saved rows still use addressType physical.
+Beneficiary physical addresses on the canonical intake.
 
 Reach it from Sidebar, Beneficiary Information, Address History (5 years).
 
-Verify: The address schema and addressValidation tests in bun run check cover the form rules. The Playwright spec only opens the petitioner URL.
+Verify: bun run check runs apps/web/src/app/lib/intake/intake.test.ts for address issues.
 
 ### `/sections/beneficiary/employment`
 
-Status: mocked.
+Status: wired.
 
-Static beneficiary employment form. It does not use EmploymentHistory and does not save. The page says it is not saved yet.
+Beneficiary employment rows on the canonical intake.
 
 Reach it from Sidebar, Beneficiary Information, Employment History (5 years).
 
-Verify: Open /sections/beneficiary/employment. Inputs are uncontrolled placeholders. No unit test covers the screen.
+Verify: bun run check runs the intake model tests. This screen writes employment rows for the beneficiary role.
 
 ### `/sections/beneficiary/biographic`
 
-Status: mocked.
+Status: wired.
 
-Static biographic details. There is no Convex table for biographic data. Eye color is not preselected, and the page says it is not saved yet.
+Beneficiary ethnicity, race, height, weight, and eye and hair color on the canonical intake.
 
 Reach it from Sidebar, Beneficiary Information, Biographic Details.
 
-Verify: Open /sections/beneficiary/biographic. No unit test covers the screen.
+Verify: bun run check runs apps/web/src/app/lib/intake/path.test.ts, which includes the biographic paths.
 
 ### `/sections/marital`
 
-Status: mocked.
+Status: wired.
 
-Static marital history. There is no Convex table for marital data. The page says it is not saved yet.
+Marriage date and place, whether the couple lives together, and any earlier marriages.
 
 Reach it from Sidebar, Marital History, Marriage Information.
 
-Verify: Open /sections/marital. No unit test covers the screen.
+Verify: bun run check runs apps/web/src/app/lib/intake/intake.test.ts, which flags a prior marriage that ends after the current one.
+
+### `/sections/immigration`
+
+Status: wired.
+
+Beneficiary arrival, I-94, status, and passport on the canonical intake.
+
+Reach it from Sidebar, Case, Immigration history.
+
+Verify: bun run check runs apps/web/src/app/lib/intake/path.test.ts, which includes the immigration paths.
+
+### `/sections/eligibility`
+
+Status: wired.
+
+I-485 eligibility questions. Each one starts unanswered and is never defaulted to no. A yes answer can include an explanation. The screen does not say whether the person may file.
+
+Reach it from Sidebar, Case, Eligibility questions.
+
+Verify: bun run check runs apps/web/src/app/lib/intake/intake.test.ts, which expects an empty intake to leave every eligibility answer unanswered.
+
+### `/sections/sponsor`
+
+Status: wired.
+
+I-864 household size and income. The screen records the numbers and does not judge whether they are enough.
+
+Reach it from Sidebar, Case, Sponsor.
+
+Verify: bun run check runs apps/web/src/app/lib/intake/path.test.ts, which includes the sponsor paths.
 
 ### `/forms`
 
@@ -146,7 +186,7 @@ Verify: Open /forms. No unit test covers the screen.
 
 Status: mocked.
 
-Static I-130 petitioner mock. The live petitioner form is /sections/petitioner. The mock does not show an A-Number, SSN, or street address. Next.js fails the production build on this URL when NEXT_PUBLIC_CONVEX_URL is empty, because the shared layout calls useMutation.
+Static I-130 petitioner mock. The live petitioner form is /sections/petitioner. The mock does not show an A-Number, SSN, or street address. The shared layout does not call Convex hooks when NEXT_PUBLIC_CONVEX_URL is empty.
 
 Reach it from the URL /forms/i-130/petitioner only.
 

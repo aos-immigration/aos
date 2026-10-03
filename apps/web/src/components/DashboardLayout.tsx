@@ -20,6 +20,9 @@ import {
   type IntakeSnapshot,
 } from "@/app/lib/sectionSaveState";
 import { SavedSectionsLabel } from "@/components/SavedSectionsLabel";
+import { LoadDemoButton } from "@/components/intake/LoadDemoButton";
+import { useIntake } from "@/components/intake/IntakeProvider";
+import type { Intake } from "@/app/lib/intake/schema";
 import {
   Dialog,
   DialogContent,
@@ -32,7 +35,99 @@ type DashboardLayoutProps = {
   children: React.ReactNode;
 };
 
+function snapshotFromIntake(intake: Intake): IntakeSnapshot {
+  return {
+    petitionerGivenName: intake.petitioner.givenName,
+    petitionerFamilyName: intake.petitioner.familyName,
+    petitionerAddressCount: intake.addresses.filter(
+      (row) => row.personRole === "petitioner" && row.street.trim() !== "",
+    ).length,
+    petitionerEmploymentCount: intake.employment.filter(
+      (row) => row.personRole === "petitioner" && row.fromYear.trim() !== "",
+    ).length,
+    beneficiaryAddressCount: intake.addresses.filter(
+      (row) => row.personRole === "beneficiary" && row.street.trim() !== "",
+    ).length,
+  };
+}
+
 export function DashboardLayout({ children }: DashboardLayoutProps) {
+  const { intake, ready } = useIntake();
+  const snapshot = ready ? snapshotFromIntake(intake) : null;
+  return (
+    <div className="flex h-screen overflow-hidden">
+      <Sidebar
+        snapshot={
+          snapshot ?? {
+            petitionerGivenName: "",
+            petitionerFamilyName: "",
+            petitionerAddressCount: 0,
+            petitionerEmploymentCount: 0,
+            beneficiaryAddressCount: 0,
+          }
+        }
+      />
+      <main className="flex-1 flex flex-col overflow-hidden relative">
+        <header className="z-10 border-b border-border bg-background">
+          <div className="flex min-h-14 flex-wrap items-center justify-between gap-3 px-4 py-2 sm:px-6">
+            <Breadcrumbs />
+            <div className="flex items-center gap-3">
+              {snapshot ? (
+                <SavedSectionsLabel
+                  persistable={PERSISTABLE_SECTION_HREFS.length}
+                  saved={savedSectionCount(snapshot)}
+                />
+              ) : (
+                <div className="text-[10px] font-mono text-muted-foreground">
+                  Checking saved sections
+                </div>
+              )}
+              <SaveStatus />
+              <LoadDemoButton className="text-sm underline decoration-foreground/30 underline-offset-4" />
+              <ThemeToggle />
+              <PreviewControls />
+            </div>
+          </div>
+          <div className="border-t border-border px-6 py-4">
+            <LifecycleRail current="collect" />
+          </div>
+        </header>
+        <div className="flex-1 overflow-y-auto custom-scrollbar bg-background">
+          <div className="p-6 md:p-8">{children}</div>
+          <SiteFooter />
+        </div>
+      </main>
+    </div>
+  );
+}
+
+function SaveStatus() {
+  const { status, error } = useIntake();
+  if (status === "idle") return null;
+  return (
+    <span className="max-w-48 truncate text-sm" role="status">
+      {status === "saving" ? "Saving" : status === "saved" ? "Saved" : error}
+    </span>
+  );
+}
+
+function PreviewControls() {
+  if (!process.env.NEXT_PUBLIC_CONVEX_URL) {
+    return (
+      <button
+        type="button"
+        disabled
+        className="flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground opacity-50"
+      >
+        <Eye className="w-4 h-4" />
+        Preview my forms
+      </button>
+    );
+  }
+  return <ConvexPreviewControls />;
+}
+
+function ConvexPreviewControls() {
   const applicationId = useApplicationId();
 
   const basics = useQuery(
@@ -47,33 +142,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     api.petitioner.listEmploymentEntries,
     applicationId ? { applicationId, personRole: "petitioner" } : "skip",
   );
-  const beneficiaryAddresses = useQuery(
-    api.petitioner.listAddresses,
-    applicationId ? { applicationId, personRole: "beneficiary" } : "skip",
-  );
-
-  const intakeLoaded =
-    basics !== undefined &&
-    addresses !== undefined &&
-    employment !== undefined &&
-    beneficiaryAddresses !== undefined;
-  const snapshot: IntakeSnapshot | null =
-    applicationId && !intakeLoaded
-      ? null
-      : {
-          petitionerGivenName: basics?.givenName ?? "",
-          petitionerFamilyName: basics?.familyName ?? "",
-          petitionerAddressCount: addresses?.length ?? 0,
-          petitionerEmploymentCount: employment?.length ?? 0,
-          beneficiaryAddressCount: beneficiaryAddresses?.length ?? 0,
-        };
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Clean up blob URL on unmount
   useEffect(() => {
     return () => {
       if (pdfUrl) {
@@ -154,71 +228,30 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   }, [basics, addresses, employment]);
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <Sidebar
-        snapshot={
-          snapshot ?? {
-            petitionerGivenName: "",
-            petitionerFamilyName: "",
-            petitionerAddressCount: 0,
-            petitionerEmploymentCount: 0,
-            beneficiaryAddressCount: 0,
-          }
-        }
-      />
-      <main className="flex-1 flex flex-col overflow-hidden relative">
-        <header className="z-10 border-b border-border bg-background">
-          <div className="flex h-14 items-center justify-between px-6">
-            <Breadcrumbs />
-            <div className="flex items-center gap-3">
-              {snapshot ? (
-                <SavedSectionsLabel
-                  persistable={PERSISTABLE_SECTION_HREFS.length}
-                  saved={savedSectionCount(snapshot)}
-                />
-              ) : (
-                <div className="text-[10px] font-mono text-muted-foreground">
-                  Checking saved sections
-                </div>
-              )}
-              <ThemeToggle />
-              {process.env.NODE_ENV === "development" && (
-                <button
-                  onClick={handleExportFixture}
-                  disabled={!basics}
-                  className="text-muted-foreground hover:text-foreground text-xs font-medium px-3 py-2 rounded border border-border transition-all flex items-center gap-2 disabled:opacity-50"
-                >
-                  <Download className="w-3 h-3" />
-                  Export Fixture
-                </button>
-              )}
-              <button
-                onClick={handleReviewPackage}
-                disabled={isGenerating || !applicationId}
-                className="flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
-              >
-                {isGenerating ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Eye className="w-4 h-4" />
-                )}
-                {isGenerating ? "Preparing preview" : "Preview my forms"}
-              </button>
-            </div>
-          </div>
-          <div className="border-t border-border px-6 py-4">
-            <LifecycleRail current="collect" />
-          </div>
-        </header>
-        <div className="flex-1 overflow-y-auto custom-scrollbar bg-background">
-          <div className="p-6 md:p-8">
-            {error ? <ErrorState message={error} /> : null}
-            {children}
-          </div>
-          <SiteFooter />
-        </div>
-      </main>
-
+    <>
+      {process.env.NODE_ENV === "development" && (
+        <button
+          onClick={handleExportFixture}
+          disabled={!basics}
+          className="text-muted-foreground hover:text-foreground text-xs font-medium px-3 py-2 rounded border border-border transition-all flex items-center gap-2 disabled:opacity-50"
+        >
+          <Download className="w-3 h-3" />
+          Export Fixture
+        </button>
+      )}
+      <button
+        onClick={handleReviewPackage}
+        disabled={isGenerating || !applicationId}
+        className="flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+      >
+        {isGenerating ? (
+          <Loader2 className="w-4 h-4 animate-spin" />
+        ) : (
+          <Eye className="w-4 h-4" />
+        )}
+        {isGenerating ? "Preparing preview" : "Preview my forms"}
+      </button>
+      {error ? <ErrorState message={error} /> : null}
       <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
         <DialogContent className="flex h-[85vh] w-[90vw] max-w-6xl flex-col gap-4 p-6">
           <DialogHeader>
@@ -229,11 +262,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </DialogHeader>
           <div className="flex-1 overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800">
             {pdfUrl ? (
-              <iframe
-                title="I-130 preview"
-                src={pdfUrl}
-                className="h-full w-full"
-              />
+              <iframe title="I-130 preview" src={pdfUrl} className="h-full w-full" />
             ) : (
               <div className="flex h-full items-center justify-center text-sm text-zinc-500">
                 Generate a preview to view the PDF.
@@ -242,6 +271,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }
