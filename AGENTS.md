@@ -40,19 +40,24 @@ bun run check   # the command CI runs
 Use that local `tsc`. `npx tsc` misses the binary and installs an unrelated
 package named `tsc`.
 
-Dev servers, in two terminals:
+One command, with no Clerk or Convex account:
 
 ```bash
-cd apps/api && npm run dev    # FastAPI on :8000
-cd apps/web && npm run dev    # Convex + Next.js on :3000
+bun run dev    # API on :8000 and Next.js on :3000
 ```
 
-`apps/web/.env.local` needs `NEXT_PUBLIC_CONVEX_URL`. `npm run dev` runs
-`convex dev`, which prints the URL and requires a Convex login.
-`NEXT_PUBLIC_API_URL` is optional and defaults to `http://localhost:8000`.
+Open `/`, then the demo couple, then Preview my forms. That path does not
+write Convex. `apps/web` starts `convex dev` only when `NEXT_PUBLIC_CONVEX_URL`
+is already set. `NEXT_PUBLIC_API_URL` is optional and defaults to
+`http://localhost:8000`.
 
-A production build without `NEXT_PUBLIC_CONVEX_URL` fails while prerendering
-`/forms/i-130/petitioner`. Any non-empty URL is enough for `next build`.
+`bun run check` runs `next build` with Clerk, Convex, and `PDF_FILL_SECRET`
+unset. The demo pages render. Sign-in routes show “Auth is not configured”.
+Local dev fills use the fixed secret `dev-only-fill-secret` when
+`PDF_FILL_SECRET` is unset. A production API (`PDF_SERVICE_ENV=production`)
+and a production Next server reject fills until the secret is set. Clerk
+keyless mode does not fit: this `@clerk/nextjs` throws when the publishable
+key is missing, and keyless is off for production builds.
 
 End-to-end tests (`cd apps/web && npm run test:e2e`) need Playwright
 (`npx playwright install chromium`) and a Convex login. They are not part of
@@ -83,10 +88,15 @@ docs/              feature map, agent patterns, review process
 
 `apps/web` owns the UI and the Convex client. It does not fill PDFs.
 `apps/web/convex` owns persistence. `apps/api` fills PDFs and does not store
-intake answers. `Forms/{slug}.pdf` is the template for `POST /fill/{slug}`. The slug allowlist
-is `i-130`, `i-130a`, `i-131`, `i-485`, and `i-765`. Only `i-130` is wired in
-the UI. Browser calls are limited to `ALLOWED_ORIGINS`, which defaults to
-`http://localhost:3000` when unset.
+intake answers. `Forms/{slug}.pdf` is the template for `POST /fill/{slug}`.
+The slug allowlist is `i-130`, `i-130a`, `i-131`, `i-485`, and `i-765`. Only
+`i-130` is wired in the UI. Browser calls are limited to `ALLOWED_ORIGINS`,
+which defaults to `http://localhost:3000` when unset. Demo
+`POST /api/fill/i-130` builds the fake payload on the server and ignores the
+client body. Signed-in fill loads that caller's Convex rows inside `fillI130`.
+The PDF service requires `X-Fill-Secret`, rate-limits `X-Fill-Caller`, and
+ignores `X-Forwarded-For`. Identity numbers are encrypted or omitted, never a
+plaintext Convex column. Do not `console.log` Convex function arguments.
 
 Bun workspaces, Turborepo. Root `dev` and `lint` exist in both apps. `build`,
 `test:unit`, and `test:e2e` exist only in `apps/web`.
@@ -97,8 +107,10 @@ Convex is the intake store. `src/app/lib/intakeStorage.ts` is types and
 factory helpers. `sessionStorage` holds the PDF preview draft.
 `localStorage` holds the theme.
 
-`useApplicationId()` calls `getOrCreateApplication` and returns the first
-draft application in the database. There is no auth.
+`useApplicationId()` calls `getOrCreateApplication` for the signed-in Clerk
+user and returns that user's draft. Intake routes require a session. `/demo`
+sets a cookie and shows a fake couple without writing Convex. SSN and
+A-Number are encrypted in Convex and are not returned by the basics query.
 
 Route status is `docs/feature-map.md`. Petitioner basics, both address
 histories, and `POST /fill/{slug}` persist. Petitioner employment persists

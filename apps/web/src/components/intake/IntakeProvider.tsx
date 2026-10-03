@@ -25,6 +25,7 @@ export type IntakeApi = {
   status: SaveStatus;
   error: string | null;
   update: (next: Intake) => void;
+  flush: () => Promise<void>;
   loadDemo: () => void;
   clear: () => void;
 };
@@ -73,6 +74,14 @@ function useSaveQueue(commit: (next: Intake) => Promise<void>) {
     }
   }, [commit]);
 
+  const flushPending = useCallback(async () => {
+    if (timer.current) {
+      clearTimeout(timer.current);
+      timer.current = null;
+    }
+    await flush();
+  }, [flush]);
+
   const queue = useCallback(
     (next: Intake) => {
       latest.current = next;
@@ -86,7 +95,7 @@ function useSaveQueue(commit: (next: Intake) => Promise<void>) {
     [flush],
   );
 
-  return { status, error, queue };
+  return { status, error, queue, flush: flushPending };
 }
 
 function MemoryIntakeProvider({ children }: { children: React.ReactNode }) {
@@ -94,7 +103,7 @@ function MemoryIntakeProvider({ children }: { children: React.ReactNode }) {
   const commit = useCallback(async (next: Intake) => {
     setMemoryIntake(next);
   }, []);
-  const { status, error, queue } = useSaveQueue(commit);
+  const { status, error, queue, flush } = useSaveQueue(commit);
 
   const update = useCallback(
     (next: Intake) => {
@@ -112,10 +121,11 @@ function MemoryIntakeProvider({ children }: { children: React.ReactNode }) {
       status,
       error,
       update,
+      flush,
       loadDemo: () => update(demoIntake()),
       clear: () => update(emptyIntake()),
     }),
-    [intake, status, error, update],
+    [intake, status, error, update, flush],
   );
 
   return <IntakeContext.Provider value={value}>{children}</IntakeContext.Provider>;
@@ -149,7 +159,7 @@ function ConvexIntakeProvider({ children }: { children: React.ReactNode }) {
     },
     [applicationId, save],
   );
-  const { status, error, queue } = useSaveQueue(commit);
+  const { status, error, queue, flush } = useSaveQueue(commit);
 
   const update = useCallback(
     (next: Intake) => {
@@ -166,17 +176,24 @@ function ConvexIntakeProvider({ children }: { children: React.ReactNode }) {
       status,
       error: error ?? loaded?.error ?? null,
       update,
+      flush,
       loadDemo: () => update(demoIntake()),
       clear: () => update(emptyIntake()),
     }),
-    [override, loaded, status, error, update],
+    [override, loaded, status, error, update, flush],
   );
 
   return <IntakeContext.Provider value={value}>{children}</IntakeContext.Provider>;
 }
 
-export function IntakeProvider({ children }: { children: React.ReactNode }) {
-  if (process.env.NEXT_PUBLIC_CONVEX_URL) {
+export function IntakeProvider({
+  children,
+  persist = false,
+}: {
+  children: React.ReactNode;
+  persist?: boolean;
+}) {
+  if (persist) {
     return <ConvexIntakeProvider>{children}</ConvexIntakeProvider>;
   }
   return <MemoryIntakeProvider>{children}</MemoryIntakeProvider>;

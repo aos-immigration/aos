@@ -6,6 +6,8 @@ import { SiteFooter } from "@/components/system/SiteFooter";
 import { WhyWeAsk } from "@/components/system/WhyWeAsk";
 import { SHORT_DISCLAIMER } from "@/components/system/copy";
 import { buttonVariants } from "@/components/ui/button";
+import { isClerkConfigured } from "@/app/lib/runtimeConfig";
+import { ClerkHomeActions } from "@/app/components/ClerkHomeActions";
 
 const PACKET = [
   { title: "I-130", line: "Petition for a relative" },
@@ -17,6 +19,7 @@ const PACKET = [
 ] as const;
 
 export default function Home() {
+  const clerk = isClerkConfigured();
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="flex items-center justify-between px-6 py-5 md:px-10">
@@ -43,8 +46,11 @@ export default function Home() {
               <Link href="/start" className={buttonVariants({ size: "cta" })}>
                 Start filling out my forms
               </Link>
-              <p className="text-sm">Automatic cross-form checks. You review and file.</p>
+              <Link href="/demo" className="text-sm underline decoration-foreground/30 underline-offset-4">
+                Explore the sample couple
+              </Link>
             </div>
+            {clerk ? <ClerkHomeActions /> : null}
             <p className="disclaimer max-w-xl">{SHORT_DISCLAIMER}</p>
           </div>
           <PacketHero />

@@ -20,21 +20,33 @@ cd apps/api && npm run dev
 cd apps/web && npm run dev
 ```
 
-`apps/web` needs `NEXT_PUBLIC_CONVEX_URL` in `apps/web/.env.local`. `npm run dev`
-runs `convex dev`, which prints the URL and needs you to be logged into Convex.
+`apps/web` needs `apps/web/.env.local`. Copy `apps/web/.env.example` and fill it
+in. `npm run dev` runs `convex dev`, which prints the Convex URL and needs you
+to be logged into Convex. The full variable list, including the API secret and
+the Convex dashboard setting, is in the root `.env.example`.
 
-`NEXT_PUBLIC_API_URL` is optional and defaults to `http://localhost:8000`.
+`NEXT_PUBLIC_API_URL` is optional. The browser no longer calls the PDF service
+directly. Demo preview posts to the same-origin `/api/fill/i-130` route. That
+route ignores the request body, builds the fake I-130 itself, and calls the
+API with `PDF_FILL_SECRET` and `X-Fill-Caller: demo`. Any other slug is
+rejected. A signed-in preview does not use that body either: a Convex action
+loads the caller's saved application and fills i-130. Set the same secret on
+the API process. `API_URL` overrides where the Next.js server reaches the API
+(default `http://localhost:8000`).
+
+`bun run dev` starts the API and Next.js with no Clerk app and no Convex
+account. `/`, `/demo`, Load demo, preview, and the packet download work for
+Jordan Sampleton and Avery Exampleton. Sign-in routes say auth is not
+configured instead of crashing. Local dev uses the fill secret
+`dev-only-fill-secret` when `PDF_FILL_SECRET` is unset. Set
+`PDF_SERVICE_ENV=production` on the API, and set `PDF_FILL_SECRET` on both
+processes, before a real deployment. `bun run check` includes `next build`
+with those secrets unset.
 
 The click-through for the fictional Sampleton demo is `docs/demo-script.md`.
-Without `NEXT_PUBLIC_CONVEX_URL`, run the API and `npx next dev` in
-`apps/web`. Answers stay in that browser tab.
-
-**Without `NEXT_PUBLIC_CONVEX_URL` the production build fails.** `providers.tsx`
-drops `ConvexProvider` when the variable is missing, and the shared
-`DashboardLayout` calls `useMutation` (via `useApplicationId()`), so prerendering
-`/sections/*` and `/forms/*` dies. The build stops on the first of those pages
-it renders; that is currently `/forms/i-130/petitioner`. Any non-empty URL is
-enough to get a build through.
+Without `NEXT_PUBLIC_CONVEX_URL`, answers stay in that browser tab. The
+production build still succeeds with the variable unset, because the intake
+provider stays in memory until both Clerk and Convex are configured.
 
 Datadog is wired into both apps. The web app initializes RUM and browser logs
 in `apps/web/src/instrumentation-client.ts` with a hardcoded client token, so it
@@ -50,7 +62,7 @@ allowed origin is `http://localhost:3000`. The value `*` is ignored.
 
 ```bash
 bun run setup   # bun install, which also uv-syncs the API
-bun run check   # lint, types, unit tests, API tests, PDF fill eval, feature map
+bun run check   # lint, types, unit tests, API tests, PDF fill eval, feature map, next build
 ```
 
 `bun run check` is what CI runs. It calls `apps/web/node_modules/.bin/tsc`,
@@ -64,8 +76,9 @@ sidebar href changes without an update to `docs/feature-map.json`.
 Agent instructions are `AGENTS.md`.
 
 End-to-end tests (`cd apps/web && npm run test:e2e`) need Playwright browsers
-(`npx playwright install chromium`) and a working Convex login, because the
-Playwright config boots the app with `npm run dev`.
+(`npx playwright install chromium`), a working Convex login, and Clerk keys in
+`apps/web/.env.local`, because the Playwright config boots the app with
+`npm run dev` and `/sections` requires a signed-in session.
 
 ---
 
@@ -117,10 +130,12 @@ Each page says the section is not available yet and does not save anything.
 Convex is the store. There is no `localStorage` intake layer — despite the name,
 `src/app/lib/intakeStorage.ts` is now just types and factory helpers.
 
-Every page starts by calling `useApplicationId()`
-(`src/app/lib/useApplicationId.ts`), which calls the
-`getOrCreateApplication` mutation and hands back an `applicationId`. Everything
-else is keyed off that id.
+Every intake page starts by calling `useApplicationId()`
+(`src/app/lib/useApplicationId.ts`). After Convex has accepted the Clerk
+session, that hook calls `getOrCreateApplication`, which returns the signed-in
+user's application (creating one if they don't have one yet). Everything else
+is keyed off that id, and every Convex query and mutation checks that the
+caller owns it.
 
 **Petitioner basics** auto-saves. You type, React Hook Form validates against
 `petitionerBasicsSchema`, and a `watch()` subscription fires on every change: it
@@ -135,14 +150,12 @@ family name, citizenship status and relationship are all filled in.
 overlapping date ranges — that check is hand-written, not Zod.
 
 **PDF preview** lives in `DashboardLayout.tsx`. The header Preview button posts
-the canonical intake to `/preview-intake` and shows JPEG page images. It does
-not put PDF bytes in the browser. Download my forms (PDF) is inside that
-preview and stays disabled until every acknowledgement box is checked, then
-posts `/packet` with `acknowledged: true`.
-In development the header also shows an "Export Fixture" button. It builds the
-payload from the saved Convex records (not the unsaved `sessionStorage` draft),
-downloads the wrapped fixture shape `eval_fill.py` accepts (`payload` plus
-`expected_values`), and copies `expected_values` from the text fields only.
+to `/api/preview-intake` with no field map and shows JPEG page images. Demo
+mode builds the Jordan Sampleton intake on the server. A signed-in preview
+loads that caller's saved intake inside Convex, decrypts SSN and A-Number
+there, and posts them to FastAPI with `X-Fill-Secret`. Download my forms
+(PDF) stays disabled until every acknowledgement box is checked, then posts
+to `/api/packet`.
 
 ### Convex schema (`apps/web/convex/schema.ts`)
 
@@ -163,7 +176,7 @@ why those pages are still mockups.
 | `GET /health` | liveness |
 | `GET /fields/{slug}` | list every AcroForm leaf field on a form |
 | `GET /debug/field/{slug}?name=` | dump one field's `/AP`, `/V`, `/AS`, parent |
-| `POST /fill/{slug}` | fill and stream back the PDF |
+| `POST /fill/{slug}` | fill and stream back the PDF. Requires header `X-Fill-Secret` matching `PDF_FILL_SECRET`. Missing or wrong secret is 401, including when the variable is unset. |
 
 A slug must be one of `i-130`, `i-130a`, `i-131`, `i-485`, or `i-765`. Anything
 else is a 404, including a path that would otherwise leave `Forms/`. Only
@@ -224,6 +237,88 @@ catalogs for the other four forms.
 
 ---
 
+## Accounts
+
+Sign-in is [Clerk](https://clerk.com), wired to Convex with the official
+integration (`ClerkProvider`, `ConvexProviderWithClerk`, `convex/auth.config.ts`).
+`/sections` and `/forms` require a session, unless the visitor is in the demo.
+`/demo` sets a cookie and opens the intake for Jordan Sampleton and Avery Exampleton.
+Their ID numbers are the fictional placeholders in `demoIntake()`. That mode
+does not write Convex. Signing in clears the cookie. `/sign-in` and `/sign-up` are the Clerk components. Each Clerk
+user gets one application; `ownerId` on that row is the Clerk subject
+(`identity.subject`). Reads, writes, and deletes on a record the caller does
+not own fail the same way a missing record does. `/account` deletes that
+user's rows and then the Clerk user.
+
+Social Security numbers and A-Numbers are encrypted in Convex with AES-256-GCM.
+The key is `SENSITIVE_ID_KEY` (32 bytes, base64) on the Convex deployment, with
+`SENSITIVE_ID_KEY_VERSION`. Queries return the last four digits only. The
+signed-in preview and packet download are Convex actions: they decrypt those
+fields, call FastAPI, and return page images or the zip. The browser result
+does not include the numbers. To rotate, set `SENSITIVE_ID_KEY_PREVIOUS` and
+`SENSITIVE_ID_KEY_PREVIOUS_VERSION` to the old key, point
+`SENSITIVE_ID_KEY` at the new key, bump the version, and run
+`npx convex run sensitive:reencryptAll`.
+
+The browser does not call the PDF service. Preview posts to
+`/api/preview-intake` and download posts to `/api/packet`, both with no body.
+In demo mode the Next route ignores any client body, builds the Jordan
+Sampleton intake, and posts it to FastAPI with `PDF_FILL_SECRET` and
+`X-Fill-Caller: demo`. A signed-in call runs a Convex action that loads only
+that caller's intake. The same proxy covers `/api/fill` and `/api/fill-intake`.
+The secret stays on the server.
+Verifying a Clerk JWT inside FastAPI would mean a second auth stack (JWKS,
+issuer, authorized parties) for one route. A shared secret plus the session
+check is the smaller one that still rejects anonymous callers on both sides.
+
+The PDF service rate limit is per `X-Fill-Caller`. The Next.js route and the
+Convex action set that header to `demo` or the Clerk subject. The service does
+not read `X-Forwarded-For`. Requests with no caller id share one bucket.
+
+Convex function-execution logs record `usage.function_args_bytes` and
+`console.log` lines. They do not record argument values. Confirmed against the
+[log stream schema](https://docs.convex.dev/production/integrations/log-streams/)
+and the `convex` CLI log printer in this repo's installed SDK. A dev deployment
+still forwards console lines to the calling browser, so Convex functions must
+not print identity numbers or the `args` object. `saveSensitiveIds` encrypts
+before `db.replace`. `saveIntake` encrypts SSN and A-Number for the petitioner
+and the beneficiary, and blanks I-94 and passport numbers, before the JSON is
+stored. Queries return the last four digits of an encrypted field.
+Moving the decryption key out of Convex is a separate decision and is not done
+here.
+
+Multi-factor authentication is configured in the Clerk dashboard (User &
+authentication → Multi-factor). Turn on the methods you want there. Also
+require email verification, and set the session lifetime to 7 days or less
+(the checklist ceiling is 30 days idle). Sign-up uses email, not an SSN.
+
+### Owner setup
+
+1. Create a Clerk application and choose the sign-in methods.
+2. In the Clerk dashboard, activate the Convex integration and copy the
+   Frontend API URL (`https://<your-instance>.clerk.accounts.dev` in
+   development).
+3. On the Convex deployment, set `CLERK_JWT_ISSUER_DOMAIN` to that URL with no
+   trailing slash: `npx convex env set CLERK_JWT_ISSUER_DOMAIN <url>` from
+   `apps/web`, then run `npx convex dev` once so `auth.config.ts` is synced.
+4. Copy `apps/web/.env.example` to `apps/web/.env.local` and set
+   `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`,
+   `NEXT_PUBLIC_CONVEX_URL`, and `PDF_FILL_SECRET`.
+5. Export the same `PDF_FILL_SECRET` for the API process.
+6. Optional: enable MFA in the Clerk dashboard.
+
+### Reset anonymous drafts
+
+Applications saved before accounts existed have no owner. They are dev-only
+test data. Convex will refuse the new schema until those documents are gone.
+In the Convex dashboard, delete every document in `applications`,
+`petitionerBasics`, `addresses`, and `employmentEntries` on the dev
+deployment, then run `npx convex dev` again. Nothing in production should be
+reading those rows.
+
+`scripts/eval_fill.py --http` sends `X-Fill-Secret` from `PDF_FILL_SECRET`.
+Direct mode does not go through the API and does not need the secret.
+
 ## Product principles
 
 - Simple, human language. Avoid form jargon.
@@ -243,7 +338,8 @@ catalogs for the other four forms.
   12 errors and 20 warnings without those fixes.
 - GitHub Actions (`.github/workflows/ci.yml`) runs `bun run setup` and
   `bun run check` on pull requests. That includes web lint, `tsc --noEmit`,
-  unit tests, API pytest, pyright, and `eval_fill.py`. Lint warnings do not
+  unit tests, API pytest, pyright, `eval_fill.py`, and `next build` with no
+  secrets. Lint warnings do not
   fail the run.
 - Employment data is passed into `buildPdfPayload()` and then ignored, so it
   never reaches the PDF.
@@ -251,8 +347,8 @@ catalogs for the other four forms.
   branch in `buildPdfPayload()` is unreachable from the UI.
 - `EmploymentHistory` hardcodes `personRole: "petitioner"` even though the
   component is otherwise reusable.
-- `getOrCreateApplication` returns the first draft application in the whole
-  database. There is no auth or per-user scoping yet.
+- Anonymous drafts from before accounts cannot be migrated in place. Clear
+  them before `npx convex dev` will accept the schema. See Accounts.
 - The `listForms` query and the `createApplication` mutation have no callers,
   and nothing populates the `forms` table.
 - Unused dependencies: `pdf-lib` in `apps/web`; `pypdf`, `cryptography` and

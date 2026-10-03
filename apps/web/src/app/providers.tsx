@@ -1,21 +1,33 @@
 "use client";
 
-import { ConvexProvider, ConvexReactClient } from "convex/react";
+import { useAuth } from "@clerk/nextjs";
+import { ConvexReactClient } from "convex/react";
+import { ConvexProviderWithClerk } from "convex/react-clerk";
 import React from "react";
 import { IntakeProvider } from "@/components/intake/IntakeProvider";
 
-const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
-const convex = convexUrl ? new ConvexReactClient(convexUrl) : null;
+const clients = new Map<string, ConvexReactClient>();
+
+function convexClient(url: string) {
+  const existing = clients.get(url);
+  if (existing) return existing;
+  const created = new ConvexReactClient(url);
+  clients.set(url, created);
+  return created;
+}
 
 type ProvidersProps = {
   children: React.ReactNode;
+  convexUrl: string;
+  persist: boolean;
 };
 
-export function Providers({ children }: ProvidersProps) {
-  const app = <IntakeProvider>{children}</IntakeProvider>;
-  if (!convex) {
-    return app;
-  }
-
-  return <ConvexProvider client={convex}>{app}</ConvexProvider>;
+export function Providers({ children, convexUrl, persist }: ProvidersProps) {
+  const app = <IntakeProvider persist={persist}>{children}</IntakeProvider>;
+  if (!convexUrl || !persist) return app;
+  return (
+    <ConvexProviderWithClerk client={convexClient(convexUrl)} useAuth={useAuth}>
+      {app}
+    </ConvexProviderWithClerk>
+  );
 }

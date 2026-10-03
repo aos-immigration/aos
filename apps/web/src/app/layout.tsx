@@ -1,7 +1,11 @@
+import { ClerkProvider } from "@clerk/nextjs";
+import { dark } from "@clerk/themes";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Newsreader } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
+import { RuntimeConfigProvider } from "./lib/runtimeConfigContext";
+import { convexUrl, isClerkConfigured } from "./lib/runtimeConfig";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -36,7 +40,19 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${newsreader.variable} antialiased`}
       >
-        <Providers>{children}</Providers>
+        <RuntimeConfigProvider clerk={isClerkConfigured()} convex={Boolean(convexUrl())}>
+          {isClerkConfigured() ? (
+            <ClerkProvider appearance={{ theme: dark }}>
+              <Providers convexUrl={convexUrl()} persist={Boolean(convexUrl())}>
+                {children}
+              </Providers>
+            </ClerkProvider>
+          ) : (
+            <Providers convexUrl="" persist={false}>
+              {children}
+            </Providers>
+          )}
+        </RuntimeConfigProvider>
       </body>
     </html>
   );

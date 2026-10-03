@@ -1,6 +1,13 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
+const encryptedId = v.object({
+  ciphertext: v.string(),
+  iv: v.string(),
+  keyVersion: v.number(),
+  last4: v.string(),
+});
+
 export default defineSchema({
   forms: defineTable({
     slug: v.string(),
@@ -9,11 +16,14 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index("by_slug", ["slug"]),
 
+  // ownerId is the Clerk subject. Drafts created before accounts have no owner;
+  // delete them before deploying this schema (see README "Accounts").
   applications: defineTable({
+    ownerId: v.string(),
     status: v.string(),
     createdAt: v.number(),
     updatedAt: v.number(),
-  }),
+  }).index("by_owner", ["ownerId"]),
 
   petitionerBasics: defineTable({
     applicationId: v.id("applications"),
@@ -30,6 +40,8 @@ export default defineSchema({
     relationship: v.string(),
     email: v.optional(v.string()),
     phone: v.optional(v.string()),
+    ssn: v.optional(encryptedId),
+    aNumber: v.optional(encryptedId),
   }).index("by_application", ["applicationId"]),
 
   addresses: defineTable({

@@ -134,3 +134,73 @@ theme.
 
 Guard: the convention in `AGENTS.md`. There is no lint, because a ban on
 `localStorage` would also ban the theme.
+
+## `/api/fill` is not a proxy for a client field map
+
+The demo preview posted whatever JSON the browser built, and a signed-in
+caller could do the same. Legal review of #81 required the server to build
+the demo intake and to fill signed-in previews from that caller's saved rows.
+`/fill-intake`, `/preview-intake`, and `/packet` use that same proxy. The
+browser posts to `/api/preview-intake` and `/api/packet` with no body.
+
+Guard: `apps/web/src/app/api/fill/[slug]/route.test.ts` posts a hostile body
+and expects the upstream intake to be Jordan Sampleton, and expects a signed-in
+call to pass `{ slug }` into the Convex action. `apps/api/tests/test_fill_auth.py`
+rejects `/fill-intake`, `/preview-intake`, and `/packet` with no
+`X-Fill-Secret`. `bun run check` runs both tests.
+
+## PDF rate limits follow the caller, not `X-Forwarded-For`
+
+`_rate_ok` used the first `X-Forwarded-For` address, so a client could pick
+a new bucket by changing that header.
+
+Guard: `apps/api/tests/test_fill_auth.py` sends the same `X-Fill-Caller`
+with two forwarding headers and expects the second request to be 429, then
+a different caller to be allowed. The key is the header the web server sets
+next to `X-Fill-Secret`.
+
+## Fill auth and the origin allowlist stay together
+
+`#83` (`c61a06c`) put `ALLOWED_ORIGINS` and the form slug allowlist in
+`apps/api/app/http_policy.py`. `#81` requires `X-Fill-Secret` and rate-limits
+`X-Fill-Caller`. Taking only one side of that CORS conflict drops a gate:
+either anonymous fill, or a wildcard origin, or a slug that is not on the
+allowlist.
+
+Guard: `apps/api/tests/test_api.py` expects the localhost origin, no
+credentials, a preflight that allows `X-Fill-Secret` and `X-Fill-Caller`, a
+422 that does not echo the submitted value, and `Cache-Control: no-store`.
+`test_fill_auth.py` still rejects a missing secret and keys the limit on
+`X-Fill-Caller`. `form_pdf` rejects any other slug. Do not bring back
+`PDF_ALLOWED_ORIGINS`.
+
+## Identity numbers are not plaintext columns
+
+SSN, A-Number, I-94, and passport number for the petitioner and the
+beneficiary were accepted as strings inside the intake JSON and written
+with `JSON.stringify`.
+
+Guard: `STORED_ID_FIELD_NAMES` in `apps/web/convex/storedIds.ts`.
+`saveIntake` encrypts a valid SSN and A-Number for both people.
+`stripStoredIds` blanks every other catalog id, and blanks an SSN or
+A-Number that is not already ciphertext. `storedIds.test.ts` saves a
+sentinel for every name and expects the plaintext to be absent, and it
+saves real SSN and A-Number values and expects ciphertext plus last4.
+The schema scan fails if any of those names is declared `v.string()` in
+`apps/web/convex`. Add a new id to the list; do not add a new test
+function.
+
+## Convex execution logs store argument size, not argument values
+
+`saveSensitiveIds` receives a plaintext SSN as a mutation argument. The
+Convex log stream schema records `usage.function_args_bytes` and
+`console.log` text, not the argument object. The CLI printer in
+`convex/dist/esm/cli/lib/logs.js` prints console lines and errors. A dev
+deployment forwards those console lines to the calling browser.
+
+Guard: the schema scan above fails if a Convex function calls `console.log`
+(or info, debug, warn, error, trace). Do not print `args`. An action whose
+arguments were the plaintext number would still be the wrong place to put
+it, because a later `console.log(args)` would ship it. Encrypt in the
+mutation, then store ciphertext. HTTP actions omit even the byte count;
+they are not required here, because the value is not in the execution log.

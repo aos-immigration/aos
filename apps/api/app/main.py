@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import hashlib
+import hmac
 import json
 import logging
 import os
+import re
 import time
 import threading
 import urllib.request
@@ -75,13 +78,14 @@ app = FastAPI(title="AOS PDF Service")
 ACROFORM_KEY = "/AcroForm"
 FIELDS_KEY = "/Fields"
 PDF_NOT_FOUND = "PDF not found"
+DEV_FILL_SECRET = "dev-only-fill-secret"
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=parse_allowed_origins(os.environ.get("ALLOWED_ORIGINS")),
     allow_credentials=False,
     allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type"],
+    allow_headers=["Content-Type", "X-Fill-Secret", "X-Fill-Caller"],
 )
 
 
@@ -106,7 +110,7 @@ async def datadog_logging_middleware(request: Request, call_next):
         status=status,
         extra={
             "http.method": request.method,
-            "http.url": str(request.url),
+            "http.path": request.url.path,
             "http.status_code": response.status_code,
             "duration_ms": round(duration_ms, 2),
         },
@@ -297,8 +301,16 @@ def health():
     return {"ok": True}
 
 
+def _catalog_enabled() -> bool:
+    if os.environ.get("PDF_ALLOW_DEBUG") == "1":
+        return True
+    return os.environ.get("PDF_SERVICE_ENV", "development") != "production"
+
+
 @app.get("/fields/{slug}")
 def list_fields(slug: str):
+    if not _catalog_enabled():
+        raise HTTPException(status_code=404, detail=PDF_NOT_FOUND)
     pdf_file = _pdf_path(slug)
     if not pdf_file.exists():
         raise HTTPException(status_code=404, detail=PDF_NOT_FOUND)
@@ -307,6 +319,8 @@ def list_fields(slug: str):
 
 @app.get("/debug/field/{slug}")
 def debug_field(slug: str, name: str):
+    if not _catalog_enabled():
+        raise HTTPException(status_code=404, detail=PDF_NOT_FOUND)
     pdf_file = _pdf_path(slug)
     if not pdf_file.exists():
         raise HTTPException(status_code=404, detail=PDF_NOT_FOUND)
@@ -327,6 +341,74 @@ def debug_field(slug: str, name: str):
             if kids:
                 stack.append((kids, full + "."))
     raise HTTPException(status_code=404, detail="Field name not found")
+
+
+_fill_hits: Dict[str, List[float]] = {}
+_CALLER_KEY = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
+
+
+def _rate_key(request: Request) -> str:
+    """The web server names the caller. A client-supplied forwarding header is not a key."""
+    caller = request.headers.get("x-fill-caller", "").strip()
+    if _CALLER_KEY.fullmatch(caller):
+        return caller
+    return "missing"
+
+
+def _rate_ok(request: Request) -> bool:
+    try:
+        limit = int(os.environ.get("PDF_RATE_LIMIT", "60"))
+    except ValueError:
+        limit = 60
+    now = time.time()
+    key = _rate_key(request)
+    stamps = [stamp for stamp in _fill_hits.get(key, []) if now - stamp < 60]
+    if len(stamps) >= limit:
+        _fill_hits[key] = stamps
+        return False
+    stamps.append(now)
+    _fill_hits[key] = stamps
+    return True
+
+
+def _expected_fill_secret() -> str:
+    """Local dev uses a fixed secret. Production must set PDF_FILL_SECRET."""
+    explicit = os.environ.get("PDF_FILL_SECRET", "")
+    if explicit:
+        return explicit
+    if os.environ.get("PDF_SERVICE_ENV") == "production":
+        return ""
+    return DEV_FILL_SECRET
+
+
+def _fill_caller_authorized(request: Request) -> bool:
+    """Shared secret from the Next.js server. Fail closed when unset."""
+    expected = _expected_fill_secret()
+    provided = request.headers.get("x-fill-secret", "")
+    if not expected or not provided:
+        return False
+    return hmac.compare_digest(
+        hashlib.sha256(provided.encode()).digest(),
+        hashlib.sha256(expected.encode()).digest(),
+    )
+
+
+def _body_limit() -> int:
+    try:
+        return int(os.environ.get("PDF_MAX_BODY_BYTES", "1000000"))
+    except ValueError:
+        return 1_000_000
+
+
+async def _guarded_body(request: Request) -> bytes:
+    if not _fill_caller_authorized(request):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    if not _rate_ok(request):
+        raise HTTPException(status_code=429, detail="Too many requests")
+    raw = await request.body()
+    if len(raw) > _body_limit():
+        raise HTTPException(status_code=413, detail="Request too large")
+    return raw
 
 
 class IntakeFillRequest(BaseModel):
@@ -369,7 +451,12 @@ def _filled_pdf(slug: str, fields: Dict[str, str], checkboxes: Dict[str, bool]) 
 
 
 @app.post("/fill/{slug}")
-def fill_pdf(slug: str, payload: FillRequest):
+async def fill_pdf(slug: str, request: Request):
+    raw = await _guarded_body(request)
+    try:
+        payload = FillRequest.model_validate_json(raw)
+    except Exception:
+        raise HTTPException(status_code=422, detail="Invalid fill request") from None
     output = _filled_pdf(slug, dict(payload.fields), dict(payload.checkboxes))
     filename = f"{slug}-filled.pdf"
     return StreamingResponse(
@@ -393,8 +480,17 @@ def _map_or_404(slug: str, intake: Dict[str, Any]) -> Dict[str, Any]:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
+async def _intake_request(request: Request) -> IntakeFillRequest:
+    raw = await _guarded_body(request)
+    try:
+        return IntakeFillRequest.model_validate_json(raw)
+    except Exception:
+        raise HTTPException(status_code=422, detail="Invalid fill request") from None
+
+
 @app.post("/fill-intake/{slug}")
-def fill_intake(slug: str, body: IntakeFillRequest):
+async def fill_intake(slug: str, request: Request):
+    body = await _intake_request(request)
     _require_acknowledgement(body)
     mapped = _map_or_404(slug, body.intake)
     output = _filled_pdf(slug, mapped["fields"], mapped["checkboxes"])
@@ -410,7 +506,8 @@ def fill_intake(slug: str, body: IntakeFillRequest):
 
 
 @app.post("/preview-intake")
-def preview_intake(body: IntakeFillRequest):
+async def preview_intake(request: Request):
+    body = await _intake_request(request)
     from app.map_intake import MAPPED_SLUGS
 
     from app.preview_pages import render_pdf_pages
@@ -444,7 +541,8 @@ def preview_intake(body: IntakeFillRequest):
 
 
 @app.post("/packet")
-def packet(body: IntakeFillRequest):
+async def packet(request: Request):
+    body = await _intake_request(request)
     import io
     import zipfile
 

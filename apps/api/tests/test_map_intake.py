@@ -1,12 +1,22 @@
 import io
 import zipfile
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
 from app.map_intake import map_intake
 
 client = TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def fill_secret(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("PDF_FILL_SECRET", "test-secret")
+
+
+def post(path: str, json: dict[str, object]):
+    return client.post(path, headers={"X-Fill-Secret": "test-secret"}, json=json)
 
 DEMO = {
     "selectedForms": ["i-130", "i-130a", "i-485", "i-864", "i-765", "i-131"],
@@ -126,7 +136,7 @@ def test_i485_copies_the_applicant() -> None:
 
 
 def test_fill_intake_returns_a_pdf() -> None:
-    response = client.post(
+    response = post(
         "/fill-intake/i-130", json={"intake": DEMO, "acknowledged": True}
     )
     assert response.status_code == 200
@@ -135,7 +145,7 @@ def test_fill_intake_returns_a_pdf() -> None:
 
 
 def test_fill_intake_rejects_a_missing_acknowledgement() -> None:
-    response = client.post("/fill-intake/i-130", json={"intake": DEMO})
+    response = post("/fill-intake/i-130", json={"intake": DEMO})
     assert response.status_code == 400
     assert not response.content.startswith(b"%PDF")
 
@@ -196,7 +206,7 @@ def test_i131_checks_pending_i485_and_copies_the_applicant() -> None:
 
 
 def test_packet_includes_mapped_forms_and_names_the_gap() -> None:
-    response = client.post("/packet", json={"intake": DEMO, "acknowledged": True})
+    response = post("/packet", json={"intake": DEMO, "acknowledged": True})
     assert response.status_code == 200
     archive = zipfile.ZipFile(io.BytesIO(response.content))
     names = set(archive.namelist())
@@ -216,12 +226,12 @@ def test_packet_includes_mapped_forms_and_names_the_gap() -> None:
 
 def test_packet_rejects_an_empty_selection() -> None:
     empty = {**DEMO, "selectedForms": []}
-    response = client.post("/packet", json={"intake": empty, "acknowledged": True})
+    response = post("/packet", json={"intake": empty, "acknowledged": True})
     assert response.status_code == 400
 
 
 def test_packet_rejects_a_missing_acknowledgement() -> None:
-    response = client.post("/packet", json={"intake": DEMO})
+    response = post("/packet", json={"intake": DEMO})
     assert response.status_code == 400
     assert response.headers["content-type"].startswith("application/json")
 
@@ -229,7 +239,7 @@ def test_packet_rejects_a_missing_acknowledgement() -> None:
 def test_preview_returns_images_without_acknowledgement() -> None:
     import base64
 
-    response = client.post("/preview-intake", json={"intake": DEMO})
+    response = post("/preview-intake", json={"intake": DEMO})
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("application/json")
     assert "attachment" not in response.headers.get("content-disposition", "")
@@ -243,7 +253,7 @@ def test_preview_returns_images_without_acknowledgement() -> None:
 
 
 def test_unmapped_slug_is_not_found() -> None:
-    response = client.post(
+    response = post(
         "/fill-intake/g-1145", json={"intake": DEMO, "acknowledged": True}
     )
     assert response.status_code == 404

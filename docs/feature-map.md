@@ -16,11 +16,21 @@ Verifying agents start here, then run the command named on the row.
 
 Status: wired.
 
-Landing page. It links to /start, states a $0 service fee, and links the USCIS fee table. It does not read or write intake data.
+Landing page. It links to /start and to the Jordan Sampleton sample couple, states a $0 service fee, and links the USCIS fee table. It does not read or write intake data. Sign-in appears when Clerk keys are set.
 
 Reach it from the site root.
 
-Verify: Open /. There is no unit test for this screen. bun run check does not boot Next.js. Disclaimer phrases are covered by apps/web/src/components/system/system.test.tsx.
+Verify: Open /. bun run check runs next build with Clerk and Convex variables unset. Disclaimer phrases are covered by apps/web/src/components/system/system.test.tsx.
+
+### `/auth-required`
+
+Status: wired.
+
+Shown when a sign-in route is opened and Clerk keys are missing. It says auth is not configured.
+
+Reach it from a redirect from /account, /sign-in, or /sign-up when Clerk is not configured.
+
+Verify: bun run check runs apps/web/src/app/lib/__tests__/runtimeConfig.test.ts. Open /sections with no Clerk keys and confirm the redirect.
 
 ### `/terms`
 
@@ -41,6 +51,46 @@ Privacy notes that are true today. Session replay is off, so the page says AOS d
 Reach it from the Privacy link in the site footer.
 
 Verify: bun run check runs apps/web/src/components/system/system.test.tsx, which asserts encryption and sign-in claims are hidden.
+
+### `/demo`
+
+Status: wired.
+
+Explains that Jordan Sampleton and Avery Exampleton are fictional, then sets the aos_demo cookie and opens the intake. Demo screens do not write Convex.
+
+Reach it from the home page link Explore the sample couple.
+
+Verify: bun run check runs apps/web/src/app/lib/__tests__/sensitiveAndDemo.test.ts, which asserts the couple names.
+
+### `/sign-in/[[...sign-in]]`
+
+Status: wired.
+
+Clerk sign-in. Real intake requires this session. The demo cookie is cleared once a session exists.
+
+Reach it from the home page Sign in button, or a redirect from a protected intake route.
+
+Verify: Open /sign-in. bun run check does not boot Clerk. Ownership tests in apps/web/convex/ownership.test.ts cover what a session can read.
+
+### `/sign-up/[[...sign-up]]`
+
+Status: wired.
+
+Clerk sign-up. Accounts are email-based. SSN and A-Number are not used as the username.
+
+Reach it from the home page Create account button.
+
+Verify: Open /sign-up. bun run check does not boot Clerk.
+
+### `/account`
+
+Status: wired.
+
+Signed-in deletion. It deletes the caller's application, petitioner basics (including encrypted ids), addresses, and employment, then deletes the Clerk user.
+
+Reach it from the home page Account link while signed in.
+
+Verify: bun run check runs the delete case in apps/web/convex/sensitive.test.ts. The page itself is not opened by that test.
 
 ### `/start`
 
@@ -288,19 +338,19 @@ Verify: bun run check runs test_debug_field_requires_a_name. Inspect a live fiel
 
 Status: wired.
 
-Fills an allowlisted form from {fields, checkboxes} and streams the PDF back with Cache-Control no-store. Checkbox on-values are sniffed from /AP. /V and /AS are both set, and /NeedAppearances is set on the AcroForm. A checkbox's subform siblings are left alone. Browser callers must send an Origin listed in ALLOWED_ORIGINS. When that variable is unset, the only allowed origin is http://localhost:3000. A validation error does not echo the submitted value.
+Fills an allowlisted form from {fields, checkboxes} and streams the PDF back with Cache-Control no-store. The caller must send X-Fill-Secret. The rate limit key is X-Fill-Caller, which the web server sets to the Clerk user id or demo. X-Forwarded-For is ignored. Checkbox on-values are sniffed from /AP. /V and /AS are both set, and /NeedAppearances is set on the AcroForm. A checkbox's subform siblings are left alone. Browser callers must send an Origin listed in ALLOWED_ORIGINS. When that variable is unset, the only allowed origin is http://localhost:3000. A validation error does not echo the submitted value.
 
-Reach it from POST /fill/i-130.
+Reach it from POST /fill/i-130 from the Next.js server, not from the browser.
 
-Verify: bun run check runs uv run python scripts/eval_fill.py fixtures/ from apps/api. That command exits 1 when a fixture field or appearance state does not match.
+Verify: bun run check runs apps/api/tests/test_fill_auth.py, apps/api/tests/test_api.py, and uv run python scripts/eval_fill.py fixtures/ from apps/api. eval_fill.py exits 1 when a fixture field or appearance state does not match.
 
 ### `POST /fill-intake/{slug}`
 
 Status: wired.
 
-Fills one mapped form from a canonical intake and returns PDF bytes only when acknowledged is true. Mapped slugs are i-130, i-130a, i-485, i-765, and i-131. I-765 writes category (c)(9) only when I-485 is also selected. I-131 checks advance parole for a pending I-485 only in that same case. I-864 is not mapped until the official PDF is in Forms/.
+Fills one mapped form from a canonical intake and returns PDF bytes only when acknowledged is true. The caller must send X-Fill-Secret. The rate limit key is X-Fill-Caller. Mapped slugs are i-130, i-130a, i-485, i-765, and i-131. I-765 writes category (c)(9) only when I-485 is also selected. I-131 checks advance parole for a pending I-485 only in that same case. I-864 is not mapped until the official PDF is in Forms/.
 
-Reach it from POST /fill-intake/i-130 with {intake, acknowledged: true}.
+Reach it from POST /api/fill-intake/i-130 on the web app. The browser does not call this API route's upstream. Demo mode builds the Sampleton intake on the server..
 
 Verify: bun run check runs apps/api/tests/test_map_intake.py and the intake_*.json fixtures in eval_fill.py.
 
@@ -308,9 +358,9 @@ Verify: bun run check runs apps/api/tests/test_map_intake.py and the intake_*.js
 
 Status: wired.
 
-Renders the selected mapped forms as JPEG page images. It does not return PDF bytes and does not require the acknowledgement flag.
+Renders the selected mapped forms as JPEG page images. It requires X-Fill-Secret, rate-limits X-Fill-Caller, does not return PDF bytes, and does not require the acknowledgement flag.
 
-Reach it from the Preview button in the app header.
+Reach it from the Preview button, which posts to /api/preview-intake with no field map.
 
 Verify: bun run check runs test_preview_returns_images_without_acknowledgement in apps/api/tests/test_map_intake.py.
 
@@ -318,9 +368,9 @@ Verify: bun run check runs test_preview_returns_images_without_acknowledgement i
 
 Status: partial.
 
-Returns 400 when selectedForms is empty or acknowledged is not true. Otherwise zips the mapped forms the person selected, plus a read-me that says the files are drafts and names any selected form that was not filled. There is no default to every mapped form. I-765 and I-131 are filled when selected. I-864 and G-1145 are named in that note when selected.
+Requires X-Fill-Secret and rate-limits X-Fill-Caller. Returns 400 when selectedForms is empty or acknowledged is not true. Otherwise zips the mapped forms the person selected, plus a read-me that says the files are drafts and names any selected form that was not filled. There is no default to every mapped form. I-765 and I-131 are filled when selected. I-864 and G-1145 are named in that note when selected.
 
-Reach it from Download my forms (PDF) inside the preview, after the four acknowledgement boxes.
+Reach it from Download my forms (PDF) inside the preview, which posts to /api/packet after the acknowledgement boxes.
 
 Verify: bun run check runs test_packet_includes_mapped_forms_and_names_the_gap and test_packet_rejects_an_empty_selection in apps/api/tests/test_map_intake.py.
 
@@ -334,7 +384,7 @@ None.
 
 Status: partial.
 
-The header Preview button is the only primary action. It posts the canonical intake to /preview-intake and shows page images, with no PDF save control. Download my forms (PDF) is inside that preview and stays off until every acknowledgement box is checked, then posts /packet with acknowledged true.
+The header Preview button posts to /api/preview-intake with no field map and shows page images. Demo mode builds the Jordan Sampleton intake on the server and ignores the client body. A signed-in preview loads that caller's saved intake, decrypts SSN and A-Number, and does not return those numbers to the browser. Download my forms (PDF) stays off until every acknowledgement box is checked, then posts to /api/packet.
 
 Reach it from the Preview button in the app header, on any /sections or /forms page.
 

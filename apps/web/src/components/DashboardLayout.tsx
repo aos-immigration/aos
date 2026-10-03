@@ -16,10 +16,12 @@ import {
   type IntakeSnapshot,
 } from "@/app/lib/sectionSaveState";
 import { SavedSectionsLabel } from "@/components/SavedSectionsLabel";
+import { UserButton } from "@clerk/nextjs";
 import { LoadDemoButton } from "@/components/intake/LoadDemoButton";
 import { FormPreview, type PreviewForm } from "@/components/intake/FormPreview";
 import { DOWNLOAD_BOXES } from "@/components/intake/trustCopy";
 import { useIntake } from "@/components/intake/IntakeProvider";
+import { useRuntimeConfig } from "@/app/lib/runtimeConfigContext";
 import type { Intake } from "@/app/lib/intake/schema";
 import {
   Dialog,
@@ -101,6 +103,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               )}
               <SaveStatus />
               <LoadDemoButton className="text-sm underline decoration-foreground/30 underline-offset-4" />
+              <AccountMenu />
               <ThemeToggle />
               <PreviewControls />
             </div>
@@ -128,8 +131,14 @@ function SaveStatus() {
   );
 }
 
+function AccountMenu() {
+  const { clerk } = useRuntimeConfig();
+  if (!clerk) return null;
+  return <UserButton />;
+}
+
 function PreviewControls() {
-  const { intake } = useIntake();
+  const { flush } = useIntake();
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [open, setOpen] = useState(false);
@@ -138,19 +147,14 @@ function PreviewControls() {
   const [acks, setAcks] = useState<boolean[]>(() => DOWNLOAD_BOXES.map(() => false));
   const [error, setError] = useState<string | null>(null);
 
-  const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-
   const openPreview = useCallback(async () => {
     setLoading(true);
     setError(null);
     setAcks(DOWNLOAD_BOXES.map(() => false));
     setOpen(true);
     try {
-      const response = await fetch(`${apiBase}/preview-intake`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ intake }),
-      });
+      await flush();
+      const response = await fetch("/api/preview-intake", { method: "POST" });
       if (!response.ok) {
         throw new Error(`Failed to prepare the preview (${response.status})`);
       }
@@ -164,17 +168,14 @@ function PreviewControls() {
     } finally {
       setLoading(false);
     }
-  }, [apiBase, intake]);
+  }, [flush]);
 
   const downloadPacket = useCallback(async () => {
     setDownloading(true);
     setError(null);
     try {
-      const response = await fetch(`${apiBase}/packet`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ intake, acknowledged: true }),
-      });
+      await flush();
+      const response = await fetch("/api/packet", { method: "POST" });
       if (!response.ok) {
         throw new Error(`Failed to build the packet (${response.status})`);
       }
@@ -190,7 +191,7 @@ function PreviewControls() {
     } finally {
       setDownloading(false);
     }
-  }, [apiBase, intake]);
+  }, [flush]);
 
   return (
     <>
