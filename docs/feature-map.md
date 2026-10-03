@@ -298,7 +298,7 @@ Verify: bun run check runs uv run python scripts/eval_fill.py fixtures/ from app
 
 Status: wired.
 
-Fills one mapped form from a canonical intake and returns PDF bytes only when acknowledged is true. Mapped slugs are i-130, i-130a, and i-485. I-864 is not mapped until the official PDF is in Forms/.
+Fills one mapped form from a canonical intake and returns PDF bytes only when acknowledged is true. Mapped slugs are i-130, i-130a, i-485, i-765, and i-131. I-765 writes category (c)(9) only when I-485 is also selected. I-131 checks advance parole for a pending I-485 only in that same case. I-864 is not mapped until the official PDF is in Forms/.
 
 Reach it from POST /fill-intake/i-130 with {intake, acknowledged: true}.
 
@@ -318,7 +318,7 @@ Verify: bun run check runs test_preview_returns_images_without_acknowledgement i
 
 Status: partial.
 
-Returns 400 when selectedForms is empty or acknowledged is not true. Otherwise zips the mapped forms the person selected, plus a read-me that says the files are drafts and names any selected form that was not filled. There is no default to every mapped form. I-864, I-765, I-131, and G-1145 are named in that note when selected.
+Returns 400 when selectedForms is empty or acknowledged is not true. Otherwise zips the mapped forms the person selected, plus a read-me that says the files are drafts and names any selected form that was not filled. There is no default to every mapped form. I-765 and I-131 are filled when selected. I-864 and G-1145 are named in that note when selected.
 
 Reach it from Download my forms (PDF) inside the preview, after the four acknowledgement boxes.
 
@@ -344,7 +344,7 @@ Verify: apps/web/e2e/review-package.spec.ts drives Preview with a mocked /previe
 
 Status: wired.
 
-The header no longer exports a fixture. Fill fixtures for the intake mapper live in apps/api/fixtures/intake_*.json.
+The header no longer exports a fixture. Fill fixtures for the intake mapper live in apps/api/fixtures/intake_*.json, including I-765 and I-131.
 
 Reach it from the fixture files, not a button.
 
