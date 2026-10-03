@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { usePathname } from "next/navigation";
 import { Sidebar } from "./Sidebar";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { ThemeToggle } from "./ThemeToggle";
 import { Eye, Loader2 } from "lucide-react";
 import { LifecycleRail } from "@/components/system/LifecycleRail";
+import type { StageId } from "@/components/system/stages";
 import { ErrorState } from "@/components/system/States";
 import { SiteFooter } from "@/components/system/SiteFooter";
 import {
@@ -31,6 +33,12 @@ type DashboardLayoutProps = {
   children: React.ReactNode;
 };
 
+function stageFor(pathname: string): StageId {
+  if (pathname === "/start" || pathname === "/cost") return "start";
+  if (pathname.startsWith("/sections/review")) return "review";
+  return "collect";
+}
+
 function snapshotFromIntake(intake: Intake): IntakeSnapshot {
   return {
     petitionerGivenName: intake.petitioner.givenName,
@@ -47,26 +55,39 @@ function snapshotFromIntake(intake: Intake): IntakeSnapshot {
   };
 }
 
+const EMPTY_SNAPSHOT: IntakeSnapshot = {
+  petitionerGivenName: "",
+  petitionerFamilyName: "",
+  petitionerAddressCount: 0,
+  petitionerEmploymentCount: 0,
+  beneficiaryAddressCount: 0,
+};
+
 export function DashboardLayout({ children }: DashboardLayoutProps) {
+  const pathname = usePathname();
+  const [navOpen, setNavOpen] = useState(false);
   const { intake, ready } = useIntake();
   const snapshot = ready ? snapshotFromIntake(intake) : null;
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar
-        snapshot={
-          snapshot ?? {
-            petitionerGivenName: "",
-            petitionerFamilyName: "",
-            petitionerAddressCount: 0,
-            petitionerEmploymentCount: 0,
-            beneficiaryAddressCount: 0,
-          }
-        }
+        open={navOpen}
+        onNavigate={() => setNavOpen(false)}
+        snapshot={snapshot ?? EMPTY_SNAPSHOT}
       />
       <main className="flex-1 flex flex-col overflow-hidden relative">
         <header className="z-10 border-b border-border bg-background">
           <div className="flex min-h-14 flex-wrap items-center justify-between gap-3 px-4 py-2 sm:px-6">
-            <Breadcrumbs />
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                className="text-sm underline decoration-foreground/30 underline-offset-4 md:hidden"
+                onClick={() => setNavOpen((open) => !open)}
+              >
+                {navOpen ? "Close" : "Menu"}
+              </button>
+              <Breadcrumbs />
+            </div>
             <div className="flex items-center gap-3">
               {snapshot ? (
                 <SavedSectionsLabel
@@ -85,7 +106,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             </div>
           </div>
           <div className="border-t border-border px-6 py-4">
-            <LifecycleRail current="collect" />
+            <LifecycleRail current={stageFor(pathname)} />
           </div>
         </header>
         <div className="flex-1 overflow-y-auto custom-scrollbar bg-background">

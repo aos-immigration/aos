@@ -11,8 +11,8 @@ const sectionLabels: Record<string, string> = {
   address: "Address History",
   employment: "Employment History",
   marital: "Marital History",
-  documents: "Document Vault",
-  proof: "Bona Fide Proof",
+  documents: "Documents",
+  proof: "Relationship documents",
 };
 
 export function Breadcrumbs() {
@@ -22,6 +22,12 @@ export function Breadcrumbs() {
     const items: Array<{ label: string; href?: string }> = [
       { label: "Application", href: "/sections" },
     ];
+
+    if (pathname === "/start") {
+      items.push({ label: "Before you file" });
+    } else if (pathname === "/cost") {
+      items.push({ label: "USCIS fees" });
+    }
 
     if (pathname.startsWith("/sections/")) {
       const parts = pathname.split("/").filter(Boolean);

@@ -33,9 +33,14 @@ export default function Home() {
             <p className="max-w-xl text-lg leading-7">
               Answer one question at a time. AOS copies your answers into the official forms you choose.
             </p>
-            <p className="type-title">$0 service fee + USCIS fees</p>
+            <p className="type-title">
+              $0 service fee +{" "}
+              <Link href="/cost" className="underline decoration-foreground/30 underline-offset-4">
+                USCIS fees
+              </Link>
+            </p>
             <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-5">
-              <Link href="/sections" className={buttonVariants({ size: "cta" })}>
+              <Link href="/start" className={buttonVariants({ size: "cta" })}>
                 Start filling out my forms
               </Link>
               <p className="text-sm">Automatic cross-form checks. You review and file.</p>

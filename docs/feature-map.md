@@ -16,7 +16,7 @@ Verifying agents start here, then run the command named on the row.
 
 Status: wired.
 
-Landing page. It links to /sections, states a $0 service fee, and does not read or write intake data.
+Landing page. It links to /start, states a $0 service fee, and links the USCIS fee table. It does not read or write intake data.
 
 Reach it from the site root.
 
@@ -46,11 +46,21 @@ Verify: bun run check runs apps/web/src/components/system/system.test.tsx, which
 
 Status: wired.
 
-A short list of situations people take to an attorney before filing. It does not say whether the person can file, and it does not store a result. The intake modal links here as Find legal help instead.
+The attorney list. It does not say whether the person can file, and it does not store a result. The intake modal links here as Find legal help instead, and the download step links here as Talk to an attorney first.
 
-Reach it from Find legal help instead on the intake modal, or the URL /start.
+Reach it from Sidebar, Prepare, Before you file; Find legal help instead on the intake modal; Talk to an attorney first in the preview.
 
-Verify: bun run check runs apps/web/src/components/intake/intake-ui.test.tsx, which expects that link.
+Verify: bun run check runs apps/web/src/components/intake/prepare.test.tsx, which asserts the page has no eligibility verdict, and intake-ui.test.tsx, which expects the modal link.
+
+### `/cost`
+
+Status: wired.
+
+Itemized USCIS fees from Form G-1055, edition 10/01/26, for the forms the person selected. I-765 cites Appendix C ($260 with a pending I-485 filed on or after 4/1/2024). I-131 cites Appendix B ($630 paper / $580 online with a pending I-485). Paper and online amounts are a toggle stored on the intake. The service fee is $0. No form is preselected.
+
+Reach it from Sidebar, Prepare, USCIS fees, or the home page USCIS fees link.
+
+Verify: bun run check runs apps/web/src/components/intake/prepare.test.tsx, which expects the demo packet to total $3,005 on paper and $2,855 online and to cite Appendix B and Appendix C.
 
 ### `/sections`
 
@@ -172,6 +182,16 @@ Reach it from Sidebar, Case, Sponsor.
 
 Verify: bun run check runs apps/web/src/app/lib/intake/path.test.ts, which includes the sponsor paths.
 
+### `/sections/documents`
+
+Status: wired.
+
+Document checklist driven by the answers and the selected forms. Choosing a file stores the file name with status uploaded. The screen never marks a file accepted.
+
+Reach it from Sidebar, Prepare, Documents, and Sidebar, Documents & Evidence, Document Vault.
+
+Verify: bun run check runs apps/web/src/components/intake/prepare.test.tsx and apps/web/src/app/lib/intake/intake.test.ts.
+
 ### `/sections/review`
 
 Status: wired.
@@ -221,16 +241,6 @@ Static I-485 biographic mock. Eye color is not preselected, it does not save, an
 Reach it from the URL /forms/i-485/biographic only.
 
 Verify: bun run check renders the page in apps/web/src/app/lib/__tests__/mockSections.test.tsx.
-
-### `/sections/documents`
-
-Status: mocked.
-
-Coming soon page for Document Vault. Nothing on the page is saved.
-
-Reach it from Sidebar, Documents & Evidence, Document Vault.
-
-Verify: Open /sections/documents. The page says the section is not available yet. bun run check renders it in mockSections.test.tsx.
 
 ### `/sections/proof`
 

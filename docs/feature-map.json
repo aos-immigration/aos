@@ -4,7 +4,7 @@
       "id": "/",
       "kind": "page",
       "status": "wired",
-      "does": "Landing page. It links to /sections, states a $0 service fee, and does not read or write intake data.",
+      "does": "Landing page. It links to /start, states a $0 service fee, and links the USCIS fee table. It does not read or write intake data.",
       "reach": "the site root",
       "verify": "Open /. There is no unit test for this screen. bun run check does not boot Next.js. Disclaimer phrases are covered by apps/web/src/components/system/system.test.tsx."
     },
@@ -28,9 +28,17 @@
       "id": "/start",
       "kind": "page",
       "status": "wired",
-      "does": "A short list of situations people take to an attorney before filing. It does not say whether the person can file, and it does not store a result. The intake modal links here as Find legal help instead.",
-      "reach": "Find legal help instead on the intake modal, or the URL /start",
-      "verify": "bun run check runs apps/web/src/components/intake/intake-ui.test.tsx, which expects that link."
+      "does": "The attorney list. It does not say whether the person can file, and it does not store a result. The intake modal links here as Find legal help instead, and the download step links here as Talk to an attorney first.",
+      "reach": "Sidebar, Prepare, Before you file; Find legal help instead on the intake modal; Talk to an attorney first in the preview",
+      "verify": "bun run check runs apps/web/src/components/intake/prepare.test.tsx, which asserts the page has no eligibility verdict, and intake-ui.test.tsx, which expects the modal link."
+    },
+    {
+      "id": "/cost",
+      "kind": "page",
+      "status": "wired",
+      "does": "Itemized USCIS fees from Form G-1055, edition 10/01/26, for the forms the person selected. I-765 cites Appendix C ($260 with a pending I-485 filed on or after 4/1/2024). I-131 cites Appendix B ($630 paper / $580 online with a pending I-485). Paper and online amounts are a toggle stored on the intake. The service fee is $0. No form is preselected.",
+      "reach": "Sidebar, Prepare, USCIS fees, or the home page USCIS fees link",
+      "verify": "bun run check runs apps/web/src/components/intake/prepare.test.tsx, which expects the demo packet to total $3,005 on paper and $2,855 online and to cite Appendix B and Appendix C."
     },
     {
       "id": "/sections",
@@ -129,6 +137,14 @@
       "verify": "bun run check runs apps/web/src/app/lib/intake/path.test.ts, which includes the sponsor paths."
     },
     {
+      "id": "/sections/documents",
+      "kind": "page",
+      "status": "wired",
+      "does": "Document checklist driven by the answers and the selected forms. Choosing a file stores the file name with status uploaded. The screen never marks a file accepted.",
+      "reach": "Sidebar, Prepare, Documents, and Sidebar, Documents & Evidence, Document Vault",
+      "verify": "bun run check runs apps/web/src/components/intake/prepare.test.tsx and apps/web/src/app/lib/intake/intake.test.ts."
+    },
+    {
       "id": "/sections/review",
       "kind": "page",
       "status": "wired",
@@ -167,14 +183,6 @@
       "does": "Static I-485 biographic mock. Eye color is not preselected, it does not save, and it does not show a completion percent.",
       "reach": "the URL /forms/i-485/biographic only",
       "verify": "bun run check renders the page in apps/web/src/app/lib/__tests__/mockSections.test.tsx."
-    },
-    {
-      "id": "/sections/documents",
-      "kind": "page",
-      "status": "mocked",
-      "does": "Coming soon page for Document Vault. Nothing on the page is saved.",
-      "reach": "Sidebar, Documents & Evidence, Document Vault",
-      "verify": "Open /sections/documents. The page says the section is not available yet. bun run check renders it in mockSections.test.tsx."
     },
     {
       "id": "/sections/proof",
