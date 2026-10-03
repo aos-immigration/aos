@@ -180,25 +180,41 @@
       "id": "POST /fill/{slug}",
       "kind": "api",
       "status": "wired",
-      "does": "Fills Forms/{slug}.pdf from {fields, checkboxes} and streams the PDF back. Checkbox on-values are sniffed from /AP. /V and /AS are both set, and /NeedAppearances is set on the AcroForm.",
-      "reach": "the Verify & Preview button, or POST /fill/i-130",
+      "does": "Fills Forms/{slug}.pdf from {fields, checkboxes} and streams the PDF back. Checkbox on-values are sniffed from /AP. /V and /AS are both set, and /NeedAppearances is set on the AcroForm. A checkbox's subform siblings are left alone.",
+      "reach": "POST /fill/i-130",
       "verify": "bun run check runs uv run python scripts/eval_fill.py fixtures/ from apps/api. That command exits 1 when a fixture field or appearance state does not match."
+    },
+    {
+      "id": "POST /fill-intake/{slug}",
+      "kind": "api",
+      "status": "wired",
+      "does": "Fills one mapped form from a canonical intake. Mapped slugs are i-130, i-130a, and i-485. I-864 is not mapped until the official PDF is in Forms/.",
+      "reach": "the Preview my forms button, or POST /fill-intake/i-130 with {intake}",
+      "verify": "bun run check runs apps/api/tests/test_map_intake.py and the intake_*.json fixtures in eval_fill.py."
+    },
+    {
+      "id": "POST /packet",
+      "kind": "api",
+      "status": "partial",
+      "does": "Zips the mapped forms the person selected, plus a read-me that says the files are drafts and names any selected form that was not filled. I-864, I-765, I-131, and G-1145 are named in that note.",
+      "reach": "Download my forms (PDF), after four acknowledgement checkboxes",
+      "verify": "bun run check runs test_packet_includes_mapped_forms_and_names_the_gap in apps/api/tests/test_map_intake.py."
     }
   ],
   "flows": [
     {
       "id": "verify-and-preview",
       "status": "partial",
-      "does": "DashboardLayout builds an I-130 payload from Convex basics, addresses, and employment, prefers the sessionStorage basics draft, POSTs /fill/i-130, and shows the PDF in an iframe. Employment is passed in and then ignored. The header no longer shows a hardcoded percent.",
+      "does": "The header posts the canonical intake to /fill-intake/i-130 and shows the draft PDF in an iframe. The download button asks for four acknowledgements, then posts /packet and saves a zip.",
       "reach": "the Preview my forms button in the app header, on any /sections or /forms page",
-      "verify": "apps/web/e2e/review-package.spec.ts drives the button with a mocked /fill/i-130 response. It needs Convex and Playwright, so it is not part of bun run check. Fill accuracy without the browser is eval_fill.py."
+      "verify": "apps/web/e2e/review-package.spec.ts drives the button with a mocked /fill-intake/i-130 response. It needs Playwright, so it is not part of bun run check. Fill accuracy without the browser is eval_fill.py."
     },
     {
       "id": "export-fixture",
       "status": "wired",
-      "does": "Development-only header button. It builds the fixture from saved Convex records, not the unsaved sessionStorage draft, downloads {payload, expected_values}, and copies expected_values from text fields only.",
-      "reach": "the Export Fixture button in the header when NODE_ENV is development",
-      "verify": "No unit test covers the button. The downloaded shape is what eval_fill.py accepts. Confirm against apps/api/scripts/eval_fill.py _load_fixture."
+      "does": "The header no longer exports a fixture. Fill fixtures for the intake mapper live in apps/api/fixtures/intake_*.json.",
+      "reach": "the fixture files, not a button",
+      "verify": "bun run check runs eval_fill.py fixtures/, which includes intake_i-130.json, intake_i-130a.json, and intake_i-485.json."
     }
   ]
 }

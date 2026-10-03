@@ -239,6 +239,8 @@ def _apply_leaf_value(
     if not parent:
         return
     parent_obj = _deref(parent)
+    if str(parent_obj.get("/FT", "")) != "/Btn":
+        return
     parent_obj["/V"] = value
     kids = parent_obj.get(KIDS_KEY, None)
     if not kids:
@@ -308,8 +310,11 @@ def debug_field(slug: str, name: str):
     raise HTTPException(status_code=404, detail="Field name not found")
 
 
-@app.post("/fill/{slug}")
-def fill_pdf(slug: str, payload: FillRequest):
+class IntakeFillRequest(BaseModel):
+    intake: Dict[str, Any] = Field(default_factory=dict)
+
+
+def _filled_pdf(slug: str, fields: Dict[str, str], checkboxes: Dict[str, bool]) -> BytesIO:
     pdf_file = _pdf_path(slug)
     if not pdf_file.exists():
         raise HTTPException(status_code=404, detail=PDF_NOT_FOUND)
@@ -317,21 +322,77 @@ def fill_pdf(slug: str, payload: FillRequest):
     acro = pdf.Root.get(ACROFORM_KEY, None)
     if not acro:
         raise HTTPException(status_code=400, detail="PDF has no AcroForm")
-
     acro["/NeedAppearances"] = pikepdf.Boolean(True)
-
-    field_values: Dict[str, str] = dict(payload.fields)
-    checkbox_values: Dict[str, bool] = dict(payload.checkboxes)
-
-    _walk_fields(pdf_get(acro, FIELDS_KEY, []), field_values, checkbox_values)
-
+    _walk_fields(pdf_get(acro, FIELDS_KEY, []), fields, checkboxes)
     output = BytesIO()
     pdf.save(output)
     output.seek(0)
+    return output
 
-    filename = f"{slug}-filled.pdf"
+
+@app.post("/fill/{slug}")
+def fill_pdf(slug: str, payload: FillRequest):
+    output = _filled_pdf(slug, dict(payload.fields), dict(payload.checkboxes))
     return StreamingResponse(
         output,
         media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={"Content-Disposition": f'attachment; filename="{slug}-filled.pdf"'},
+    )
+
+
+@app.post("/fill-intake/{slug}")
+def fill_intake(slug: str, body: IntakeFillRequest):
+    from app.map_intake import map_intake
+
+    try:
+        mapped = map_intake(slug, body.intake)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    output = _filled_pdf(slug, mapped["fields"], mapped["checkboxes"])
+    return StreamingResponse(
+        output,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{slug}-filled.pdf"'},
+    )
+
+
+@app.post("/packet")
+def packet(body: IntakeFillRequest):
+    import io
+    import zipfile
+
+    from app.map_intake import MAPPED_SLUGS, map_intake
+
+    selected = body.intake.get("selectedForms") or list(MAPPED_SLUGS)
+    if not isinstance(selected, list):
+        selected = list(MAPPED_SLUGS)
+    buffer = io.BytesIO()
+    notes: List[str] = [
+        "These are drafts. Check every answer against the form instructions before you sign.",
+        "AOS does not file these forms with USCIS.",
+    ]
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+        for slug in selected:
+            if not isinstance(slug, str):
+                continue
+            if slug not in MAPPED_SLUGS:
+                notes.append(f"{slug}: not filled. This packet does not map that form yet.")
+                continue
+            try:
+                mapped = map_intake(slug, body.intake)
+            except FileNotFoundError:
+                notes.append(
+                    f"{slug}: not filled. The official PDF is not in this checkout."
+                )
+                continue
+            pdf = _filled_pdf(slug, mapped["fields"], mapped["checkboxes"])
+            archive.writestr(f"{slug}-filled.pdf", pdf.getvalue())
+        archive.writestr("read-me.txt", "\n".join(notes) + "\n")
+    buffer.seek(0)
+    return StreamingResponse(
+        buffer,
+        media_type="application/zip",
+        headers={"Content-Disposition": 'attachment; filename="aos-packet.zip"'},
     )

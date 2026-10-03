@@ -1,8 +1,6 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { useQuery } from "convex/react";
-import { api } from "../../convex/_generated/api";
 import { Sidebar } from "./Sidebar";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { ThemeToggle } from "./ThemeToggle";
@@ -10,10 +8,7 @@ import { Eye, Download, Loader2 } from "lucide-react";
 import { LifecycleRail } from "@/components/system/LifecycleRail";
 import { ErrorState } from "@/components/system/States";
 import { SiteFooter } from "@/components/system/SiteFooter";
-import { useApplicationId } from "@/app/lib/useApplicationId";
-import { buildPdfPayload } from "@/app/lib/buildPdfPayload";
-import type { AddressRow, EmploymentRow } from "@/app/lib/buildPdfPayload";
-import { readPetitionerBasicsDraft } from "@/app/lib/reviewDraft";
+import { DISCLAIMER } from "@/components/system/copy";
 import { useIntake } from "@/components/intake/IntakeProvider";
 import {
   Dialog,
@@ -78,41 +73,20 @@ function LoadDemoButton() {
   );
 }
 
+const DOWNLOAD_ACKS = [
+  "AOS is not a law firm.",
+  "AOS is not a substitute for the advice of an attorney.",
+  "AOS is not affiliated with USCIS.",
+  "I will check this draft before I sign or file it.",
+] as const;
+
 function PreviewControls() {
-  if (!process.env.NEXT_PUBLIC_CONVEX_URL) {
-    return (
-      <button
-        type="button"
-        disabled
-        className="flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground opacity-50"
-      >
-        <Eye className="w-4 h-4" />
-        Preview my forms
-      </button>
-    );
-  }
-  return <ConvexPreviewControls />;
-}
-
-function ConvexPreviewControls() {
-  const applicationId = useApplicationId();
-
-  const basics = useQuery(
-    api.petitioner.getPetitionerBasics,
-    applicationId ? { applicationId } : "skip",
-  );
-  const addresses = useQuery(
-    api.petitioner.listAddresses,
-    applicationId ? { applicationId, personRole: "petitioner" } : "skip",
-  );
-  const employment = useQuery(
-    api.petitioner.listEmploymentEntries,
-    applicationId ? { applicationId, personRole: "petitioner" } : "skip",
-  );
-
+  const { intake } = useIntake();
   const [isGenerating, setIsGenerating] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [downloadOpen, setDownloadOpen] = useState(false);
+  const [acks, setAcks] = useState<boolean[]>(() => DOWNLOAD_ACKS.map(() => false));
   const [error, setError] = useState<string | null>(null);
 
   // Clean up blob URL on unmount
@@ -124,41 +98,23 @@ function ConvexPreviewControls() {
     };
   }, [pdfUrl]);
 
-  const handleReviewPackage = useCallback(async () => {
-    const basicsForPreview = readPetitionerBasicsDraft() ?? basics;
-    if (!basicsForPreview) {
-      setError("No petitioner data found. Please fill in the basic information first.");
-      return;
-    }
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+  const handleReviewPackage = useCallback(async () => {
     setIsGenerating(true);
     setError(null);
-
     try {
-      const payload = buildPdfPayload(
-        basicsForPreview,
-        (addresses ?? []) as AddressRow[],
-        (employment ?? []) as EmploymentRow[],
-      );
-
-      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      const response = await fetch(`${apiBase}/fill/i-130`, {
+      const response = await fetch(`${apiBase}/fill-intake/i-130`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ intake }),
       });
-
       if (!response.ok) {
         throw new Error(`Failed to generate PDF (${response.status})`);
       }
-
       const blob = await response.blob();
       const url = globalThis.URL.createObjectURL(blob);
-
-      if (pdfUrl) {
-        globalThis.URL.revokeObjectURL(pdfUrl);
-      }
-
+      if (pdfUrl) globalThis.URL.revokeObjectURL(pdfUrl);
       setPdfUrl(url);
       setIsPreviewOpen(true);
     } catch (err) {
@@ -166,50 +122,50 @@ function ConvexPreviewControls() {
     } finally {
       setIsGenerating(false);
     }
-  }, [basics, addresses, employment, pdfUrl]);
+  }, [apiBase, intake, pdfUrl]);
 
-  const handleExportFixture = useCallback(() => {
-    if (!basics) return;
-
-    const payload = buildPdfPayload(
-      basics,
-      (addresses ?? []) as AddressRow[],
-      (employment ?? []) as EmploymentRow[],
-    );
-
-    const fixture = {
-      description: `i-130 fixture exported on ${new Date().toISOString().slice(0, 10)}`,
-      slug: "i-130",
-      payload,
-      expected_values: { ...payload.fields },
-    };
-
-    const blob = new Blob([JSON.stringify(fixture, null, 2)], {
-      type: "application/json",
-    });
-    const url = globalThis.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `i-130-fixture-${Date.now()}.json`;
-    a.click();
-    globalThis.URL.revokeObjectURL(url);
-  }, [basics, addresses, employment]);
+  const handleDownload = useCallback(async () => {
+    setIsGenerating(true);
+    setError(null);
+    try {
+      const response = await fetch(`${apiBase}/packet`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ intake }),
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to build the packet (${response.status})`);
+      }
+      const blob = await response.blob();
+      const url = globalThis.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "aos-packet.zip";
+      a.click();
+      globalThis.URL.revokeObjectURL(url);
+      setDownloadOpen(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to build the packet");
+    } finally {
+      setIsGenerating(false);
+    }
+  }, [apiBase, intake]);
 
   return (
     <>
-      {process.env.NODE_ENV === "development" && (
-        <button
-          onClick={handleExportFixture}
-          disabled={!basics}
-          className="text-muted-foreground hover:text-foreground text-xs font-medium px-3 py-2 rounded border border-border transition-all flex items-center gap-2 disabled:opacity-50"
-        >
-          <Download className="w-3 h-3" />
-          Export Fixture
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={() => {
+          setAcks(DOWNLOAD_ACKS.map(() => false));
+          setDownloadOpen(true);
+        }}
+        className="text-sm underline decoration-foreground/30 underline-offset-4"
+      >
+        Download my forms (PDF)
+      </button>
       <button
         onClick={handleReviewPackage}
-        disabled={isGenerating || !applicationId}
+        disabled={isGenerating}
         className="flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
       >
         {isGenerating ? (
@@ -241,6 +197,42 @@ function ConvexPreviewControls() {
               </div>
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={downloadOpen} onOpenChange={setDownloadOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Download the draft packet</DialogTitle>
+            <DialogDescription>{DISCLAIMER}</DialogDescription>
+          </DialogHeader>
+          <ul className="space-y-3">
+            {DOWNLOAD_ACKS.map((label, index) => (
+              <li key={label}>
+                <label className="flex items-start gap-3 text-sm leading-6">
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    checked={acks[index]}
+                    onChange={(event) =>
+                      setAcks((current) =>
+                        current.map((value, item) => (item === index ? event.target.checked : value)),
+                      )
+                    }
+                  />
+                  <span>{label}</span>
+                </label>
+              </li>
+            ))}
+          </ul>
+          <button
+            type="button"
+            className="inline-flex h-12 items-center gap-2 rounded-md bg-primary px-6 text-base font-medium text-primary-foreground disabled:opacity-40"
+            disabled={isGenerating || acks.some((checked) => !checked)}
+            onClick={handleDownload}
+          >
+            {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+            Download my forms (PDF)
+          </button>
         </DialogContent>
       </Dialog>
     </>

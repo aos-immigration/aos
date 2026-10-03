@@ -238,11 +238,31 @@ Verify: bun run check runs test_debug_field_requires_a_name. Inspect a live fiel
 
 Status: wired.
 
-Fills Forms/{slug}.pdf from {fields, checkboxes} and streams the PDF back. Checkbox on-values are sniffed from /AP. /V and /AS are both set, and /NeedAppearances is set on the AcroForm.
+Fills Forms/{slug}.pdf from {fields, checkboxes} and streams the PDF back. Checkbox on-values are sniffed from /AP. /V and /AS are both set, and /NeedAppearances is set on the AcroForm. A checkbox's subform siblings are left alone.
 
-Reach it from the Verify & Preview button, or POST /fill/i-130.
+Reach it from POST /fill/i-130.
 
 Verify: bun run check runs uv run python scripts/eval_fill.py fixtures/ from apps/api. That command exits 1 when a fixture field or appearance state does not match.
+
+### `POST /fill-intake/{slug}`
+
+Status: wired.
+
+Fills one mapped form from a canonical intake. Mapped slugs are i-130, i-130a, and i-485. I-864 is not mapped until the official PDF is in Forms/.
+
+Reach it from the Preview my forms button, or POST /fill-intake/i-130 with {intake}.
+
+Verify: bun run check runs apps/api/tests/test_map_intake.py and the intake_*.json fixtures in eval_fill.py.
+
+### `POST /packet`
+
+Status: partial.
+
+Zips the mapped forms the person selected, plus a read-me that says the files are drafts and names any selected form that was not filled. I-864, I-765, I-131, and G-1145 are named in that note.
+
+Reach it from Download my forms (PDF), after four acknowledgement checkboxes.
+
+Verify: bun run check runs test_packet_includes_mapped_forms_and_names_the_gap in apps/api/tests/test_map_intake.py.
 
 ## Linked paths with no page
 
@@ -254,18 +274,18 @@ None.
 
 Status: partial.
 
-DashboardLayout builds an I-130 payload from Convex basics, addresses, and employment, prefers the sessionStorage basics draft, POSTs /fill/i-130, and shows the PDF in an iframe. Employment is passed in and then ignored. The header no longer shows a hardcoded percent.
+The header posts the canonical intake to /fill-intake/i-130 and shows the draft PDF in an iframe. The download button asks for four acknowledgements, then posts /packet and saves a zip.
 
 Reach it from the Preview my forms button in the app header, on any /sections or /forms page.
 
-Verify: apps/web/e2e/review-package.spec.ts drives the button with a mocked /fill/i-130 response. It needs Convex and Playwright, so it is not part of bun run check. Fill accuracy without the browser is eval_fill.py.
+Verify: apps/web/e2e/review-package.spec.ts drives the button with a mocked /fill-intake/i-130 response. It needs Playwright, so it is not part of bun run check. Fill accuracy without the browser is eval_fill.py.
 
 ### export-fixture
 
 Status: wired.
 
-Development-only header button. It builds the fixture from saved Convex records, not the unsaved sessionStorage draft, downloads {payload, expected_values}, and copies expected_values from text fields only.
+The header no longer exports a fixture. Fill fixtures for the intake mapper live in apps/api/fixtures/intake_*.json.
 
-Reach it from the Export Fixture button in the header when NODE_ENV is development.
+Reach it from the fixture files, not a button.
 
-Verify: No unit test covers the button. The downloaded shape is what eval_fill.py accepts. Confirm against apps/api/scripts/eval_fill.py _load_fixture.
+Verify: bun run check runs eval_fill.py fixtures/, which includes intake_i-130.json, intake_i-130a.json, and intake_i-485.json.
