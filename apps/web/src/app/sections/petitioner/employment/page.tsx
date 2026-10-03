@@ -2,14 +2,13 @@
 
 import { useApplicationId } from "@/app/lib/useApplicationId";
 import { useDemoMode } from "@/app/lib/intakeMode";
+import { useRuntimeConfig } from "@/app/lib/runtimeConfigContext";
 import { EmploymentHistory } from "@/app/components/intake/EmploymentHistory";
 import { DemoEmploymentView } from "@/app/components/intake/DemoCoupleViews";
+import { AuthNotConfigured } from "@/app/components/AuthNotConfigured";
 
-export default function PetitionerEmploymentPage() {
-  const demo = useDemoMode();
+function LivePetitionerEmploymentPage() {
   const applicationId = useApplicationId();
-
-  if (demo) return <DemoEmploymentView />;
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">
@@ -32,4 +31,12 @@ export default function PetitionerEmploymentPage() {
       )}
     </div>
   );
+}
+
+export default function PetitionerEmploymentPage() {
+  const demo = useDemoMode();
+  const { clerk, convex } = useRuntimeConfig();
+  if (demo) return <DemoEmploymentView />;
+  if (!clerk || !convex) return <AuthNotConfigured />;
+  return <LivePetitionerEmploymentPage />;
 }

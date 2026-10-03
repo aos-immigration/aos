@@ -13,6 +13,11 @@ vi.mock("next/headers", () => ({
 
 const authMock = vi.mocked(auth);
 
+function enableClerk() {
+  vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_example");
+  vi.stubEnv("CLERK_SECRET_KEY", "sk_test_example");
+}
+
 function callFill(body = "{}") {
   return POST(new Request("http://localhost/api/fill/i-130", { method: "POST", body }), {
     params: Promise.resolve({ slug: "i-130" }),
@@ -27,13 +32,16 @@ describe("POST /api/fill/[slug]", () => {
   });
 
   it("rejects a signed-out caller", async () => {
+    enableClerk();
     authMock.mockResolvedValue({ userId: null } as never);
     const response = await callFill();
     expect(response.status).toBe(401);
   });
 
   it("refuses to call the PDF service without a shared secret", async () => {
+    enableClerk();
     authMock.mockResolvedValue({ userId: "user_123" } as never);
+    vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("PDF_FILL_SECRET", "");
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
@@ -43,6 +51,7 @@ describe("POST /api/fill/[slug]", () => {
   });
 
   it("forwards the shared secret for a signed-in caller", async () => {
+    enableClerk();
     authMock.mockResolvedValue({ userId: "user_123" } as never);
     vi.stubEnv("PDF_FILL_SECRET", "test-secret");
     const fetchMock = vi.fn().mockResolvedValue(

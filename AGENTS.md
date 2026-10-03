@@ -39,19 +39,24 @@ bun run check   # the command CI runs
 Use that local `tsc`. `npx tsc` misses the binary and installs an unrelated
 package named `tsc`.
 
-Dev servers, in two terminals:
+One command, with no Clerk or Convex account:
 
 ```bash
-cd apps/api && npm run dev    # FastAPI on :8000
-cd apps/web && npm run dev    # Convex + Next.js on :3000
+bun run dev    # API on :8000 and Next.js on :3000
 ```
 
-`apps/web/.env.local` needs `NEXT_PUBLIC_CONVEX_URL`. `npm run dev` runs
-`convex dev`, which prints the URL and requires a Convex login.
-`NEXT_PUBLIC_API_URL` is optional and defaults to `http://localhost:8000`.
+Open `/`, then the demo couple, then Preview my forms. That path does not
+write Convex. `apps/web` starts `convex dev` only when `NEXT_PUBLIC_CONVEX_URL`
+is already set. `NEXT_PUBLIC_API_URL` is optional and defaults to
+`http://localhost:8000`.
 
-A production build without `NEXT_PUBLIC_CONVEX_URL` fails while prerendering
-`/forms/i-130/petitioner`. Any non-empty URL is enough for `next build`.
+`bun run check` runs `next build` with Clerk, Convex, and `PDF_FILL_SECRET`
+unset. The demo pages render. Sign-in routes show “Auth is not configured”.
+Local dev fills use the fixed secret `dev-only-fill-secret` when
+`PDF_FILL_SECRET` is unset. A production API (`PDF_SERVICE_ENV=production`)
+and a production Next server reject fills until the secret is set. Clerk
+keyless mode does not fit: this `@clerk/nextjs` throws when the publishable
+key is missing, and keyless is off for production builds.
 
 End-to-end tests (`cd apps/web && npm run test:e2e`) need Playwright
 (`npx playwright install chromium`) and a Convex login. They are not part of

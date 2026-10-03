@@ -168,8 +168,7 @@ export default function BiographicPage() {
           <div className="space-y-8">
             <div className="space-y-2">
               <h3 className="text-xs font-mono text-primary flex items-center">
-                <span className="text-[16px] mr-2">💡</span>
-                USCIS GUIDANCE
+                USCIS guidance
               </h3>
               <p className="text-[13px] leading-relaxed text-muted-foreground font-light">
                 &quot;Provide the race and ethnicity that you best identify with.
@@ -184,15 +183,6 @@ export default function BiographicPage() {
                 (feet/inches). If your passport lists metric units, convert them
                 precisely to avoid mismatch flags.
               </p>
-            </div>
-            <div className="pt-6 border-t border-border">
-              <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                <span>Form Completion</span>
-                <span>64%</span>
-              </div>
-              <div className="mt-2 h-1 w-full bg-muted rounded-full overflow-hidden">
-                <div className="h-full bg-primary w-[64%] shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
-              </div>
             </div>
           </div>
         </div>

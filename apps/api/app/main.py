@@ -71,6 +71,7 @@ app = FastAPI(title="AOS PDF Service")
 ACROFORM_KEY = "/AcroForm"
 FIELDS_KEY = "/Fields"
 PDF_NOT_FOUND = "PDF not found"
+DEV_FILL_SECRET = "dev-only-fill-secret"
 
 def _allowed_origins() -> List[str]:
     raw = os.environ.get("PDF_ALLOWED_ORIGINS", "http://localhost:3000")
@@ -351,9 +352,19 @@ def _rate_ok(request: Request) -> bool:
     return True
 
 
+def _expected_fill_secret() -> str:
+    """Local dev uses a fixed secret. Production must set PDF_FILL_SECRET."""
+    explicit = os.environ.get("PDF_FILL_SECRET", "")
+    if explicit:
+        return explicit
+    if os.environ.get("PDF_SERVICE_ENV") == "production":
+        return ""
+    return DEV_FILL_SECRET
+
+
 def _fill_caller_authorized(request: Request) -> bool:
     """Shared secret from the signed-in Next.js route. Fail closed when unset."""
-    expected = os.environ.get("PDF_FILL_SECRET", "")
+    expected = _expected_fill_secret()
     provided = request.headers.get("x-fill-secret", "")
     if not expected or not provided:
         return False

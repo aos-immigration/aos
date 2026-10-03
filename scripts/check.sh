@@ -83,6 +83,17 @@ feature_map() {
   python3 scripts/feature_map.py --check
 }
 
+web_build() {
+  cd "$ROOT/apps/web"
+  env \
+    -u NEXT_PUBLIC_CONVEX_URL \
+    -u NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY \
+    -u CLERK_SECRET_KEY \
+    -u PDF_FILL_SECRET \
+    -u CLERK_JWT_ISSUER_DOMAIN \
+    ./node_modules/.bin/next build
+}
+
 start web-lint web_lint
 start web-typecheck web_typecheck
 start unit-tests unit_tests
@@ -107,6 +118,17 @@ for name in web-lint web-typecheck unit-tests api agent-surface feature-map; do
     fail=1
   fi
 done
+
+echo
+echo "========== web-build =========="
+if web_build >"$LOG_DIR/web-build.log" 2>&1; then
+  echo "PASS web-build"
+  tail -n 12 "$LOG_DIR/web-build.log"
+else
+  echo "FAIL web-build"
+  cat "$LOG_DIR/web-build.log"
+  fail=1
+fi
 
 echo
 if [[ "$fail" == "0" ]]; then

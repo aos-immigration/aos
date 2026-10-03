@@ -2,6 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { DEMO_COOKIE } from "@/app/lib/demoCouple";
+import { fillSecret, isClerkConfigured } from "@/app/lib/runtimeConfig";
 import { redactFillPayload } from "@/app/lib/sensitiveId";
 
 const SLUG = /^[a-z0-9-]+$/;
@@ -10,13 +11,17 @@ export async function POST(
   request: Request,
   context: { params: Promise<{ slug: string }> },
 ) {
-  const { userId } = await auth();
   const demo = (await cookies()).get(DEMO_COOKIE)?.value === "1";
+  const clerk = isClerkConfigured();
+  const { userId } = clerk ? await auth() : { userId: null };
   if (!userId && !demo) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { error: clerk ? "Unauthorized" : "Auth is not configured" },
+      { status: clerk ? 401 : 503 },
+    );
   }
 
-  const secret = process.env.PDF_FILL_SECRET;
+  const secret = fillSecret();
   if (!secret) {
     return NextResponse.json({ error: "PDF fill is not configured" }, { status: 500 });
   }

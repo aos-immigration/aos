@@ -28,6 +28,7 @@ def test_fill_rejects_wrong_secret(client: TestClient) -> None:
 
 def test_fill_rejects_when_server_secret_unset(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("PDF_FILL_SECRET", raising=False)
+    monkeypatch.setenv("PDF_SERVICE_ENV", "production")
     response = TestClient(app).post(
         "/fill/i-130",
         json={"fields": {}, "checkboxes": {}},
@@ -62,6 +63,18 @@ def test_fill_accepts_matching_secret(client: TestClient) -> None:
     )
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("application/pdf")
+    assert response.content.startswith(b"%PDF")
+
+
+def test_fill_accepts_the_dev_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("PDF_FILL_SECRET", raising=False)
+    monkeypatch.setenv("PDF_SERVICE_ENV", "development")
+    response = TestClient(app).post(
+        "/fill/i-130",
+        json={"fields": {}, "checkboxes": {}},
+        headers={"X-Fill-Secret": "dev-only-fill-secret"},
+    )
+    assert response.status_code == 200
     assert response.content.startswith(b"%PDF")
 
 

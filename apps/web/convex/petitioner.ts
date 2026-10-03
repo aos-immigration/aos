@@ -218,6 +218,11 @@ export const deleteMyApplication = mutation({
         .withIndex("by_application_role", (q) => q.eq("applicationId", application._id))
         .collect();
       for (const row of employment) await ctx.db.delete(row._id);
+      const intakes = await ctx.db
+        .query("intakes")
+        .withIndex("by_application", (q) => q.eq("applicationId", application._id))
+        .collect();
+      for (const row of intakes) await ctx.db.delete(row._id);
       await ctx.db.delete(application._id);
     }
     return { deleted: applications.length };

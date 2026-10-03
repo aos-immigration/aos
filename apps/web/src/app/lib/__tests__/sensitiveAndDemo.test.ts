@@ -60,7 +60,7 @@ describe("telemetry redaction", () => {
 describe("convex public functions", () => {
   it("derives the caller before touching an application", () => {
     const dir = path.resolve(__dirname, "../../../../convex");
-    const files = ["petitioner.ts", "forms.ts", "sensitive.ts"];
+    const files = ["petitioner.ts", "forms.ts", "sensitive.ts", "intake.ts"];
     const declaration = /export const (\w+) = (query|mutation|action)\(/g;
     for (const file of files) {
       const source = readFileSync(path.join(dir, file), "utf8");

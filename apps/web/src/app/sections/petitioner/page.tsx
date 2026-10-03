@@ -12,8 +12,10 @@ import {
 import type { Resolver } from "react-hook-form";
 import { useApplicationId } from "../../lib/useApplicationId";
 import { useDemoMode } from "../../lib/intakeMode";
+import { useRuntimeConfig } from "../../lib/runtimeConfigContext";
 import { DemoPetitionerView } from "../../components/intake/DemoCoupleViews";
 import { SensitiveIdForm } from "../../components/intake/SensitiveIdForm";
+import { AuthNotConfigured } from "../../components/AuthNotConfigured";
 import { savePetitionerBasicsDraft } from "../../lib/reviewDraft";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -58,12 +60,11 @@ const RELATIONSHIP_OPTIONS = [
   { value: "sibling", label: "Brother/Sister" },
 ];
 
-export default function PetitionerPage() {
-  const demo = useDemoMode();
+function LivePetitionerPage() {
   const applicationId = useApplicationId();
   const existingData = useQuery(
     api.petitioner.getPetitionerBasics,
-    !demo && applicationId ? { applicationId } : "skip"
+    applicationId ? { applicationId } : "skip"
   );
   const saveMutation = useMutation(api.petitioner.savePetitionerBasics);
 
@@ -118,7 +119,7 @@ export default function PetitionerPage() {
   // Debounced auto-save
   const debouncedSave = useCallback(
     (data: PetitionerBasicsFormData) => {
-      if (demo || !applicationId) return;
+      if (!applicationId) return;
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(async () => {
         try {
@@ -142,7 +143,7 @@ export default function PetitionerPage() {
         }
       }, 500);
     },
-    [applicationId, demo, saveMutation]
+    [applicationId, saveMutation]
   );
 
   // Watch all fields and auto-save on change
@@ -160,8 +161,6 @@ export default function PetitionerPage() {
     });
     return () => subscription.unsubscribe();
   }, [watch, debouncedSave, existingData]);
-
-  if (demo) return <DemoPetitionerView />;
 
   if (!applicationId) {
     return (
@@ -418,4 +417,12 @@ export default function PetitionerPage() {
       </div>
     </div>
   );
+}
+
+export default function PetitionerPage() {
+  const demo = useDemoMode();
+  const { clerk, convex } = useRuntimeConfig();
+  if (demo) return <DemoPetitionerView />;
+  if (!clerk || !convex) return <AuthNotConfigured />;
+  return <LivePetitionerPage />;
 }

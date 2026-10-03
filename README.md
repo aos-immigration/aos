@@ -31,12 +31,13 @@ route calls the API with `PDF_FILL_SECRET`. Set the same secret on the API
 process. `API_URL` overrides where the Next.js server reaches the API
 (default `http://localhost:8000`).
 
-**Without `NEXT_PUBLIC_CONVEX_URL` or the Clerk keys, the production build fails.**
-`providers.tsx` drops `ConvexProviderWithClerk` when the Convex URL is missing,
-and the shared `DashboardLayout` calls `useMutation` (via `useApplicationId()`),
-so prerendering `/sections/*` and `/forms/*` dies. `ClerkProvider` also needs
-`NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY`. The build stops on
-the first of those pages it renders; that is currently `/forms/i-130/petitioner`.
+`bun run dev` starts the API and Next.js with no Clerk app and no Convex
+account. `/` and `/demo` work, and Preview my forms fills a sample I-130.
+Sign-in routes say auth is not configured instead of crashing. Local dev
+uses the fill secret `dev-only-fill-secret` when `PDF_FILL_SECRET` is unset.
+Set `PDF_SERVICE_ENV=production` on the API, and set `PDF_FILL_SECRET` on both
+processes, before a real deployment. `bun run check` includes `next build`
+with those secrets unset.
 
 Datadog is wired into both apps. The web app initializes RUM and browser logs
 in `apps/web/src/instrumentation-client.ts` with a hardcoded client token, so it
@@ -48,7 +49,7 @@ HTTP middleware, but only when `DD_API_KEY` is set (`DD_SITE`, `DD_SERVICE` and
 
 ```bash
 bun run setup   # bun install, which also uv-syncs the API
-bun run check   # lint, types, unit tests, API tests, PDF fill eval, feature map
+bun run check   # lint, types, unit tests, API tests, PDF fill eval, feature map, next build
 ```
 
 `bun run check` is what CI runs. It calls `apps/web/node_modules/.bin/tsc`,
@@ -305,7 +306,8 @@ Direct mode does not go through the API and does not need the secret.
   12 errors and 20 warnings without those fixes.
 - GitHub Actions (`.github/workflows/ci.yml`) runs `bun run setup` and
   `bun run check` on pull requests. That includes web lint, `tsc --noEmit`,
-  unit tests, API pytest, pyright, and `eval_fill.py`. Lint warnings do not
+  unit tests, API pytest, pyright, `eval_fill.py`, and `next build` with no
+  secrets. Lint warnings do not
   fail the run.
 - Employment data is passed into `buildPdfPayload()` and then ignored, so it
   never reaches the PDF.

@@ -2,14 +2,13 @@
 
 import { AddressHistory } from "@/app/components/intake/AddressHistory";
 import { DemoAddressView } from "@/app/components/intake/DemoCoupleViews";
+import { AuthNotConfigured } from "@/app/components/AuthNotConfigured";
 import { useApplicationId } from "@/app/lib/useApplicationId";
 import { useDemoMode } from "@/app/lib/intakeMode";
+import { useRuntimeConfig } from "@/app/lib/runtimeConfigContext";
 
-export default function BeneficiaryAddressPage() {
-  const demo = useDemoMode();
+function LiveBeneficiaryAddressPage() {
   const applicationId = useApplicationId();
-
-  if (demo) return <DemoAddressView who="Jamie Demo" />;
 
   if (!applicationId) {
     return <div className="max-w-5xl mx-auto py-12 text-center text-muted-foreground">Loading…</div>;
@@ -32,4 +31,12 @@ export default function BeneficiaryAddressPage() {
       <AddressHistory applicationId={applicationId} personRole="beneficiary" />
     </div>
   );
+}
+
+export default function BeneficiaryAddressPage() {
+  const demo = useDemoMode();
+  const { clerk, convex } = useRuntimeConfig();
+  if (demo) return <DemoAddressView who="Jamie Demo" />;
+  if (!clerk || !convex) return <AuthNotConfigured />;
+  return <LiveBeneficiaryAddressPage />;
 }

@@ -4,8 +4,16 @@ import { useState } from "react";
 import { useMutation } from "convex/react";
 import { useUser } from "@clerk/nextjs";
 import { api } from "../../../convex/_generated/api";
+import { useRuntimeConfig } from "@/app/lib/runtimeConfigContext";
+import { AuthNotConfigured } from "@/app/components/AuthNotConfigured";
 
 export default function AccountPage() {
+  const { clerk, convex } = useRuntimeConfig();
+  if (!clerk || !convex) return <AuthNotConfigured />;
+  return <AccountSettings />;
+}
+
+function AccountSettings() {
   const deleteApplication = useMutation(api.petitioner.deleteMyApplication);
   const { user } = useUser();
   const [confirming, setConfirming] = useState(false);

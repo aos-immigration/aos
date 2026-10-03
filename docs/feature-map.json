@@ -4,9 +4,33 @@
       "id": "/",
       "kind": "page",
       "status": "wired",
-      "does": "Landing page. Signed-out visitors can sign in, create an account, or open the fake demo couple. Signed-in visitors can start their own application. It does not read or write intake data.",
+      "does": "Landing page. The primary button opens the fake demo couple. It states a $0 service fee and does not read or write intake data. When Clerk keys are missing it says auth is not configured.",
       "reach": "the site root",
-      "verify": "Open /. There is no unit test for this screen. bun run check does not boot Next.js."
+      "verify": "Open /. bun run check runs next build with Clerk and Convex variables unset. Disclaimer phrases are covered by apps/web/src/components/system/system.test.tsx."
+    },
+    {
+      "id": "/auth-required",
+      "kind": "page",
+      "status": "wired",
+      "does": "Shown when a sign-in route is opened and Clerk keys are missing. It says auth is not configured and links to the demo couple.",
+      "reach": "a redirect from /sections, /forms, /account, /sign-in, or /sign-up when Clerk is not configured",
+      "verify": "bun run check runs apps/web/src/app/lib/__tests__/runtimeConfig.test.ts. Open /sections with no Clerk keys and confirm the redirect."
+    },
+    {
+      "id": "/terms",
+      "kind": "page",
+      "status": "wired",
+      "does": "Short terms notice. It repeats that AOS is not a law firm and is not a substitute for the advice of an attorney, and it says a lawyer has not published a contract yet.",
+      "reach": "the Terms link in the site footer",
+      "verify": "Open /terms. The disclaimer phrases are asserted in apps/web/src/components/system/system.test.tsx."
+    },
+    {
+      "id": "/privacy",
+      "kind": "page",
+      "status": "wired",
+      "does": "Privacy notes that are true today. Lines that depend on auth, encryption, or analytics changes stay out of the page.",
+      "reach": "the Privacy link in the site footer",
+      "verify": "bun run check runs apps/web/src/components/system/system.test.tsx, which asserts encryption and sign-in claims are hidden."
     },
     {
       "id": "/demo",
@@ -45,7 +69,7 @@
       "kind": "page",
       "status": "mocked",
       "does": "Application overview made of static cards. Nothing on the page is loaded from Convex.",
-      "reach": "the home page link Start Your Application, or the URL",
+      "reach": "the home page link Start filling out my forms, or the URL",
       "verify": "Open /sections and confirm the cards do not change after saving petitioner data. No automated test covers this page."
     },
     {
@@ -124,7 +148,7 @@
       "id": "/forms/i-130/petitioner",
       "kind": "page",
       "status": "mocked",
-      "does": "Static I-130 petitioner mock. The live petitioner form is /sections/petitioner. Next.js fails the production build on this URL when NEXT_PUBLIC_CONVEX_URL is empty, because the shared layout calls useMutation.",
+      "does": "Static I-130 petitioner mock. The live petitioner form is /sections/petitioner. With no Clerk keys the shared layout renders the demo shell and does not call Convex.",
       "reach": "the URL /forms/i-130/petitioner only",
       "verify": "Open the URL. No unit test covers the screen. Do not treat a successful next build as proof the form saves."
     },
@@ -140,25 +164,9 @@
       "id": "/forms/i-485/biographic",
       "kind": "page",
       "status": "mocked",
-      "does": "Static I-485 biographic mock. The progress label on the page is the hardcoded string 64%.",
+      "does": "Static I-485 biographic mock. It does not save, and it no longer shows a hardcoded completion percent.",
       "reach": "the URL /forms/i-485/biographic only",
-      "verify": "Open the URL. No unit test covers the screen. The hardcoded progress is logged in docs/agent-patterns.md and is left for the UI honesty work."
-    },
-    {
-      "id": "/sections/documents",
-      "kind": "link",
-      "status": "missing",
-      "does": "Sidebar item Document Vault. There is no page.tsx for this path.",
-      "reach": "Sidebar, Documents & Evidence, Document Vault",
-      "verify": "python3 scripts/feature_map.py --check fails if the href disappears or a page is added without a status update. Opening the URL 404s."
-    },
-    {
-      "id": "/sections/proof",
-      "kind": "link",
-      "status": "missing",
-      "does": "Sidebar item Bona Fide Proof. There is no page.tsx for this path.",
-      "reach": "Sidebar, Documents & Evidence, Bona Fide Proof",
-      "verify": "python3 scripts/feature_map.py --check tracks the href. Opening the URL 404s."
+      "verify": "Open the URL. No unit test covers the screen."
     },
     {
       "id": "GET /health",
@@ -197,8 +205,8 @@
     {
       "id": "verify-and-preview",
       "status": "partial",
-      "does": "DashboardLayout builds an I-130 payload from Convex basics, addresses, and employment, prefers the sessionStorage basics draft, and shows the PDF in an iframe. A signed-in preview goes through a Convex action that decrypts SSN and A-Number server-side. Demo mode uses the fake couple and the Next proxy, which strips those identifiers. Employment is passed in and then ignored. The header progress label is a hardcoded 64%.",
-      "reach": "the Verify & Preview button in the app header, on any /sections or /forms page",
+      "does": "DashboardLayout builds an I-130 payload from Convex basics, addresses, and employment, prefers the sessionStorage basics draft, and shows the PDF in an iframe. A signed-in preview goes through a Convex action that decrypts SSN and A-Number server-side. Demo mode uses the fake couple and the Next proxy, which strips those identifiers. Employment is passed in and then ignored. The header no longer shows a hardcoded percent.",
+      "reach": "the Preview my forms button in the app header, on any /sections or /forms page",
       "verify": "apps/web/e2e/review-package.spec.ts drives the button with a mocked /fill/i-130 response. It needs Convex and Playwright, so it is not part of bun run check. Fill accuracy without the browser is eval_fill.py."
     },
     {
