@@ -32,12 +32,15 @@ beforeEach(() => {
 describe("start", () => {
   it("lists attorney topics and does not give a filing result", () => {
     render(<StartScreen />);
-    expect(screen.getByRole("heading", { name: "Before you file" })).toBeTruthy();
-    expect(screen.getByText("A prior marriage")).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Continue to my forms" }).getAttribute("href")).toBe(
+    expect(
+      screen.getByRole("heading", { name: "Talk to an attorney before filing if any of these apply" }),
+    ).toBeTruthy();
+    expect(screen.getByText(/prior marriage that may not have been legally ended/)).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Back to my forms" }).getAttribute("href")).toBe(
       "/sections",
     );
-    expect(screen.queryByText(/eligible|you qualify|recommended/i)).toBeNull();
+    expect(screen.getByText(/this list doesn't decide that either/)).toBeTruthy();
+    expect(screen.queryByText(/eligible|recommended/i)).toBeNull();
   });
 });
 
@@ -49,6 +52,9 @@ describe("cost", () => {
         <CostScreen />
       </IntakeProvider>,
     );
+    expect(screen.getByText(/Appendix C/)).toBeTruthy();
+    expect(screen.getByText(/Appendix B/)).toBeTruthy();
+    expect(screen.getByText(/\$630 paper \/ \$580 online/)).toBeTruthy();
     expect(screen.getByText("$3,005")).toBeTruthy();
     expect(screen.getAllByText("$0").length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole("button", { name: "online" }));

@@ -80,27 +80,27 @@ the US ZIP regex into `validateZipCode`.
 separate mock page, so the hardcode currently only affects the petitioner
 screen, and it will be wrong the moment that component is reused.
 
-TODO: no guard that fails CI. Changing the role is a product change. Left
-for the UI honesty work.
+TODO: no guard that fails CI. Changing the role is a later product change.
 
-## Fake progress and placeholder chrome
+## Saved-section count replaces fake progress
 
-Sidebar section percentages, the header "PROGRESS 64%" bar in
-`DashboardLayout.tsx`, and the 64% label on `/forms/i-485/biographic` are
-hardcoded. The header user name is hardcoded too.
+Sidebar dots and the header count used to be hardcoded, including a 64% bar
+and the name "John Doe". `sectionSaveState` now marks a section saved only
+when that section has stored data. Sections with no table stay not saved.
+The header text is "{n} of {persistable} sections saved" and includes no
+percent.
 
-TODO: no guard. The UI honesty work owns the product change. Do not invent
-a percentage while that work is in flight.
+Guard: `apps/web/src/app/lib/__tests__/sectionSaveState.test.tsx` and
+`mockSections.test.tsx`. `bun run check` runs both.
 
-## Sidebar links with no page
+## Coming-soon pages for documents and proof
 
-`/sections/documents` and `/sections/proof` are sidebar hrefs. There is no
-`page.tsx` for either.
+`/sections/documents` and `/sections/proof` used to 404 outside the shell.
+They are now pages that say the section is not available yet.
 
-Guard: both are `missing` in `docs/feature-map.json`. The feature-map check
-fails if the href is removed or a page appears without a status change.
-
-TODO: adding the pages is the UI honesty work.
+Guard: both are `mocked` pages in `docs/feature-map.json`. The feature-map
+check fails if the href or the page disappears. `mockSections.test.tsx`
+renders the document vault page.
 
 ## Employment never reaches the PDF
 
