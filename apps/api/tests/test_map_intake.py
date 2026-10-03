@@ -116,13 +116,22 @@ def test_i485_copies_the_applicant() -> None:
 
 
 def test_fill_intake_returns_a_pdf() -> None:
-    response = client.post("/fill-intake/i-130", json={"intake": DEMO})
+    response = client.post(
+        "/fill-intake/i-130", json={"intake": DEMO, "acknowledged": True}
+    )
     assert response.status_code == 200
     assert response.content.startswith(b"%PDF")
+    assert response.headers["cache-control"] == "no-store"
+
+
+def test_fill_intake_rejects_a_missing_acknowledgement() -> None:
+    response = client.post("/fill-intake/i-130", json={"intake": DEMO})
+    assert response.status_code == 400
+    assert not response.content.startswith(b"%PDF")
 
 
 def test_packet_includes_mapped_forms_and_names_the_gap() -> None:
-    response = client.post("/packet", json={"intake": DEMO})
+    response = client.post("/packet", json={"intake": DEMO, "acknowledged": True})
     assert response.status_code == 200
     archive = zipfile.ZipFile(io.BytesIO(response.content))
     names = set(archive.namelist())
@@ -138,6 +147,36 @@ def test_packet_includes_mapped_forms_and_names_the_gap() -> None:
     assert "does not file" in note
 
 
+def test_packet_rejects_an_empty_selection() -> None:
+    empty = {**DEMO, "selectedForms": []}
+    response = client.post("/packet", json={"intake": empty, "acknowledged": True})
+    assert response.status_code == 400
+
+
+def test_packet_rejects_a_missing_acknowledgement() -> None:
+    response = client.post("/packet", json={"intake": DEMO})
+    assert response.status_code == 400
+    assert response.headers["content-type"].startswith("application/json")
+
+
+def test_preview_returns_images_without_acknowledgement() -> None:
+    import base64
+
+    response = client.post("/preview-intake", json={"intake": DEMO})
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("application/json")
+    assert "attachment" not in response.headers.get("content-disposition", "")
+    body = response.json()
+    slugs = [form["slug"] for form in body["forms"]]
+    assert slugs == ["i-130", "i-130a", "i-485"]
+    page = base64.b64decode(body["forms"][0]["pages"][0])
+    assert page.startswith(b"\xff\xd8\xff")
+    assert not response.content.startswith(b"%PDF")
+    assert "i-864" in " ".join(body["notes"])
+
+
 def test_unmapped_slug_is_not_found() -> None:
-    response = client.post("/fill-intake/i-765", json={"intake": DEMO})
+    response = client.post(
+        "/fill-intake/i-765", json={"intake": DEMO, "acknowledged": True}
+    )
     assert response.status_code == 404

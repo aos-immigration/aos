@@ -34,9 +34,13 @@ enough to get a build through.
 
 Datadog is wired into both apps. The web app initializes RUM and browser logs
 in `apps/web/src/instrumentation-client.ts` with a hardcoded client token, so it
-sends data whenever the app runs. The API ships a log line per request from an
-HTTP middleware, but only when `DD_API_KEY` is set (`DD_SITE`, `DD_SERVICE` and
-`DD_ENV` are optional overrides).
+sends data whenever the app runs. Session replay is off
+(`sessionReplaySampleRate` 0) and `defaultPrivacyLevel` is `mask`, so a replay
+cannot record field text. The API ships one log line per request from HTTP
+middleware, and only when `DD_API_KEY` is set. `DD_SITE`, `DD_SERVICE`, and
+`DD_ENV` are optional overrides. `POST /fill/{slug}` allows browser calls only
+from origins in `ALLOWED_ORIGINS`. When that variable is unset, the only
+allowed origin is `http://localhost:3000`. The value `*` is ignored.
 
 ### Checks
 
@@ -99,8 +103,8 @@ unwired mockups.
 `/sections/marital`, `/sections` overview, and everything under `/forms/*`.
 Nothing links to `/forms/*`; those pages are reachable only by typing the URL.
 
-**Dead links:** the sidebar points at `/sections/documents` and `/sections/proof`,
-neither of which exists.
+**Coming soon:** `/sections/documents` and `/sections/proof` are sidebar links.
+Each page says the section is not available yet and does not save anything.
 
 ---
 
@@ -126,10 +130,11 @@ family name, citizenship status and relationship are all filled in.
 `validateAllAddresses()` over the whole list after loading from Convex to catch
 overlapping date ranges — that check is hand-written, not Zod.
 
-**PDF preview** lives in `DashboardLayout.tsx`. It reads basics, addresses and
-employment out of Convex, prefers the `sessionStorage` draft so unsaved typing
-still shows up, runs `buildPdfPayload()` to turn all of it into USCIS field
-names, POSTs to `/fill/i-130`, and drops the returned blob into an iframe.
+**PDF preview** lives in `DashboardLayout.tsx`. The header Preview button posts
+the canonical intake to `/preview-intake` and shows JPEG page images. It does
+not put PDF bytes in the browser. Download my forms (PDF) is inside that
+preview and stays disabled until every acknowledgement box is checked, then
+posts `/packet` with `acknowledged: true`.
 In development the header also shows an "Export Fixture" button. It builds the
 payload from the saved Convex records (not the unsaved `sessionStorage` draft),
 downloads the wrapped fixture shape `eval_fill.py` accepts (`payload` plus
@@ -156,8 +161,9 @@ why those pages are still mockups.
 | `GET /debug/field/{slug}?name=` | dump one field's `/AP`, `/V`, `/AS`, parent |
 | `POST /fill/{slug}` | fill and stream back the PDF |
 
-A slug maps to `Forms/{slug}.pdf` by filename convention — no registry, so all
-five PDFs are reachable even though only `i-130` is wired up in the UI.
+A slug must be one of `i-130`, `i-130a`, `i-131`, `i-485`, or `i-765`. Anything
+else is a 404, including a path that would otherwise leave `Forms/`. Only
+`i-130` is wired up in the UI.
 
 `POST /fill/{slug}` takes `{fields: {name: string}, checkboxes: {name: bool}}`
 where names are full dotted AcroForm paths like
@@ -243,8 +249,6 @@ catalogs for the other four forms.
   component is otherwise reusable.
 - `getOrCreateApplication` returns the first draft application in the whole
   database. There is no auth or per-user scoping yet.
-- Sidebar progress percentages, the header's "PROGRESS 64%" bar and the user
-  name are hardcoded.
 - The `listForms` query and the `createApplication` mutation have no callers,
   and nothing populates the `forms` table.
 - Unused dependencies: `pdf-lib` in `apps/web`; `pypdf`, `cryptography` and
