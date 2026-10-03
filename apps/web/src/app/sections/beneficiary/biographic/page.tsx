@@ -1,3 +1,5 @@
+import { NotSavedNotice } from "@/components/NotSavedNotice";
+
 export default function BeneficiaryBiographicPage() {
   return (
     <div className="max-w-7xl mx-auto grid grid-cols-12 gap-12">
@@ -12,6 +14,7 @@ export default function BeneficiaryBiographicPage() {
             birth certificate exactly.
           </p>
         </header>
+        <NotSavedNotice />
 
         <div className="space-y-16">
           <section className="space-y-8">
@@ -71,8 +74,8 @@ export default function BeneficiaryBiographicPage() {
                   <button className="px-4 py-3 rounded-lg border border-border text-sm hover:border-primary/50 transition-colors text-left bg-card">
                     Black
                   </button>
-                  <button className="px-4 py-3 rounded-lg border border-primary text-sm transition-colors text-left bg-primary/10 flex items-center justify-between">
-                    Brown <span className="text-sm">✓</span>
+                  <button className="px-4 py-3 rounded-lg border border-border text-sm hover:border-primary/50 transition-colors text-left bg-card">
+                    Brown
                   </button>
                   <button className="px-4 py-3 rounded-lg border border-border text-sm hover:border-primary/50 transition-colors text-left bg-card">
                     Blue

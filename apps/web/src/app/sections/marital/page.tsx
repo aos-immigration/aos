@@ -1,3 +1,5 @@
+import { NotSavedNotice } from "@/components/NotSavedNotice";
+
 export default function MaritalPage() {
   return (
     <div className="max-w-5xl mx-auto space-y-8">
@@ -7,12 +9,11 @@ export default function MaritalPage() {
             Marital History
           </h1>
           <p className="text-muted-foreground text-sm max-w-xl">
-            Provide details about your marriage and relationship history. This
-            information is used to establish the validity of your marriage-based
-            petition.
+            Provide details about your marriage and relationship history.
           </p>
         </div>
       </div>
+      <NotSavedNotice />
 
       <div className="space-y-16">
         <section>

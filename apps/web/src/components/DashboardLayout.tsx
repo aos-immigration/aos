@@ -15,6 +15,12 @@ import { buildPdfPayload } from "@/app/lib/buildPdfPayload";
 import type { AddressRow, EmploymentRow } from "@/app/lib/buildPdfPayload";
 import { readPetitionerBasicsDraft } from "@/app/lib/reviewDraft";
 import {
+  PERSISTABLE_SECTION_HREFS,
+  savedSectionCount,
+  type IntakeSnapshot,
+} from "@/app/lib/sectionSaveState";
+import { SavedSectionsLabel } from "@/components/SavedSectionsLabel";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -41,6 +47,26 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     api.petitioner.listEmploymentEntries,
     applicationId ? { applicationId, personRole: "petitioner" } : "skip",
   );
+  const beneficiaryAddresses = useQuery(
+    api.petitioner.listAddresses,
+    applicationId ? { applicationId, personRole: "beneficiary" } : "skip",
+  );
+
+  const intakeLoaded =
+    basics !== undefined &&
+    addresses !== undefined &&
+    employment !== undefined &&
+    beneficiaryAddresses !== undefined;
+  const snapshot: IntakeSnapshot | null =
+    applicationId && !intakeLoaded
+      ? null
+      : {
+          petitionerGivenName: basics?.givenName ?? "",
+          petitionerFamilyName: basics?.familyName ?? "",
+          petitionerAddressCount: addresses?.length ?? 0,
+          petitionerEmploymentCount: employment?.length ?? 0,
+          beneficiaryAddressCount: beneficiaryAddresses?.length ?? 0,
+        };
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
@@ -129,12 +155,32 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <Sidebar />
+      <Sidebar
+        snapshot={
+          snapshot ?? {
+            petitionerGivenName: "",
+            petitionerFamilyName: "",
+            petitionerAddressCount: 0,
+            petitionerEmploymentCount: 0,
+            beneficiaryAddressCount: 0,
+          }
+        }
+      />
       <main className="flex-1 flex flex-col overflow-hidden relative">
         <header className="z-10 border-b border-border bg-background">
           <div className="flex h-14 items-center justify-between px-6">
             <Breadcrumbs />
             <div className="flex items-center gap-3">
+              {snapshot ? (
+                <SavedSectionsLabel
+                  persistable={PERSISTABLE_SECTION_HREFS.length}
+                  saved={savedSectionCount(snapshot)}
+                />
+              ) : (
+                <div className="text-[10px] font-mono text-muted-foreground">
+                  Checking saved sections
+                </div>
+              )}
               <ThemeToggle />
               {process.env.NODE_ENV === "development" && (
                 <button
