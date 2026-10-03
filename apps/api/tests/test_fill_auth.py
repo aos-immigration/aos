@@ -1,7 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from app.main import _allowed_origins, _send_dd_log, app
+from app.main import _allowed_origins, _fill_hits, _send_dd_log, app
 
 SECRET = "test-secret"
 
@@ -126,13 +126,38 @@ def test_fill_rejects_an_oversized_body(client: TestClient, monkeypatch: pytest.
     assert response.status_code == 413
 
 
-def test_fill_rate_limits(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_fill_rate_limits_by_caller_and_ignores_forwarded_for(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setenv("PDF_RATE_LIMIT", "1")
-    headers = {"X-Fill-Secret": SECRET, "X-Forwarded-For": "203.0.113.50"}
-    first = client.post("/fill/not-a-form", json={"fields": {}, "checkboxes": {}}, headers=headers)
-    second = client.post("/fill/not-a-form", json={"fields": {}, "checkboxes": {}}, headers=headers)
+    _fill_hits.clear()
+    alice = {"X-Fill-Secret": SECRET, "X-Fill-Caller": "user_alice", "X-Forwarded-For": "203.0.113.50"}
+    first = client.post("/fill/not-a-form", json={"fields": {}, "checkboxes": {}}, headers=alice)
+    rotated = client.post(
+        "/fill/not-a-form",
+        json={"fields": {}, "checkboxes": {}},
+        headers={**alice, "X-Forwarded-For": "198.51.100.20"},
+    )
+    bob = client.post(
+        "/fill/not-a-form",
+        json={"fields": {}, "checkboxes": {}},
+        headers={"X-Fill-Secret": SECRET, "X-Fill-Caller": "user_bob", "X-Forwarded-For": "203.0.113.50"},
+    )
+    missing_a = client.post(
+        "/fill/not-a-form",
+        json={"fields": {}, "checkboxes": {}},
+        headers={"X-Fill-Secret": SECRET, "X-Forwarded-For": "192.0.2.10"},
+    )
+    missing_b = client.post(
+        "/fill/not-a-form",
+        json={"fields": {}, "checkboxes": {}},
+        headers={"X-Fill-Secret": SECRET, "X-Forwarded-For": "192.0.2.11"},
+    )
     assert first.status_code == 404
-    assert second.status_code == 429
+    assert rotated.status_code == 429
+    assert bob.status_code == 404
+    assert missing_a.status_code == 404
+    assert missing_b.status_code == 429
 
 
 def test_request_log_keeps_the_path_only(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:

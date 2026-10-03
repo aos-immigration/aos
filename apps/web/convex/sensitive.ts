@@ -2,6 +2,7 @@ import { action, internalMutation, internalQuery, mutation } from "./_generated/
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { requireOwnedApplication, requireUserId } from "./authz";
+import { buildPdfPayload, type AddressRow, type EmploymentRow } from "../src/app/lib/buildPdfPayload";
 import {
   decryptField,
   encryptField,
@@ -77,6 +78,79 @@ export const loadForFill = internalQuery({
   },
 });
 
+export const loadOwnedI130 = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await requireUserId(ctx);
+    const application = await ctx.db
+      .query("applications")
+      .withIndex("by_owner", (q) => q.eq("ownerId", userId))
+      .first();
+    if (!application) return null;
+    const basics = await ctx.db
+      .query("petitionerBasics")
+      .withIndex("by_application", (q) => q.eq("applicationId", application._id))
+      .first();
+    if (!basics) return null;
+    const addresses = await ctx.db
+      .query("addresses")
+      .withIndex("by_application_role", (q) =>
+        q.eq("applicationId", application._id).eq("personRole", "petitioner"),
+      )
+      .collect();
+    const employment = await ctx.db
+      .query("employmentEntries")
+      .withIndex("by_application_role", (q) =>
+        q.eq("applicationId", application._id).eq("personRole", "petitioner"),
+      )
+      .collect();
+    const addressRows: AddressRow[] = addresses.map((row) => ({
+      street: row.street,
+      unit: row.unit,
+      city: row.city,
+      state: row.state,
+      zip: row.zip,
+      country: row.country,
+      startMonth: row.startMonth,
+      startYear: row.startYear,
+      endMonth: row.endMonth,
+      endYear: row.endYear,
+      isCurrent: row.isCurrent,
+      addressType: row.addressType,
+      sortOrder: row.sortOrder,
+    }));
+    const employmentRows: EmploymentRow[] = employment.map((row) => ({
+      status: row.status,
+      employerName: row.employerName,
+      jobTitle: row.jobTitle,
+      city: row.city,
+      state: row.state,
+      country: row.country,
+      fromMonth: row.fromMonth,
+      fromYear: row.fromYear,
+      toMonth: row.toMonth,
+      toYear: row.toYear,
+      isCurrent: row.isCurrent,
+      sortOrder: row.sortOrder,
+    }));
+    return {
+      payload: buildPdfPayload(
+        {
+          givenName: basics.givenName,
+          middleName: basics.middleName,
+          familyName: basics.familyName,
+          dateOfBirth: basics.dateOfBirth,
+          relationship: basics.relationship,
+        },
+        addressRows,
+        employmentRows,
+      ),
+      ssn: basics.ssn ? await decryptField(basics.ssn) : "",
+      aNumber: basics.aNumber ? await decryptField(basics.aNumber) : "",
+    };
+  },
+});
+
 export const reencryptAll = internalMutation({
   args: {},
   handler: async (ctx) => {
@@ -103,21 +177,16 @@ export const reencryptAll = internalMutation({
 });
 
 export const fillI130 = action({
-  args: {
-    applicationId: v.id("applications"),
-    fields: v.record(v.string(), v.string()),
-    checkboxes: v.record(v.string(), v.boolean()),
-  },
-  handler: async (ctx, args) => {
-    await requireUserId(ctx);
-    const secrets = await ctx.runQuery(internal.sensitive.loadForFill, {
-      applicationId: args.applicationId,
-    });
-    const fields = { ...args.fields };
+  args: {},
+  handler: async (ctx) => {
+    const userId = await requireUserId(ctx);
+    const owned = await ctx.runQuery(internal.sensitive.loadOwnedI130, {});
+    if (!owned) throw new Error("Save petitioner basics before preview");
+    const fields = { ...owned.payload.fields };
     delete fields[SSN_FIELD];
     delete fields[A_NUMBER_FIELD];
-    if (secrets.ssn) fields[SSN_FIELD] = secrets.ssn;
-    if (secrets.aNumber) fields[A_NUMBER_FIELD] = secrets.aNumber;
+    if (owned.ssn) fields[SSN_FIELD] = owned.ssn;
+    if (owned.aNumber) fields[A_NUMBER_FIELD] = owned.aNumber;
     const secret = process.env.PDF_FILL_SECRET ?? "";
     if (!secret) throw new Error("PDF fill is not configured");
     const apiBase = process.env.PDF_API_URL || process.env.API_URL || "http://localhost:8000";
@@ -126,8 +195,9 @@ export const fillI130 = action({
       headers: {
         "Content-Type": "application/json",
         "X-Fill-Secret": secret,
+        "X-Fill-Caller": userId,
       },
-      body: JSON.stringify({ fields, checkboxes: args.checkboxes }),
+      body: JSON.stringify({ fields, checkboxes: owned.payload.checkboxes }),
     });
     if (!response.ok) throw new Error("PDF fill failed");
     const bytes = new Uint8Array(await response.arrayBuffer());

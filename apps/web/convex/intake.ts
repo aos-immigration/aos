@@ -2,6 +2,7 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { parseIntake } from "../src/app/lib/intake/schema";
 import { requireOwnedApplication } from "./authz";
+import { stripStoredIds } from "./storedIds";
 
 export const getIntake = query({
   args: { applicationId: v.id("applications") },
@@ -21,7 +22,7 @@ export const saveIntake = mutation({
   },
   handler: async (ctx, args) => {
     await requireOwnedApplication(ctx, args.applicationId);
-    const intake = parseIntake(args.payload);
+    const intake = stripStoredIds(parseIntake(args.payload));
     const existing = await ctx.db
       .query("intakes")
       .withIndex("by_application", (q) => q.eq("applicationId", args.applicationId))

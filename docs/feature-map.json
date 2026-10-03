@@ -196,8 +196,8 @@
       "id": "POST /fill/{slug}",
       "kind": "api",
       "status": "wired",
-      "does": "Fills Forms/{slug}.pdf from {fields, checkboxes} and streams the PDF back. The caller must send X-Fill-Secret. Checkbox on-values are sniffed from /AP. /V and /AS are both set, and /NeedAppearances is set on the AcroForm.",
-      "reach": "the signed-in Verify & Preview button, which calls the Convex fill action, or POST /fill/i-130 with the shared secret",
+      "does": "Fills Forms/{slug}.pdf from {fields, checkboxes} and streams the PDF back. The caller must send X-Fill-Secret. The rate limit key is X-Fill-Caller, which the web server sets to the Clerk user id or demo. X-Forwarded-For is ignored. Checkbox on-values are sniffed from /AP. /V and /AS are both set, and /NeedAppearances is set on the AcroForm.",
+      "reach": "the signed-in Preview my forms button, which calls the Convex fill action with the caller's saved application, or the demo POST /api/fill/i-130 route, which builds the fake I-130 on the server",
       "verify": "bun run check runs apps/api/tests/test_fill_auth.py and uv run python scripts/eval_fill.py fixtures/ from apps/api. eval_fill.py exits 1 when a fixture field or appearance state does not match."
     }
   ],
@@ -205,7 +205,7 @@
     {
       "id": "verify-and-preview",
       "status": "partial",
-      "does": "DashboardLayout builds an I-130 payload from Convex basics, addresses, and employment, prefers the sessionStorage basics draft, and shows the PDF in an iframe. A signed-in preview goes through a Convex action that decrypts SSN and A-Number server-side. Demo mode uses the fake couple and the Next proxy, which strips those identifiers. Employment is passed in and then ignored. The header no longer shows a hardcoded percent.",
+      "does": "Preview my forms shows the PDF in an iframe. A signed-in preview is a Convex action that loads that caller's saved application, decrypts SSN and A-Number, and fills only i-130. Demo mode posts to /api/fill/i-130 with no field map; the server builds the Alex Demo payload and ignores the body. Employment is loaded and then ignored. The header no longer shows a hardcoded percent.",
       "reach": "the Preview my forms button in the app header, on any /sections or /forms page",
       "verify": "apps/web/e2e/review-package.spec.ts drives the button with a mocked /fill/i-130 response. It needs Convex and Playwright, so it is not part of bun run check. Fill accuracy without the browser is eval_fill.py."
     },

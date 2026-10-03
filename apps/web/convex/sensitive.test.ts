@@ -147,22 +147,22 @@ describe("sensitive ids", () => {
     });
     const fetchMock = vi.fn().mockResolvedValue(new Response("%PDF-demo", { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
-    const pdf = await alice.action(api.sensitive.fillI130, {
-      applicationId,
-      fields: {
-        "form1[0].#subform[0].Pt2Line4a_FamilyName[0]": "Lovelace",
-        "form1[0].#subform[0].Pt2Line11_SSN[0]": "999-99-9999",
-      },
-      checkboxes: {},
-    });
+    const pdf = await alice.action(api.sensitive.fillI130, {});
     expect(pdf).not.toContain("123-45-6789");
     const call = fetchMock.mock.calls[0];
     if (!call) throw new Error("fill was not called");
     const init = call[1] as { body?: string; headers?: Record<string, string> };
-    const body = JSON.parse(init.body ?? "{}") as { fields: Record<string, string> };
+    const body = JSON.parse(init.body ?? "{}") as {
+      fields: Record<string, string>;
+      checkboxes: Record<string, boolean>;
+    };
+    expect(body.fields["form1[0].#subform[0].Pt2Line4a_FamilyName[0]"]).toBe("Lovelace");
     expect(body.fields["form1[0].#subform[0].Pt2Line11_SSN[0]"]).toBe("123-45-6789");
     expect(body.fields["form1[0].#subform[0].#area[4].Pt2Line1_AlienNumber[0]"]).toBe("A1234567");
+    expect(body.checkboxes["form1[0].#subform[0].Pt1Line1_Spouse[0]"]).toBe(true);
+    expect(JSON.stringify(body)).not.toContain("999-99-9999");
     expect(init.headers?.["X-Fill-Secret"]).toBe("fill-secret");
+    expect(init.headers?.["X-Fill-Caller"]).toBe("user_alice");
     vi.unstubAllGlobals();
   });
 

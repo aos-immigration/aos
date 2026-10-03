@@ -88,6 +88,11 @@ docs/              feature map, agent patterns, review process
 `apps/web` owns the UI and the Convex client. It does not fill PDFs.
 `apps/web/convex` owns persistence. `apps/api` fills PDFs and does not store
 intake answers. `Forms/{slug}.pdf` is the template for `POST /fill/{slug}`.
+Demo `POST /api/fill/i-130` builds the fake payload on the server and ignores
+the client body. Signed-in fill loads that caller's Convex rows inside
+`fillI130`. The PDF service rate-limits `X-Fill-Caller` and ignores
+`X-Forwarded-For`. Identity numbers are encrypted or omitted, never a
+plaintext Convex column. Do not `console.log` Convex function arguments.
 There is no form registry. All five PDFs are reachable. Only `i-130` is
 wired in the UI.
 

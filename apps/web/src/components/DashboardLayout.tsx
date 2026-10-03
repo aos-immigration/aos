@@ -14,10 +14,9 @@ import { SiteFooter } from "@/components/system/SiteFooter";
 import { useApplicationId } from "@/app/lib/useApplicationId";
 import { useDemoMode } from "@/app/lib/intakeMode";
 import { useRuntimeConfig } from "@/app/lib/runtimeConfigContext";
-import { DEMO_BANNER, demoPdfAddress, demoPdfBasics } from "@/app/lib/demoCouple";
+import { DEMO_BANNER } from "@/app/lib/demoCouple";
 import { buildPdfPayload } from "@/app/lib/buildPdfPayload";
-import type { AddressRow, EmploymentRow, PetitionerBasics } from "@/app/lib/buildPdfPayload";
-import { readPetitionerBasicsDraft } from "@/app/lib/reviewDraft";
+import type { AddressRow, EmploymentRow } from "@/app/lib/buildPdfPayload";
 import {
   Dialog,
   DialogContent,
@@ -158,12 +157,7 @@ function usePdfPreview() {
 }
 
 async function demoPdfBlob() {
-  const payload = buildPdfPayload(demoPdfBasics(), [demoPdfAddress()], []);
-  const response = await fetch("/api/fill/i-130", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
+  const response = await fetch("/api/fill/i-130", { method: "POST" });
   if (!response.ok) throw new Error(`Failed to generate PDF (${response.status})`);
   return response.blob();
 }
@@ -219,24 +213,14 @@ function LiveDashboard({ children }: DashboardLayoutProps) {
   const preview = usePdfPreview();
 
   const onPreview = useCallback(async () => {
-    const basicsForPreview = (readPetitionerBasicsDraft() ?? basics) as PetitionerBasics | null;
-    if (!basicsForPreview || !applicationId) {
+    if (!applicationId) {
       preview.setError("No petitioner data found. Please fill in the basic information first.");
       return;
     }
     preview.setIsGenerating(true);
     preview.setError(null);
     try {
-      const payload = buildPdfPayload(
-        basicsForPreview,
-        (addresses ?? []) as AddressRow[],
-        (employment ?? []) as EmploymentRow[],
-      );
-      const pdf = await fillI130({
-        applicationId,
-        fields: payload.fields,
-        checkboxes: payload.checkboxes,
-      });
+      const pdf = await fillI130({});
       const binary = atob(pdf);
       const bytes = new Uint8Array(binary.length);
       for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
@@ -246,7 +230,7 @@ function LiveDashboard({ children }: DashboardLayoutProps) {
     } finally {
       preview.setIsGenerating(false);
     }
-  }, [addresses, applicationId, basics, employment, fillI130, preview]);
+  }, [applicationId, fillI130, preview]);
 
   const onExport = useCallback(() => {
     if (!basics) return;

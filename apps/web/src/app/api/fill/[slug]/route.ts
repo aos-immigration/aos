@@ -1,19 +1,30 @@
 import { auth } from "@clerk/nextjs/server";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { DEMO_COOKIE } from "@/app/lib/demoCouple";
-import { fillSecret, isClerkConfigured } from "@/app/lib/runtimeConfig";
-import { redactFillPayload } from "@/app/lib/sensitiveId";
+import { buildPdfPayload } from "@/app/lib/buildPdfPayload";
+import { DEMO_COOKIE, demoPdfAddress, demoPdfBasics } from "@/app/lib/demoCouple";
+import { convexUrl, fillSecret, isClerkConfigured } from "@/app/lib/runtimeConfig";
 
-const SLUG = /^[a-z0-9-]+$/;
+const DEMO_SLUG = "i-130";
+
+function pdfResponse(bytes: ArrayBuffer | Uint8Array, slug: string) {
+  const view = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  return new NextResponse(Buffer.from(view), {
+    status: 200,
+    headers: {
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename="${slug}-filled.pdf"`,
+    },
+  });
+}
 
 export async function POST(
-  request: Request,
+  _request: Request,
   context: { params: Promise<{ slug: string }> },
 ) {
   const demo = (await cookies()).get(DEMO_COOKIE)?.value === "1";
   const clerk = isClerkConfigured();
-  const { userId } = clerk ? await auth() : { userId: null };
+  const { userId, getToken } = clerk ? await auth() : { userId: null, getToken: null };
   if (!userId && !demo) {
     return NextResponse.json(
       { error: clerk ? "Unauthorized" : "Auth is not configured" },
@@ -21,37 +32,46 @@ export async function POST(
     );
   }
 
+  const { slug } = await context.params;
+  if (slug !== DEMO_SLUG) {
+    return NextResponse.json({ error: "Unknown form" }, { status: 404 });
+  }
+
+  if (userId) {
+    if (!convexUrl() || !getToken) {
+      return NextResponse.json({ error: "Auth is not configured" }, { status: 503 });
+    }
+    const token = await getToken({ template: "convex" });
+    if (!token) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const { fetchAction } = await import("convex/nextjs");
+    const { api } = await import("../../../../../convex/_generated/api");
+    try {
+      const pdf = await fetchAction(api.sensitive.fillI130, {}, { token });
+      return pdfResponse(Buffer.from(pdf, "base64"), slug);
+    } catch {
+      return NextResponse.json({ error: "PDF fill failed" }, { status: 502 });
+    }
+  }
+
   const secret = fillSecret();
   if (!secret) {
     return NextResponse.json({ error: "PDF fill is not configured" }, { status: 500 });
   }
 
-  const { slug } = await context.params;
-  if (!SLUG.test(slug)) {
-    return NextResponse.json({ error: "Unknown form" }, { status: 404 });
-  }
-
-  let body: string;
-  try {
-    const parsed = JSON.parse(await request.text()) as {
-      fields?: Record<string, string>;
-      checkboxes?: Record<string, boolean>;
-    };
-    body = JSON.stringify(redactFillPayload(parsed));
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
-  }
-
+  const payload = buildPdfPayload(demoPdfBasics(), [demoPdfAddress()], []);
   const apiBase = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
   let upstream: Response;
   try {
-    upstream = await fetch(`${apiBase}/fill/${slug}`, {
+    upstream = await fetch(`${apiBase}/fill/${DEMO_SLUG}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "X-Fill-Secret": secret,
+        "X-Fill-Caller": "demo",
       },
-      body,
+      body: JSON.stringify(payload),
     });
   } catch {
     return NextResponse.json({ error: "PDF fill service is unavailable" }, { status: 502 });
@@ -64,13 +84,5 @@ export async function POST(
     );
   }
 
-  return new NextResponse(await upstream.arrayBuffer(), {
-    status: 200,
-    headers: {
-      "Content-Type": "application/pdf",
-      "Content-Disposition":
-        upstream.headers.get("Content-Disposition") ??
-        `attachment; filename="${slug}-filled.pdf"`,
-    },
-  });
+  return pdfResponse(await upstream.arrayBuffer(), DEMO_SLUG);
 }

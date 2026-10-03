@@ -332,6 +332,15 @@ _SLUG = re.compile(r"[a-z0-9-]+")
 
 
 _fill_hits: Dict[str, List[float]] = {}
+_CALLER_KEY = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
+
+
+def _rate_key(request: Request) -> str:
+    """The web server names the caller. A client-supplied forwarding header is not a key."""
+    caller = request.headers.get("x-fill-caller", "").strip()
+    if _CALLER_KEY.fullmatch(caller):
+        return caller
+    return "missing"
 
 
 def _rate_ok(request: Request) -> bool:
@@ -340,15 +349,13 @@ def _rate_ok(request: Request) -> bool:
     except ValueError:
         limit = 60
     now = time.time()
-    forwarded = request.headers.get("x-forwarded-for", "")
-    client = request.client.host if request.client else "local"
-    ip = forwarded.split(",")[0].strip() if forwarded else client
-    stamps = [stamp for stamp in _fill_hits.get(ip, []) if now - stamp < 60]
+    key = _rate_key(request)
+    stamps = [stamp for stamp in _fill_hits.get(key, []) if now - stamp < 60]
     if len(stamps) >= limit:
-        _fill_hits[ip] = stamps
+        _fill_hits[key] = stamps
         return False
     stamps.append(now)
-    _fill_hits[ip] = stamps
+    _fill_hits[key] = stamps
     return True
 
 
