@@ -1,4 +1,4 @@
-import { mutation, query, type MutationCtx } from "./_generated/server";
+import { internalMutation, mutation, query, type MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import {
   requireOwnedAddress,
@@ -194,37 +194,43 @@ export const removeEmploymentEntry = mutation({
   },
 });
 
+async function purgeOwnedApplications(ctx: MutationCtx, userId: string) {
+  const applications = await ctx.db
+    .query("applications")
+    .withIndex("by_owner", (q) => q.eq("ownerId", userId))
+    .collect();
+  for (const application of applications) {
+    const basics = await ctx.db
+      .query("petitionerBasics")
+      .withIndex("by_application", (q) => q.eq("applicationId", application._id))
+      .collect();
+    for (const row of basics) await ctx.db.delete(row._id);
+    const addresses = await ctx.db
+      .query("addresses")
+      .withIndex("by_application_role", (q) => q.eq("applicationId", application._id))
+      .collect();
+    for (const row of addresses) await ctx.db.delete(row._id);
+    const employment = await ctx.db
+      .query("employmentEntries")
+      .withIndex("by_application_role", (q) => q.eq("applicationId", application._id))
+      .collect();
+    for (const row of employment) await ctx.db.delete(row._id);
+    const intakes = await ctx.db
+      .query("intakes")
+      .withIndex("by_application", (q) => q.eq("applicationId", application._id))
+      .collect();
+    for (const row of intakes) await ctx.db.delete(row._id);
+    await ctx.db.delete(application._id);
+  }
+  return { deleted: applications.length };
+}
+
 export const deleteMyApplication = mutation({
   args: {},
-  handler: async (ctx) => {
-    const userId = await requireUserId(ctx);
-    const applications = await ctx.db
-      .query("applications")
-      .withIndex("by_owner", (q) => q.eq("ownerId", userId))
-      .collect();
-    for (const application of applications) {
-      const basics = await ctx.db
-        .query("petitionerBasics")
-        .withIndex("by_application", (q) => q.eq("applicationId", application._id))
-        .collect();
-      for (const row of basics) await ctx.db.delete(row._id);
-      const addresses = await ctx.db
-        .query("addresses")
-        .withIndex("by_application_role", (q) => q.eq("applicationId", application._id))
-        .collect();
-      for (const row of addresses) await ctx.db.delete(row._id);
-      const employment = await ctx.db
-        .query("employmentEntries")
-        .withIndex("by_application_role", (q) => q.eq("applicationId", application._id))
-        .collect();
-      for (const row of employment) await ctx.db.delete(row._id);
-      const intakes = await ctx.db
-        .query("intakes")
-        .withIndex("by_application", (q) => q.eq("applicationId", application._id))
-        .collect();
-      for (const row of intakes) await ctx.db.delete(row._id);
-      await ctx.db.delete(application._id);
-    }
-    return { deleted: applications.length };
-  },
+  handler: async (ctx) => purgeOwnedApplications(ctx, await requireUserId(ctx)),
+});
+
+export const purgeOwner = internalMutation({
+  args: { ownerId: v.string() },
+  handler: async (ctx, args) => purgeOwnedApplications(ctx, args.ownerId),
 });

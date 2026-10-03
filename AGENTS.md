@@ -93,6 +93,9 @@ the client body. Signed-in fill loads that caller's Convex rows inside
 `fillI130`. The PDF service rate-limits `X-Fill-Caller` and ignores
 `X-Forwarded-For`. Identity numbers are encrypted or omitted, never a
 plaintext Convex column. Do not `console.log` Convex function arguments.
+`/account` POSTs `/api/account/delete`. That route deletes Convex rows and
+then the Clerk user. `/api/webhooks/clerk` verifies Svix and purges on
+`user.deleted`.
 There is no form registry. All five PDFs are reachable. Only `i-130` is
 wired in the UI.
 

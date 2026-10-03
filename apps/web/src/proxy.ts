@@ -4,7 +4,7 @@ import { DEMO_COOKIE } from "@/app/lib/demoCouple";
 import { isClerkConfigured, unconfiguredGate } from "@/app/lib/runtimeConfig";
 
 const isIntakeRoute = createRouteMatcher(["/sections(.*)", "/forms(.*)"]);
-const isAccountRoute = createRouteMatcher(["/account(.*)"]);
+const isAccountRoute = createRouteMatcher(["/account(.*)", "/api/account(.*)"]);
 const isFillRoute = createRouteMatcher(["/api/fill(.*)"]);
 
 function demoOn(request: NextRequest) {
