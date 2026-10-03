@@ -22,10 +22,10 @@ def render_pdf_pages(pdf_bytes: bytes) -> list[str]:
         pages: list[str] = []
         for index in range(len(document)):
             page = document[index]
-            bitmap = page.render(scale=2, may_draw_forms=True)
+            bitmap = page.render(scale=1, may_draw_forms=True)
             image = bitmap.to_pil()
             buffer = io.BytesIO()
-            image.save(buffer, format="JPEG", quality=80)
+            image.save(buffer, format="JPEG", quality=40, optimize=True)
             pages.append(base64.b64encode(buffer.getvalue()).decode("ascii"))
             page.close()
         return pages

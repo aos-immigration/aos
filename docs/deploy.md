@@ -76,5 +76,6 @@ vercel --prod
 | `PDF_MAX_BODY_BYTES` | `1000000`, optional |
 
 `PDF_SERVICE_ENV=production` rejects fills when `PDF_FILL_SECRET` is unset.
-Hobby functions use the platform duration cap. A single I-130 fill is the
-check that the cap is enough.
+A Vercel function response must stay under 4.5MB. Preview page images are
+rendered so the Sampleton preview JSON fits that limit. The packet zip is
+about 2.3MB.
