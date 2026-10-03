@@ -11,6 +11,9 @@ import {
 } from "../../lib/schemas/petitionerBasicsSchema";
 import type { Resolver } from "react-hook-form";
 import { useApplicationId } from "../../lib/useApplicationId";
+import { useDemoMode } from "../../lib/intakeMode";
+import { DemoPetitionerView } from "../../components/intake/DemoCoupleViews";
+import { SensitiveIdForm } from "../../components/intake/SensitiveIdForm";
 import { savePetitionerBasicsDraft } from "../../lib/reviewDraft";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -56,10 +59,11 @@ const RELATIONSHIP_OPTIONS = [
 ];
 
 export default function PetitionerPage() {
+  const demo = useDemoMode();
   const applicationId = useApplicationId();
   const existingData = useQuery(
     api.petitioner.getPetitionerBasics,
-    applicationId ? { applicationId } : "skip"
+    !demo && applicationId ? { applicationId } : "skip"
   );
   const saveMutation = useMutation(api.petitioner.savePetitionerBasics);
 
@@ -114,7 +118,7 @@ export default function PetitionerPage() {
   // Debounced auto-save
   const debouncedSave = useCallback(
     (data: PetitionerBasicsFormData) => {
-      if (!applicationId) return;
+      if (demo || !applicationId) return;
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(async () => {
         try {
@@ -138,7 +142,7 @@ export default function PetitionerPage() {
         }
       }, 500);
     },
-    [applicationId, saveMutation]
+    [applicationId, demo, saveMutation]
   );
 
   // Watch all fields and auto-save on change
@@ -156,6 +160,8 @@ export default function PetitionerPage() {
     });
     return () => subscription.unsubscribe();
   }, [watch, debouncedSave, existingData]);
+
+  if (demo) return <DemoPetitionerView />;
 
   if (!applicationId) {
     return (
@@ -403,6 +409,11 @@ export default function PetitionerPage() {
               </div>
             </div>
           </div>
+          <SensitiveIdForm
+            applicationId={applicationId}
+            ssnLast4={existingData?.ssnLast4 ?? null}
+            aNumberLast4={existingData?.aNumberLast4 ?? null}
+          />
         </div>
       </div>
     </div>

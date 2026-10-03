@@ -1,5 +1,6 @@
-import Link from "next/link";
+import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
 import { ArrowRight } from "lucide-react";
+import Link from "next/link";
 
 export default function Home() {
   return (
@@ -21,12 +22,42 @@ export default function Home() {
 
         <div className="flex items-center justify-center gap-4">
           <Link
-            href="/sections"
-            className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-md font-medium hover:bg-primary/90 transition-colors"
+            href="/demo"
+            className="inline-flex items-center gap-2 border border-amber-500/40 text-amber-500 px-6 py-3 rounded-md font-medium hover:bg-amber-500/10 transition-colors"
           >
-            Start Your Application
-            <ArrowRight className="w-4 h-4" />
+            Explore the demo couple
           </Link>
+          <Show when="signed-out">
+            <SignInButton mode="redirect">
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-md font-medium hover:bg-primary/90 transition-colors"
+              >
+                Sign in
+              </button>
+            </SignInButton>
+            <SignUpButton mode="redirect">
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 border border-border px-6 py-3 rounded-md font-medium hover:bg-muted transition-colors"
+              >
+                Create account
+              </button>
+            </SignUpButton>
+          </Show>
+          <Show when="signed-in">
+            <Link
+              href="/sections"
+              className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-md font-medium hover:bg-primary/90 transition-colors"
+            >
+              Start Your Application
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+            <Link href="/account" className="text-sm underline text-muted-foreground">
+              Account
+            </Link>
+            <UserButton />
+          </Show>
         </div>
       </div>
     </div>

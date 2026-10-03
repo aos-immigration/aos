@@ -7,8 +7,13 @@ export default defineConfig({
   test: {
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
-    include: ["src/**/*.{test,spec}.{ts,tsx}"],
+    include: ["src/**/*.{test,spec}.{ts,tsx}", "convex/**/*.test.ts"],
     exclude: ["src/**/*.component.test.{ts,tsx}"],
+    server: {
+      deps: {
+        inline: ["convex-test"],
+      },
+    },
     coverage: {
       reporter: ["text", "html"],
       include: ["src/app/lib/**/*.ts"],

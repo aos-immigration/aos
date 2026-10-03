@@ -95,8 +95,10 @@ Convex is the intake store. `src/app/lib/intakeStorage.ts` is types and
 factory helpers. `sessionStorage` holds the PDF preview draft.
 `localStorage` holds the theme.
 
-`useApplicationId()` calls `getOrCreateApplication` and returns the first
-draft application in the database. There is no auth.
+`useApplicationId()` calls `getOrCreateApplication` for the signed-in Clerk
+user and returns that user's draft. Intake routes require a session. `/demo`
+sets a cookie and shows a fake couple without writing Convex. SSN and
+A-Number are encrypted in Convex and are not returned by the basics query.
 
 The authoritative list of routes, how to open each one, how to verify it,
 and whether it is wired, partial, mocked, or missing is

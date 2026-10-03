@@ -1,13 +1,16 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { useQuery } from "convex/react";
+import { useAction, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Sidebar } from "./Sidebar";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { ThemeToggle } from "./ThemeToggle";
+import { UserButton } from "@clerk/nextjs";
 import { Verified, Download, Loader2 } from "lucide-react";
 import { useApplicationId } from "@/app/lib/useApplicationId";
+import { useDemoMode } from "@/app/lib/intakeMode";
+import { DEMO_BANNER, demoPdfAddress, demoPdfBasics } from "@/app/lib/demoCouple";
 import { buildPdfPayload } from "@/app/lib/buildPdfPayload";
 import type { AddressRow, EmploymentRow } from "@/app/lib/buildPdfPayload";
 import { readPetitionerBasicsDraft } from "@/app/lib/reviewDraft";
@@ -24,19 +27,21 @@ type DashboardLayoutProps = {
 };
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
+  const demo = useDemoMode();
   const applicationId = useApplicationId();
+  const fillI130 = useAction(api.sensitive.fillI130);
 
   const basics = useQuery(
     api.petitioner.getPetitionerBasics,
-    applicationId ? { applicationId } : "skip",
+    !demo && applicationId ? { applicationId } : "skip",
   );
   const addresses = useQuery(
     api.petitioner.listAddresses,
-    applicationId ? { applicationId, personRole: "petitioner" } : "skip",
+    !demo && applicationId ? { applicationId, personRole: "petitioner" } : "skip",
   );
   const employment = useQuery(
     api.petitioner.listEmploymentEntries,
-    applicationId ? { applicationId, personRole: "petitioner" } : "skip",
+    !demo && applicationId ? { applicationId, personRole: "petitioner" } : "skip",
   );
 
   const [isGenerating, setIsGenerating] = useState(false);
@@ -54,8 +59,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   }, [pdfUrl]);
 
   const handleReviewPackage = useCallback(async () => {
-    const basicsForPreview = readPetitionerBasicsDraft() ?? basics;
-    if (!basicsForPreview) {
+    const basicsForPreview = demo ? demoPdfBasics() : (readPetitionerBasicsDraft() ?? basics);
+    if (!basicsForPreview || (!demo && !applicationId)) {
       setError("No petitioner data found. Please fill in the basic information first.");
       return;
     }
@@ -66,22 +71,33 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     try {
       const payload = buildPdfPayload(
         basicsForPreview,
-        (addresses ?? []) as AddressRow[],
-        (employment ?? []) as EmploymentRow[],
+        demo ? [demoPdfAddress()] : ((addresses ?? []) as AddressRow[]),
+        demo ? [] : ((employment ?? []) as EmploymentRow[]),
       );
 
-      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      const response = await fetch(`${apiBase}/fill/i-130`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to generate PDF (${response.status})`);
+      let blob: Blob;
+      if (demo) {
+        const response = await fetch("/api/fill/i-130", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!response.ok) {
+          throw new Error(`Failed to generate PDF (${response.status})`);
+        }
+        blob = await response.blob();
+      } else {
+        const pdf = await fillI130({
+          applicationId: applicationId!,
+          fields: payload.fields,
+          checkboxes: payload.checkboxes,
+        });
+        const binary = atob(pdf);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+        blob = new Blob([bytes], { type: "application/pdf" });
       }
 
-      const blob = await response.blob();
       const url = globalThis.URL.createObjectURL(blob);
 
       if (pdfUrl) {
@@ -95,7 +111,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     } finally {
       setIsGenerating(false);
     }
-  }, [basics, addresses, employment, pdfUrl]);
+  }, [applicationId, basics, addresses, demo, employment, fillI130, pdfUrl]);
 
   const handleExportFixture = useCallback(() => {
     if (!basics) return;
@@ -128,6 +144,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     <div className="flex h-screen overflow-hidden">
       <Sidebar />
       <main className="flex-1 flex flex-col overflow-hidden relative">
+        {demo && (
+          <div className="bg-amber-500/15 text-amber-200 text-sm px-6 py-2 border-b border-amber-500/30">
+            {DEMO_BANNER}
+          </div>
+        )}
         <header className="h-14 border-b border-border flex items-center justify-between px-6 z-10 bg-background/80 backdrop-blur-sm">
           <Breadcrumbs />
           <div className="flex items-center gap-6">
@@ -140,6 +161,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               </div>
             </div>
             <div className="flex items-center gap-3">
+              <UserButton />
               <ThemeToggle />
               {process.env.NODE_ENV === "development" && (
                 <button

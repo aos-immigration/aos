@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import hashlib
+import hmac
 import json
 import logging
 import os
+import re
 import time
 import threading
 import urllib.request
@@ -69,12 +72,18 @@ ACROFORM_KEY = "/AcroForm"
 FIELDS_KEY = "/Fields"
 PDF_NOT_FOUND = "PDF not found"
 
+def _allowed_origins() -> List[str]:
+    raw = os.environ.get("PDF_ALLOWED_ORIGINS", "http://localhost:3000")
+    origins = [part.strip() for part in raw.split(",") if part.strip() and part.strip() != "*"]
+    return origins or ["http://localhost:3000"]
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_allowed_origins(),
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "X-Fill-Secret"],
 )
 
 
@@ -89,7 +98,7 @@ async def datadog_logging_middleware(request: Request, call_next):
         status=status,
         extra={
             "http.method": request.method,
-            "http.url": str(request.url),
+            "http.path": request.url.path,
             "http.status_code": response.status_code,
             "duration_ms": round(duration_ms, 2),
         },
@@ -276,8 +285,16 @@ def health():
     return {"ok": True}
 
 
+def _catalog_enabled() -> bool:
+    if os.environ.get("PDF_ALLOW_DEBUG") == "1":
+        return True
+    return os.environ.get("PDF_SERVICE_ENV", "development") != "production"
+
+
 @app.get("/fields/{slug}")
 def list_fields(slug: str):
+    if not _catalog_enabled():
+        raise HTTPException(status_code=404, detail=PDF_NOT_FOUND)
     pdf_file = _pdf_path(slug)
     if not pdf_file.exists():
         raise HTTPException(status_code=404, detail=PDF_NOT_FOUND)
@@ -286,6 +303,8 @@ def list_fields(slug: str):
 
 @app.get("/debug/field/{slug}")
 def debug_field(slug: str, name: str):
+    if not _catalog_enabled():
+        raise HTTPException(status_code=404, detail=PDF_NOT_FOUND)
     pdf_file = _pdf_path(slug)
     if not pdf_file.exists():
         raise HTTPException(status_code=404, detail=PDF_NOT_FOUND)
@@ -308,8 +327,61 @@ def debug_field(slug: str, name: str):
     raise HTTPException(status_code=404, detail="Field name not found")
 
 
+_SLUG = re.compile(r"[a-z0-9-]+")
+
+
+_fill_hits: Dict[str, List[float]] = {}
+
+
+def _rate_ok(request: Request) -> bool:
+    try:
+        limit = int(os.environ.get("PDF_RATE_LIMIT", "60"))
+    except ValueError:
+        limit = 60
+    now = time.time()
+    forwarded = request.headers.get("x-forwarded-for", "")
+    client = request.client.host if request.client else "local"
+    ip = forwarded.split(",")[0].strip() if forwarded else client
+    stamps = [stamp for stamp in _fill_hits.get(ip, []) if now - stamp < 60]
+    if len(stamps) >= limit:
+        _fill_hits[ip] = stamps
+        return False
+    stamps.append(now)
+    _fill_hits[ip] = stamps
+    return True
+
+
+def _fill_caller_authorized(request: Request) -> bool:
+    """Shared secret from the signed-in Next.js route. Fail closed when unset."""
+    expected = os.environ.get("PDF_FILL_SECRET", "")
+    provided = request.headers.get("x-fill-secret", "")
+    if not expected or not provided:
+        return False
+    return hmac.compare_digest(
+        hashlib.sha256(provided.encode()).digest(),
+        hashlib.sha256(expected.encode()).digest(),
+    )
+
+
 @app.post("/fill/{slug}")
-def fill_pdf(slug: str, payload: FillRequest):
+async def fill_pdf(slug: str, request: Request):
+    if not _fill_caller_authorized(request):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    if not _rate_ok(request):
+        raise HTTPException(status_code=429, detail="Too many requests")
+    if not _SLUG.fullmatch(slug):
+        raise HTTPException(status_code=404, detail=PDF_NOT_FOUND)
+    raw = await request.body()
+    try:
+        max_bytes = int(os.environ.get("PDF_MAX_BODY_BYTES", "1000000"))
+    except ValueError:
+        max_bytes = 1_000_000
+    if len(raw) > max_bytes:
+        raise HTTPException(status_code=413, detail="Request too large")
+    try:
+        payload = FillRequest.model_validate_json(raw)
+    except Exception:
+        raise HTTPException(status_code=422, detail="Invalid fill request") from None
     pdf_file = _pdf_path(slug)
     if not pdf_file.exists():
         raise HTTPException(status_code=404, detail=PDF_NOT_FOUND)

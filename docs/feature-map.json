@@ -4,9 +4,41 @@
       "id": "/",
       "kind": "page",
       "status": "wired",
-      "does": "Landing page. It links to /sections and does not read or write intake data.",
+      "does": "Landing page. Signed-out visitors can sign in, create an account, or open the fake demo couple. Signed-in visitors can start their own application. It does not read or write intake data.",
       "reach": "the site root",
       "verify": "Open /. There is no unit test for this screen. bun run check does not boot Next.js."
+    },
+    {
+      "id": "/demo",
+      "kind": "page",
+      "status": "wired",
+      "does": "Explains that Alex Demo and Jamie Demo are a fake couple, then sets the aos_demo cookie and opens the petitioner screen. Demo screens do not write Convex.",
+      "reach": "the home page link Explore the demo couple",
+      "verify": "bun run check runs apps/web/src/app/lib/__tests__/sensitiveAndDemo.test.ts, which asserts the fixture has no SSN or A-Number."
+    },
+    {
+      "id": "/sign-in/[[...sign-in]]",
+      "kind": "page",
+      "status": "wired",
+      "does": "Clerk sign-in. Real intake requires this session. The demo cookie is cleared once a session exists.",
+      "reach": "the home page Sign in button, or a redirect from a protected intake route",
+      "verify": "Open /sign-in. bun run check does not boot Clerk. Ownership tests in apps/web/convex/ownership.test.ts cover what a session can read."
+    },
+    {
+      "id": "/sign-up/[[...sign-up]]",
+      "kind": "page",
+      "status": "wired",
+      "does": "Clerk sign-up. Accounts are email-based. SSN and A-Number are not used as the username.",
+      "reach": "the home page Create account button",
+      "verify": "Open /sign-up. bun run check does not boot Clerk."
+    },
+    {
+      "id": "/account",
+      "kind": "page",
+      "status": "wired",
+      "does": "Signed-in deletion. It deletes the caller's application, petitioner basics (including encrypted ids), addresses, and employment, then deletes the Clerk user.",
+      "reach": "the home page Account link while signed in",
+      "verify": "bun run check runs the delete case in apps/web/convex/sensitive.test.ts. The page itself is not opened by that test."
     },
     {
       "id": "/sections",
@@ -156,16 +188,16 @@
       "id": "POST /fill/{slug}",
       "kind": "api",
       "status": "wired",
-      "does": "Fills Forms/{slug}.pdf from {fields, checkboxes} and streams the PDF back. Checkbox on-values are sniffed from /AP. /V and /AS are both set, and /NeedAppearances is set on the AcroForm.",
-      "reach": "the Verify & Preview button, or POST /fill/i-130",
-      "verify": "bun run check runs uv run python scripts/eval_fill.py fixtures/ from apps/api. That command exits 1 when a fixture field or appearance state does not match."
+      "does": "Fills Forms/{slug}.pdf from {fields, checkboxes} and streams the PDF back. The caller must send X-Fill-Secret. Checkbox on-values are sniffed from /AP. /V and /AS are both set, and /NeedAppearances is set on the AcroForm.",
+      "reach": "the signed-in Verify & Preview button, which calls the Convex fill action, or POST /fill/i-130 with the shared secret",
+      "verify": "bun run check runs apps/api/tests/test_fill_auth.py and uv run python scripts/eval_fill.py fixtures/ from apps/api. eval_fill.py exits 1 when a fixture field or appearance state does not match."
     }
   ],
   "flows": [
     {
       "id": "verify-and-preview",
       "status": "partial",
-      "does": "DashboardLayout builds an I-130 payload from Convex basics, addresses, and employment, prefers the sessionStorage basics draft, POSTs /fill/i-130, and shows the PDF in an iframe. Employment is passed in and then ignored. The header progress label is a hardcoded 64%.",
+      "does": "DashboardLayout builds an I-130 payload from Convex basics, addresses, and employment, prefers the sessionStorage basics draft, and shows the PDF in an iframe. A signed-in preview goes through a Convex action that decrypts SSN and A-Number server-side. Demo mode uses the fake couple and the Next proxy, which strips those identifiers. Employment is passed in and then ignored. The header progress label is a hardcoded 64%.",
       "reach": "the Verify & Preview button in the app header, on any /sections or /forms page",
       "verify": "apps/web/e2e/review-package.spec.ts drives the button with a mocked /fill/i-130 response. It needs Convex and Playwright, so it is not part of bun run check. Fill accuracy without the browser is eval_fill.py."
     },

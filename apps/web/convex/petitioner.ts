@@ -1,35 +1,36 @@
-import { query, mutation } from "./_generated/server";
+import { mutation, query, type MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
+import {
+  requireOwnedAddress,
+  requireOwnedApplication,
+  requireOwnedEmployment,
+  requireUserId,
+} from "./authz";
 
-// ── Applications ──
+async function applicationForUser(ctx: MutationCtx) {
+  const userId = await requireUserId(ctx);
+  const existing = await ctx.db
+    .query("applications")
+    .withIndex("by_owner", (q) => q.eq("ownerId", userId))
+    .first();
+  if (existing) return existing._id;
+  const now = Date.now();
+  return await ctx.db.insert("applications", {
+    ownerId: userId,
+    status: "draft",
+    createdAt: now,
+    updatedAt: now,
+  });
+}
 
 export const createApplication = mutation({
   args: {},
-  handler: async (ctx) => {
-    const now = Date.now();
-    return await ctx.db.insert("applications", {
-      status: "draft",
-      createdAt: now,
-      updatedAt: now,
-    });
-  },
+  handler: async (ctx) => applicationForUser(ctx),
 });
 
 export const getOrCreateApplication = mutation({
   args: {},
-  handler: async (ctx) => {
-    const existing = await ctx.db
-      .query("applications")
-      .filter((q) => q.eq(q.field("status"), "draft"))
-      .first();
-    if (existing) return existing._id;
-    const now = Date.now();
-    return await ctx.db.insert("applications", {
-      status: "draft",
-      createdAt: now,
-      updatedAt: now,
-    });
-  },
+  handler: async (ctx) => applicationForUser(ctx),
 });
 
 // ── Petitioner Basics ──
@@ -54,6 +55,7 @@ const petitionerBasicsArgs = {
 export const savePetitionerBasics = mutation({
   args: petitionerBasicsArgs,
   handler: async (ctx, args) => {
+    await requireOwnedApplication(ctx, args.applicationId);
     const existing = await ctx.db
       .query("petitionerBasics")
       .withIndex("by_application", (q) => q.eq("applicationId", args.applicationId))
@@ -69,10 +71,18 @@ export const savePetitionerBasics = mutation({
 export const getPetitionerBasics = query({
   args: { applicationId: v.id("applications") },
   handler: async (ctx, args) => {
-    return await ctx.db
+    await requireOwnedApplication(ctx, args.applicationId);
+    const row = await ctx.db
       .query("petitionerBasics")
       .withIndex("by_application", (q) => q.eq("applicationId", args.applicationId))
       .first();
+    if (!row) return null;
+    const { ssn, aNumber, ...rest } = row;
+    return {
+      ...rest,
+      ssnLast4: ssn?.last4 ?? null,
+      aNumberLast4: aNumber?.last4 ?? null,
+    };
   },
 });
 
@@ -99,7 +109,9 @@ const addressArgs = {
 export const saveAddress = mutation({
   args: { _id: v.optional(v.id("addresses")), ...addressArgs },
   handler: async (ctx, { _id, ...data }) => {
+    await requireOwnedApplication(ctx, data.applicationId);
     if (_id) {
+      await requireOwnedAddress(ctx, _id);
       await ctx.db.patch(_id, data);
       return _id;
     }
@@ -110,6 +122,7 @@ export const saveAddress = mutation({
 export const listAddresses = query({
   args: { applicationId: v.id("applications"), personRole: v.string() },
   handler: async (ctx, args) => {
+    await requireOwnedApplication(ctx, args.applicationId);
     return await ctx.db
       .query("addresses")
       .withIndex("by_application_role", (q) =>
@@ -122,6 +135,7 @@ export const listAddresses = query({
 export const removeAddress = mutation({
   args: { id: v.id("addresses") },
   handler: async (ctx, args) => {
+    await requireOwnedAddress(ctx, args.id);
     await ctx.db.delete(args.id);
   },
 });
@@ -149,7 +163,9 @@ const employmentArgs = {
 export const saveEmploymentEntry = mutation({
   args: { _id: v.optional(v.id("employmentEntries")), ...employmentArgs },
   handler: async (ctx, { _id, ...data }) => {
+    await requireOwnedApplication(ctx, data.applicationId);
     if (_id) {
+      await requireOwnedEmployment(ctx, _id);
       await ctx.db.patch(_id, data);
       return _id;
     }
@@ -160,6 +176,7 @@ export const saveEmploymentEntry = mutation({
 export const listEmploymentEntries = query({
   args: { applicationId: v.id("applications"), personRole: v.string() },
   handler: async (ctx, args) => {
+    await requireOwnedApplication(ctx, args.applicationId);
     return await ctx.db
       .query("employmentEntries")
       .withIndex("by_application_role", (q) =>
@@ -172,6 +189,37 @@ export const listEmploymentEntries = query({
 export const removeEmploymentEntry = mutation({
   args: { id: v.id("employmentEntries") },
   handler: async (ctx, args) => {
+    await requireOwnedEmployment(ctx, args.id);
     await ctx.db.delete(args.id);
+  },
+});
+
+export const deleteMyApplication = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await requireUserId(ctx);
+    const applications = await ctx.db
+      .query("applications")
+      .withIndex("by_owner", (q) => q.eq("ownerId", userId))
+      .collect();
+    for (const application of applications) {
+      const basics = await ctx.db
+        .query("petitionerBasics")
+        .withIndex("by_application", (q) => q.eq("applicationId", application._id))
+        .collect();
+      for (const row of basics) await ctx.db.delete(row._id);
+      const addresses = await ctx.db
+        .query("addresses")
+        .withIndex("by_application_role", (q) => q.eq("applicationId", application._id))
+        .collect();
+      for (const row of addresses) await ctx.db.delete(row._id);
+      const employment = await ctx.db
+        .query("employmentEntries")
+        .withIndex("by_application_role", (q) => q.eq("applicationId", application._id))
+        .collect();
+      for (const row of employment) await ctx.db.delete(row._id);
+      await ctx.db.delete(application._id);
+    }
+    return { deleted: applications.length };
   },
 });

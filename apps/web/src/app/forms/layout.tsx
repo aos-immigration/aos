@@ -1,9 +1,17 @@
+import { cookies } from "next/headers";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { IntakeModeProvider } from "@/app/lib/intakeMode";
+import { DEMO_COOKIE } from "@/app/lib/demoCouple";
 
-export default function FormsLayout({
+export default async function FormsLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return <DashboardLayout>{children}</DashboardLayout>;
+  const demo = (await cookies()).get(DEMO_COOKIE)?.value === "1";
+  return (
+    <IntakeModeProvider demo={demo}>
+      <DashboardLayout>{children}</DashboardLayout>
+    </IntakeModeProvider>
+  );
 }

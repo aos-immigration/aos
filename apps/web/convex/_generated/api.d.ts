@@ -10,6 +10,7 @@
 
 import type * as forms from "../forms.js";
 import type * as petitioner from "../petitioner.js";
+import type * as sensitive from "../sensitive.js";
 
 import type {
   ApiFromModules,
@@ -20,6 +21,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   forms: typeof forms;
   petitioner: typeof petitioner;
+  sensitive: typeof sensitive;
 }>;
 
 /**

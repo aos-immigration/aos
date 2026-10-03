@@ -1,6 +1,7 @@
 import { datadogRum } from "@datadog/browser-rum";
 import { reactPlugin } from "@datadog/browser-rum-react";
 import { datadogLogs } from "@datadog/browser-logs";
+import { redactUnknown } from "./lib/redactTelemetry";
 
 datadogRum.init({
   applicationId: "4f21fd8b-4a01-4234-85f1-bfd17a2766a9",
@@ -10,11 +11,16 @@ datadogRum.init({
   env: process.env.NODE_ENV || "development",
   version: "0.1.0",
   sessionSampleRate: 100,
-  sessionReplaySampleRate: 20,
+  sessionReplaySampleRate: 0,
+  defaultPrivacyLevel: "mask",
   trackResources: true,
-  trackUserInteractions: true,
+  trackUserInteractions: false,
   trackLongTasks: true,
   plugins: [reactPlugin({ router: false })],
+  beforeSend: (event) => {
+    Object.assign(event, redactUnknown(event) as typeof event);
+    return true;
+  },
 });
 
 datadogLogs.init({
@@ -24,7 +30,11 @@ datadogLogs.init({
   env: process.env.NODE_ENV || "development",
   version: "0.1.0",
   forwardErrorsToLogs: true,
-  forwardConsoleLogs: ["error", "warn", "info"],
+  forwardConsoleLogs: ["error"],
   forwardReports: "all",
   sessionSampleRate: 100,
+  beforeSend: (event) => {
+    Object.assign(event, redactUnknown(event) as typeof event);
+    return true;
+  },
 });

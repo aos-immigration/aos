@@ -24,7 +24,12 @@ def test_debug_field_requires_a_name() -> None:
     assert response.status_code == 422
 
 
-def test_fill_unknown_form_is_not_found() -> None:
-    response = client.post("/fill/not-a-form", json={"fields": {}, "checkboxes": {}})
+def test_fill_unknown_form_is_not_found(monkeypatch) -> None:
+    monkeypatch.setenv("PDF_FILL_SECRET", "test-secret")
+    response = client.post(
+        "/fill/not-a-form",
+        json={"fields": {}, "checkboxes": {}},
+        headers={"X-Fill-Secret": "test-secret"},
+    )
     assert response.status_code == 404
     assert response.json()["detail"] == "PDF not found"

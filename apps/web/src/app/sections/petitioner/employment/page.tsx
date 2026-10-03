@@ -1,10 +1,15 @@
 "use client";
 
 import { useApplicationId } from "@/app/lib/useApplicationId";
+import { useDemoMode } from "@/app/lib/intakeMode";
 import { EmploymentHistory } from "@/app/components/intake/EmploymentHistory";
+import { DemoEmploymentView } from "@/app/components/intake/DemoCoupleViews";
 
 export default function PetitionerEmploymentPage() {
+  const demo = useDemoMode();
   const applicationId = useApplicationId();
+
+  if (demo) return <DemoEmploymentView />;
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">

@@ -16,11 +16,51 @@ Verifying agents start here, then run the command named on the row.
 
 Status: wired.
 
-Landing page. It links to /sections and does not read or write intake data.
+Landing page. Signed-out visitors can sign in, create an account, or open the fake demo couple. Signed-in visitors can start their own application. It does not read or write intake data.
 
 Reach it from the site root.
 
 Verify: Open /. There is no unit test for this screen. bun run check does not boot Next.js.
+
+### `/demo`
+
+Status: wired.
+
+Explains that Alex Demo and Jamie Demo are a fake couple, then sets the aos_demo cookie and opens the petitioner screen. Demo screens do not write Convex.
+
+Reach it from the home page link Explore the demo couple.
+
+Verify: bun run check runs apps/web/src/app/lib/__tests__/sensitiveAndDemo.test.ts, which asserts the fixture has no SSN or A-Number.
+
+### `/sign-in/[[...sign-in]]`
+
+Status: wired.
+
+Clerk sign-in. Real intake requires this session. The demo cookie is cleared once a session exists.
+
+Reach it from the home page Sign in button, or a redirect from a protected intake route.
+
+Verify: Open /sign-in. bun run check does not boot Clerk. Ownership tests in apps/web/convex/ownership.test.ts cover what a session can read.
+
+### `/sign-up/[[...sign-up]]`
+
+Status: wired.
+
+Clerk sign-up. Accounts are email-based. SSN and A-Number are not used as the username.
+
+Reach it from the home page Create account button.
+
+Verify: Open /sign-up. bun run check does not boot Clerk.
+
+### `/account`
+
+Status: wired.
+
+Signed-in deletion. It deletes the caller's application, petitioner basics (including encrypted ids), addresses, and employment, then deletes the Clerk user.
+
+Reach it from the home page Account link while signed in.
+
+Verify: bun run check runs the delete case in apps/web/convex/sensitive.test.ts. The page itself is not opened by that test.
 
 ### `/sections`
 
@@ -188,11 +228,11 @@ Verify: bun run check runs test_debug_field_requires_a_name. Inspect a live fiel
 
 Status: wired.
 
-Fills Forms/{slug}.pdf from {fields, checkboxes} and streams the PDF back. Checkbox on-values are sniffed from /AP. /V and /AS are both set, and /NeedAppearances is set on the AcroForm.
+Fills Forms/{slug}.pdf from {fields, checkboxes} and streams the PDF back. The caller must send X-Fill-Secret. Checkbox on-values are sniffed from /AP. /V and /AS are both set, and /NeedAppearances is set on the AcroForm.
 
-Reach it from the Verify & Preview button, or POST /fill/i-130.
+Reach it from the signed-in Verify & Preview button, which calls the Convex fill action, or POST /fill/i-130 with the shared secret.
 
-Verify: bun run check runs uv run python scripts/eval_fill.py fixtures/ from apps/api. That command exits 1 when a fixture field or appearance state does not match.
+Verify: bun run check runs apps/api/tests/test_fill_auth.py and uv run python scripts/eval_fill.py fixtures/ from apps/api. eval_fill.py exits 1 when a fixture field or appearance state does not match.
 
 ## Linked paths with no page
 
@@ -222,7 +262,7 @@ Verify: python3 scripts/feature_map.py --check tracks the href. Opening the URL 
 
 Status: partial.
 
-DashboardLayout builds an I-130 payload from Convex basics, addresses, and employment, prefers the sessionStorage basics draft, POSTs /fill/i-130, and shows the PDF in an iframe. Employment is passed in and then ignored. The header progress label is a hardcoded 64%.
+DashboardLayout builds an I-130 payload from Convex basics, addresses, and employment, prefers the sessionStorage basics draft, and shows the PDF in an iframe. A signed-in preview goes through a Convex action that decrypts SSN and A-Number server-side. Demo mode uses the fake couple and the Next proxy, which strips those identifiers. Employment is passed in and then ignored. The header progress label is a hardcoded 64%.
 
 Reach it from the Verify & Preview button in the app header, on any /sections or /forms page.
 

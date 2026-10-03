@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from io import BytesIO
 from pathlib import Path
@@ -173,8 +174,11 @@ def _fill_http(slug: str, fields: Dict[str, str], checkboxes: Dict[str, bool],
     import urllib.request
     url = f"{base_url}/fill/{slug}"
     payload = json.dumps({"fields": fields, "checkboxes": checkboxes}).encode()
-    req = urllib.request.Request(url, data=payload,
-                                headers={"Content-Type": "application/json"})
+    headers = {"Content-Type": "application/json"}
+    secret = os.environ.get("PDF_FILL_SECRET", "")
+    if secret:
+        headers["X-Fill-Secret"] = secret
+    req = urllib.request.Request(url, data=payload, headers=headers)
     try:
         with urllib.request.urlopen(req) as resp:
             return resp.read()
