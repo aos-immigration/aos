@@ -16,11 +16,31 @@ Verifying agents start here, then run the command named on the row.
 
 Status: wired.
 
-Landing page. It links to /sections and does not read or write intake data.
+Landing page. It links to /sections, states a $0 service fee, and does not read or write intake data.
 
 Reach it from the site root.
 
-Verify: Open /. There is no unit test for this screen. bun run check does not boot Next.js.
+Verify: Open /. There is no unit test for this screen. bun run check does not boot Next.js. Disclaimer phrases are covered by apps/web/src/components/system/system.test.tsx.
+
+### `/terms`
+
+Status: wired.
+
+Short terms notice. It repeats that AOS is not a law firm and is not a substitute for the advice of an attorney, and it says a lawyer has not published a contract yet.
+
+Reach it from the Terms link in the site footer.
+
+Verify: Open /terms. The disclaimer phrases are asserted in apps/web/src/components/system/system.test.tsx.
+
+### `/privacy`
+
+Status: wired.
+
+Privacy notes that are true today. Lines that depend on auth, encryption, or analytics changes stay out of the page.
+
+Reach it from the Privacy link in the site footer.
+
+Verify: bun run check runs apps/web/src/components/system/system.test.tsx, which asserts encryption and sign-in claims are hidden.
 
 ### `/sections`
 
@@ -28,7 +48,7 @@ Status: mocked.
 
 Application overview made of static cards. Nothing on the page is loaded from Convex.
 
-Reach it from the home page link Start Your Application, or the URL.
+Reach it from the home page link Start filling out my forms, or the URL.
 
 Verify: Open /sections and confirm the cards do not change after saving petitioner data. No automated test covers this page.
 
@@ -146,11 +166,11 @@ Verify: Open the URL. No unit test covers the screen.
 
 Status: mocked.
 
-Static I-485 biographic mock. The progress label on the page is the hardcoded string 64%.
+Static I-485 biographic mock. It does not save, and it no longer shows a hardcoded completion percent.
 
 Reach it from the URL /forms/i-485/biographic only.
 
-Verify: Open the URL. No unit test covers the screen. The hardcoded progress is logged in docs/agent-patterns.md and is left for the UI honesty work.
+Verify: Open the URL. No unit test covers the screen.
 
 ## API
 
@@ -196,25 +216,7 @@ Verify: bun run check runs uv run python scripts/eval_fill.py fixtures/ from app
 
 ## Linked paths with no page
 
-### `/sections/documents`
-
-Status: missing.
-
-Sidebar item Document Vault. There is no page.tsx for this path.
-
-Reach it from Sidebar, Documents & Evidence, Document Vault.
-
-Verify: python3 scripts/feature_map.py --check fails if the href disappears or a page is added without a status update. Opening the URL 404s.
-
-### `/sections/proof`
-
-Status: missing.
-
-Sidebar item Bona Fide Proof. There is no page.tsx for this path.
-
-Reach it from Sidebar, Documents & Evidence, Bona Fide Proof.
-
-Verify: python3 scripts/feature_map.py --check tracks the href. Opening the URL 404s.
+None.
 
 ## Flows that are not routes
 
@@ -222,9 +224,9 @@ Verify: python3 scripts/feature_map.py --check tracks the href. Opening the URL 
 
 Status: partial.
 
-DashboardLayout builds an I-130 payload from Convex basics, addresses, and employment, prefers the sessionStorage basics draft, POSTs /fill/i-130, and shows the PDF in an iframe. Employment is passed in and then ignored. The header progress label is a hardcoded 64%.
+DashboardLayout builds an I-130 payload from Convex basics, addresses, and employment, prefers the sessionStorage basics draft, POSTs /fill/i-130, and shows the PDF in an iframe. Employment is passed in and then ignored. The header no longer shows a hardcoded percent.
 
-Reach it from the Verify & Preview button in the app header, on any /sections or /forms page.
+Reach it from the Preview my forms button in the app header, on any /sections or /forms page.
 
 Verify: apps/web/e2e/review-package.spec.ts drives the button with a mocked /fill/i-130 response. It needs Convex and Playwright, so it is not part of bun run check. Fill accuracy without the browser is eval_fill.py.
 
