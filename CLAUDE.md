@@ -49,8 +49,9 @@ against the baseline rather than assuming you caused them.
 ## PDF field gotchas
 
 Checkbox on-values differ per field and are always sniffed from the `/AP`
-dictionary; there is no name-based rule. (On the I-130, `_Yes[0]` fields happen
-to use `/Y` and `_No[0]` fields `/N`.) Set both
+dictionary; there is no name-based rule. On the I-130, every `_Yes[0]` field
+uses `/Y` and most `_No[0]` fields use `/N`, but `Pt4Line20_No[0]` and
+`Pt4Line28_No[0]` use `/Y`. Set both
 `/V` and `/AS`, sync radio-group parents and siblings, and set
 `/NeedAppearances`. To inspect a field:
 

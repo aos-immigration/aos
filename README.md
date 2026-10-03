@@ -28,13 +28,14 @@ runs `convex dev`, which prints the URL and needs you to be logged into Convex.
 **Without `NEXT_PUBLIC_CONVEX_URL` the production build fails.** `providers.tsx`
 drops `ConvexProvider` when the variable is missing, and the shared
 `DashboardLayout` calls `useMutation` (via `useApplicationId()`), so prerendering
-the first `/sections` or `/forms` page (currently `/forms/i-130/beneficiary`)
-dies. Any non-empty URL is enough to get a build through.
+`/sections/*` and `/forms/*` dies. The build stops on the first of those pages
+it renders; that is currently `/forms/i-130/petitioner`. Any non-empty URL is
+enough to get a build through.
 
 Datadog is wired into both apps. The web app initializes RUM and browser logs
-in `src/instrumentation-client.ts` with a hardcoded client token, so it sends
-data whenever the app runs. The API ships a log line per request from an HTTP
-middleware, but only when `DD_API_KEY` is set (`DD_SITE`, `DD_SERVICE` and
+in `apps/web/src/instrumentation-client.ts` with a hardcoded client token, so it
+sends data whenever the app runs. The API ships a log line per request from an
+HTTP middleware, but only when `DD_API_KEY` is set (`DD_SITE`, `DD_SERVICE` and
 `DD_ENV` are optional overrides).
 
 ### Checks
@@ -124,9 +125,10 @@ overlapping date ranges — that check is hand-written, not Zod.
 employment out of Convex, prefers the `sessionStorage` draft so unsaved typing
 still shows up, runs `buildPdfPayload()` to turn all of it into USCIS field
 names, POSTs to `/fill/i-130`, and drops the returned blob into an iframe.
-In development the header also shows an "Export Fixture" button that downloads
-the current payload in the `apps/api/fixtures/` format, with `expected_values`
-copied from the text fields.
+In development the header also shows an "Export Fixture" button. It builds the
+payload from the saved Convex records (not the unsaved `sessionStorage` draft),
+downloads the wrapped fixture shape `eval_fill.py` accepts (`payload` plus
+`expected_values`), and copies `expected_values` from the text fields only.
 
 ### Convex schema (`apps/web/convex/schema.ts`)
 
@@ -161,9 +163,10 @@ where names are full dotted AcroForm paths like
 
 Checkbox "on" values vary per form and per field (`/Y`, `/N`, `/1`, `/Yes`, …).
 There is no name-based rule; the `/AP` appearance dictionary is the only source
-of truth. On the I-130, `_Yes[0]` fields happen to use `/Y` and `_No[0]` fields
-`/N`, but that comes out of `/AP`, not the field name. The rules in
-`_apply_leaf_value` and `_checkbox_on_value()`:
+of truth. On the I-130, every `_Yes[0]` field uses `/Y` and most `_No[0]`
+fields use `/N`, but `Pt4Line20_No[0]` and `Pt4Line28_No[0]` use `/Y`. That
+comes out of `/AP`, not the field name. The rules in `_apply_leaf_value` and
+`_checkbox_on_value()`:
 
 - The on-value is sniffed from the widget's `/AP` (or its parent's `/AP` if the
   widget has none): look at `/D` then `/N`, take the first key that isn't
@@ -220,10 +223,12 @@ catalogs for the other four forms.
 
 ## Known rough edges
 
-- `npm run lint` fails: 12 errors, 20 warnings. Ten are unescaped apostrophes
-  and quotes in JSX (`react/no-unescaped-entities`); two are
-  `set-state-in-effect`, one in `ThemeToggle.tsx` and one in `AddressHistory.tsx`.
-- No CI. Nothing checks builds, types or tests on a pull request.
+- `npm run lint`: 0 errors and 19 warnings after the JSX-entity and
+  `set-state-in-effect` fixes (`ThemeToggle.tsx`, `AddressHistory.tsx`);
+  12 errors and 20 warnings without those fixes.
+- GitHub Actions (`.github/workflows/ci.yml`) runs `npm run test:unit`,
+  `tsc --noEmit`, and an API `compileall` check on pull requests. `npm run lint`
+  is not part of that workflow.
 - Employment data is passed into `buildPdfPayload()` and then ignored, so it
   never reaches the PDF.
 - Every address is saved with `addressType: "physical"`, so the mailing-address
