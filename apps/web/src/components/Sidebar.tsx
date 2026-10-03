@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { ChevronRight, User, Users, Home, Briefcase, Heart, FileText } from "lucide-react";
+import { ChevronRight, User, Users, Home, Briefcase, Heart, FileText, Stamp, ShieldQuestion, Wallet } from "lucide-react";
 import { Disclaimer } from "@/components/system/Disclaimer";
 import { cn } from "@/lib/utils";
 
@@ -87,12 +87,36 @@ const sidebarData: SidebarSection[] = [
       },
     ],
   },
+  {
+    id: "case",
+    title: "Case",
+    items: [
+      {
+        id: "immigration",
+        label: "Immigration history",
+        href: "/sections/immigration",
+        icon: <Stamp className="w-[18px] h-[18px]" />,
+      },
+      {
+        id: "eligibility",
+        label: "Eligibility questions",
+        href: "/sections/eligibility",
+        icon: <ShieldQuestion className="w-[18px] h-[18px]" />,
+      },
+      {
+        id: "sponsor",
+        label: "Sponsor",
+        href: "/sections/sponsor",
+        icon: <Wallet className="w-[18px] h-[18px]" />,
+      },
+    ],
+  },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
-    new Set(["petitioner", "beneficiary"]) // Default to both expanded
+    new Set(["petitioner", "beneficiary", "case"])
   );
 
   const toggleSection = (sectionId: string) => {

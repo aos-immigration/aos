@@ -3,7 +3,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ChoiceCard } from "./ChoiceCard";
-import { DISCLAIMER, PRIVACY_LINES, visibleCopy } from "./copy";
+import { DISCLAIMER, PRIVACY_LINES, REQUIRED_DISCLAIMER_PHRASES, SHORT_DISCLAIMER, visibleCopy } from "./copy";
 import { LifecycleRail } from "./LifecycleRail";
 import { QuestionFrame } from "./QuestionFrame";
 import { stageVisual } from "./stages";
@@ -11,10 +11,10 @@ import { WhyWeAsk } from "./WhyWeAsk";
 
 describe("disclaimer copy", () => {
   it("keeps the three required phrases intact", () => {
-    const text = DISCLAIMER.toLowerCase();
-    expect(text).toContain("not a substitute for the advice of an attorney");
-    expect(text).toContain("not a law firm");
-    expect(text).toContain("not affiliated with uscis");
+    for (const phrase of REQUIRED_DISCLAIMER_PHRASES) {
+      expect(DISCLAIMER.toLowerCase()).toContain(phrase.toLowerCase());
+      expect(SHORT_DISCLAIMER.toLowerCase()).toContain(phrase.toLowerCase());
+    }
   });
 
   it("hides privacy lines that still need a security fix", () => {
@@ -41,6 +41,7 @@ describe("LifecycleRail", () => {
     expect(screen.getByText("You submit to USCIS")).toBeTruthy();
     const file = document.querySelector('[data-stage="file"]');
     expect(file?.getAttribute("data-state")).toBe("upcoming");
+    expect(document.querySelector("ol")?.className).toContain("flex-col");
     const start = document.querySelector('[data-stage="start"]');
     expect(start?.getAttribute("data-state")).toBe("upcoming");
   });

@@ -8,6 +8,7 @@ type QuestionFrameProps = {
   note?: string;
   nextLabel?: string;
   onNext?: () => void;
+  onBack?: () => void;
   children: React.ReactNode;
 };
 
@@ -19,6 +20,7 @@ export function QuestionFrame({
   note,
   nextLabel = "Next",
   onNext,
+  onBack,
   children,
 }: QuestionFrameProps) {
   const position = Math.min(Math.max(index, 1), total);
@@ -40,6 +42,15 @@ export function QuestionFrame({
         {why ? <WhyWeAsk>{why}</WhyWeAsk> : null}
       </div>
       <div className="flex flex-wrap items-center gap-4">
+        {onBack ? (
+          <button
+            type="button"
+            className="text-sm underline decoration-foreground/30 underline-offset-4"
+            onClick={onBack}
+          >
+            Back
+          </button>
+        ) : null}
         <button
           type="button"
           className="inline-flex h-12 items-center rounded-md bg-primary px-6 text-base font-medium text-primary-foreground"

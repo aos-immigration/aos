@@ -1,6 +1,9 @@
 export const DISCLAIMER =
   "AOS is self-help software, not a law firm, and is not a substitute for the advice of an attorney. Not affiliated with USCIS or any government agency.";
 
+export const SHORT_DISCLAIMER =
+  "Not a law firm. Not a substitute for the advice of an attorney. Not affiliated with USCIS.";
+
 export const REQUIRED_DISCLAIMER_PHRASES = [
   "not a substitute for the advice of an attorney",
   "not a law firm",

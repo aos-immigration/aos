@@ -14,6 +14,7 @@ import { useApplicationId } from "@/app/lib/useApplicationId";
 import { buildPdfPayload } from "@/app/lib/buildPdfPayload";
 import type { AddressRow, EmploymentRow } from "@/app/lib/buildPdfPayload";
 import { readPetitionerBasicsDraft } from "@/app/lib/reviewDraft";
+import { useIntake } from "@/components/intake/IntakeProvider";
 import {
   Dialog,
   DialogContent,
@@ -27,6 +28,73 @@ type DashboardLayoutProps = {
 };
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
+  return (
+    <div className="flex h-screen overflow-hidden">
+      <Sidebar />
+      <main className="flex-1 flex flex-col overflow-hidden relative">
+        <header className="z-10 border-b border-border bg-background">
+          <div className="flex min-h-14 flex-wrap items-center justify-between gap-3 px-4 py-2 sm:px-6">
+            <Breadcrumbs />
+            <div className="flex items-center gap-3">
+              <SaveStatus />
+              <LoadDemoButton />
+              <ThemeToggle />
+              <PreviewControls />
+            </div>
+          </div>
+          <div className="border-t border-border px-6 py-4">
+            <LifecycleRail current="collect" />
+          </div>
+        </header>
+        <div className="flex-1 overflow-y-auto custom-scrollbar bg-background">
+          <div className="p-6 md:p-8">{children}</div>
+          <SiteFooter />
+        </div>
+      </main>
+    </div>
+  );
+}
+
+function SaveStatus() {
+  const { status, error } = useIntake();
+  if (status === "idle") return null;
+  return (
+    <span className="max-w-48 truncate text-sm" role="status">
+      {status === "saving" ? "Saving" : status === "saved" ? "Saved" : error}
+    </span>
+  );
+}
+
+function LoadDemoButton() {
+  const { loadDemo } = useIntake();
+  return (
+    <button
+      type="button"
+      onClick={loadDemo}
+      className="text-sm underline decoration-foreground/30 underline-offset-4"
+    >
+      Load demo
+    </button>
+  );
+}
+
+function PreviewControls() {
+  if (!process.env.NEXT_PUBLIC_CONVEX_URL) {
+    return (
+      <button
+        type="button"
+        disabled
+        className="flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground opacity-50"
+      >
+        <Eye className="w-4 h-4" />
+        Preview my forms
+      </button>
+    );
+  }
+  return <ConvexPreviewControls />;
+}
+
+function ConvexPreviewControls() {
   const applicationId = useApplicationId();
 
   const basics = useQuery(
@@ -128,51 +196,30 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   }, [basics, addresses, employment]);
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <Sidebar />
-      <main className="flex-1 flex flex-col overflow-hidden relative">
-        <header className="z-10 border-b border-border bg-background">
-          <div className="flex h-14 items-center justify-between px-6">
-            <Breadcrumbs />
-            <div className="flex items-center gap-3">
-              <ThemeToggle />
-              {process.env.NODE_ENV === "development" && (
-                <button
-                  onClick={handleExportFixture}
-                  disabled={!basics}
-                  className="text-muted-foreground hover:text-foreground text-xs font-medium px-3 py-2 rounded border border-border transition-all flex items-center gap-2 disabled:opacity-50"
-                >
-                  <Download className="w-3 h-3" />
-                  Export Fixture
-                </button>
-              )}
-              <button
-                onClick={handleReviewPackage}
-                disabled={isGenerating || !applicationId}
-                className="flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
-              >
-                {isGenerating ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Eye className="w-4 h-4" />
-                )}
-                {isGenerating ? "Preparing preview" : "Preview my forms"}
-              </button>
-            </div>
-          </div>
-          <div className="border-t border-border px-6 py-4">
-            <LifecycleRail current="collect" />
-          </div>
-        </header>
-        <div className="flex-1 overflow-y-auto custom-scrollbar bg-background">
-          <div className="p-6 md:p-8">
-            {error ? <ErrorState message={error} /> : null}
-            {children}
-          </div>
-          <SiteFooter />
-        </div>
-      </main>
-
+    <>
+      {process.env.NODE_ENV === "development" && (
+        <button
+          onClick={handleExportFixture}
+          disabled={!basics}
+          className="text-muted-foreground hover:text-foreground text-xs font-medium px-3 py-2 rounded border border-border transition-all flex items-center gap-2 disabled:opacity-50"
+        >
+          <Download className="w-3 h-3" />
+          Export Fixture
+        </button>
+      )}
+      <button
+        onClick={handleReviewPackage}
+        disabled={isGenerating || !applicationId}
+        className="flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+      >
+        {isGenerating ? (
+          <Loader2 className="w-4 h-4 animate-spin" />
+        ) : (
+          <Eye className="w-4 h-4" />
+        )}
+        {isGenerating ? "Preparing preview" : "Preview my forms"}
+      </button>
+      {error ? <ErrorState message={error} /> : null}
       <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
         <DialogContent className="flex h-[85vh] w-[90vw] max-w-6xl flex-col gap-4 p-6">
           <DialogHeader>
@@ -196,6 +243,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }
