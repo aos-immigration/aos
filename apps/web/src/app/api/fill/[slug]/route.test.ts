@@ -89,7 +89,7 @@ describe("POST /api/fill/[slug]", () => {
     expect(fetchMock).not.toHaveBeenCalled();
     expect(fetchActionMock).toHaveBeenCalledWith(
       expect.anything(),
-      {},
+      { slug: "i-130" },
       { token: "convex-token" },
     );
   });
@@ -114,15 +114,17 @@ describe("POST /api/fill/[slug]", () => {
     expect(response.status).toBe(200);
     const forwardedBody = fetchMock.mock.calls[0]?.[1]?.body;
     const forwarded = JSON.parse(String(forwardedBody)) as {
-      fields: Record<string, string>;
+      intake: { petitioner: { familyName: string; givenName: string } };
+      acknowledged: boolean;
     };
-    expect(forwarded.fields["form1[0].#subform[0].Pt2Line4a_FamilyName[0]"]).toBe("Demo");
-    expect(forwarded.fields["form1[0].#subform[0].Pt2Line4b_GivenName[0]"]).toBe("Alex");
+    expect(forwarded.acknowledged).toBe(true);
+    expect(forwarded.intake.petitioner.familyName).toBe("Sampleton");
+    expect(forwarded.intake.petitioner.givenName).toBe("Jordan");
     expect(JSON.stringify(forwarded)).not.toContain("Lovelace");
     expect(JSON.stringify(forwarded)).not.toContain("123-45-6789");
     expect(JSON.stringify(forwarded)).not.toContain("A123456789");
     expect(fetchMock).toHaveBeenCalledWith(
-      "http://localhost:8000/fill/i-130",
+      "http://localhost:8000/fill-intake/i-130",
       expect.objectContaining({
         method: "POST",
         headers: expect.objectContaining({
@@ -133,14 +135,18 @@ describe("POST /api/fill/[slug]", () => {
     );
   });
 
-  it("rejects a demo fill for any slug other than i-130", async () => {
+  it("returns the service 404 for an unmapped slug and still ignores the body", async () => {
     authMock.mockResolvedValue({ userId: null } as never);
     demoCookie();
     vi.stubEnv("PDF_FILL_SECRET", "test-secret");
-    const fetchMock = vi.fn();
+    const fetchMock = vi.fn().mockResolvedValue(new Response("{}", { status: 404 }));
     vi.stubGlobal("fetch", fetchMock);
-    const response = await callFill("i-485");
+    const response = await callFill("g-1145", '{"intake":{"petitioner":{"ssn":"123-45-6789"}}}');
     expect(response.status).toBe(404);
-    expect(fetchMock).not.toHaveBeenCalled();
+    const forwarded = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body)) as {
+      intake: { petitioner: { familyName: string; ssn: string } };
+    };
+    expect(forwarded.intake.petitioner.familyName).toBe("Sampleton");
+    expect(forwarded.intake.petitioner.ssn).not.toBe("123-45-6789");
   });
 });

@@ -35,12 +35,18 @@ the API process. `API_URL` overrides where the Next.js server reaches the API
 (default `http://localhost:8000`).
 
 `bun run dev` starts the API and Next.js with no Clerk app and no Convex
-account. `/` and `/demo` work, and Preview my forms fills a sample I-130.
-Sign-in routes say auth is not configured instead of crashing. Local dev
-uses the fill secret `dev-only-fill-secret` when `PDF_FILL_SECRET` is unset.
-Set `PDF_SERVICE_ENV=production` on the API, and set `PDF_FILL_SECRET` on both
+account. `/`, `/demo`, Load demo, preview, and the packet download work for
+Jordan Sampleton and Avery Exampleton. Sign-in routes say auth is not
+configured instead of crashing. Local dev uses the fill secret
+`dev-only-fill-secret` when `PDF_FILL_SECRET` is unset. Set
+`PDF_SERVICE_ENV=production` on the API, and set `PDF_FILL_SECRET` on both
 processes, before a real deployment. `bun run check` includes `next build`
 with those secrets unset.
+
+The click-through for the fictional Sampleton demo is `docs/demo-script.md`.
+Without `NEXT_PUBLIC_CONVEX_URL`, answers stay in that browser tab. The
+production build still succeeds with the variable unset, because the intake
+provider stays in memory until both Clerk and Convex are configured.
 
 Datadog is wired into both apps. The web app initializes RUM and browser logs
 in `apps/web/src/instrumentation-client.ts` with a hardcoded client token, so it
@@ -143,16 +149,13 @@ family name, citizenship status and relationship are all filled in.
 `validateAllAddresses()` over the whole list after loading from Convex to catch
 overlapping date ranges — that check is hand-written, not Zod.
 
-**PDF preview** lives in `DashboardLayout.tsx`. Signed-in preview calls the
-`fillI130` Convex action. The action loads that user's saved basics, addresses,
-and employment, decrypts the identity numbers, and posts the i-130 payload to
-FastAPI. Unsaved `sessionStorage` typing is not part of the preview. Demo
-preview posts to `/api/fill/i-130` with an empty body; the server builds the
-Alex Demo payload. In development the header also shows an "Export Fixture"
-button. It builds the payload from the saved Convex records (not the unsaved
-`sessionStorage` draft), downloads the wrapped fixture shape `eval_fill.py`
-accepts (`payload` plus `expected_values`), and copies `expected_values` from
-the text fields only.
+**PDF preview** lives in `DashboardLayout.tsx`. The header Preview button posts
+to `/api/preview-intake` with no field map and shows JPEG page images. Demo
+mode builds the Jordan Sampleton intake on the server. A signed-in preview
+loads that caller's saved intake inside Convex, decrypts SSN and A-Number
+there, and posts them to FastAPI with `X-Fill-Secret`. Download my forms
+(PDF) stays disabled until every acknowledgement box is checked, then posts
+to `/api/packet`.
 
 ### Convex schema (`apps/web/convex/schema.ts`)
 
@@ -239,9 +242,9 @@ catalogs for the other four forms.
 Sign-in is [Clerk](https://clerk.com), wired to Convex with the official
 integration (`ClerkProvider`, `ConvexProviderWithClerk`, `convex/auth.config.ts`).
 `/sections` and `/forms` require a session, unless the visitor is in the demo.
-`/demo` sets a cookie and shows Alex Demo and Jamie Demo, a fake couple with
-no SSN and no A-Number. That mode does not write Convex. Signing in clears
-the cookie. `/sign-in` and `/sign-up` are the Clerk components. Each Clerk
+`/demo` sets a cookie and opens the intake for Jordan Sampleton and Avery Exampleton.
+Their ID numbers are the fictional placeholders in `demoIntake()`. That mode
+does not write Convex. Signing in clears the cookie. `/sign-in` and `/sign-up` are the Clerk components. Each Clerk
 user gets one application; `ownerId` on that row is the Clerk subject
 (`identity.subject`). Reads, writes, and deletes on a record the caller does
 not own fail the same way a missing record does. `/account` POSTs to
@@ -255,19 +258,20 @@ to `/api/webhooks/clerk`. The route checks the Svix signature
 Social Security numbers and A-Numbers are encrypted in Convex with AES-256-GCM.
 The key is `SENSITIVE_ID_KEY` (32 bytes, base64) on the Convex deployment, with
 `SENSITIVE_ID_KEY_VERSION`. Queries return the last four digits only. The
-signed-in PDF preview is a Convex action: it decrypts those fields, calls
-FastAPI, and returns the PDF bytes. The browser action result does not include
-the numbers. To rotate, set `SENSITIVE_ID_KEY_PREVIOUS` and
+signed-in preview and packet download are Convex actions: they decrypt those
+fields, call FastAPI, and return page images or the zip. The browser result
+does not include the numbers. To rotate, set `SENSITIVE_ID_KEY_PREVIOUS` and
 `SENSITIVE_ID_KEY_PREVIOUS_VERSION` to the old key, point
 `SENSITIVE_ID_KEY` at the new key, bump the version, and run
 `npx convex run sensitive:reencryptAll`.
 
-The browser does not call the PDF service. A signed-in preview uses the Convex
-action, which loads only that caller's rows. The demo preview uses
-`/api/fill/i-130`. The route checks the demo cookie, discards the client body,
-and posts the server-built fake payload with `PDF_FILL_SECRET` and
-`X-Fill-Caller: demo`. A signed-in call to that route does not forward a field
-map either; it runs the same Convex action. The secret stays on the server.
+The browser does not call the PDF service. Preview posts to
+`/api/preview-intake` and download posts to `/api/packet`, both with no body.
+In demo mode the Next route ignores any client body, builds the Jordan
+Sampleton intake, and posts it to FastAPI with `PDF_FILL_SECRET` and
+`X-Fill-Caller: demo`. A signed-in call runs a Convex action that loads only
+that caller's intake. The same proxy covers `/api/fill` and `/api/fill-intake`.
+The secret stays on the server.
 Verifying a Clerk JWT inside FastAPI would mean a second auth stack (JWKS,
 issuer, authorized parties) for one route. A shared secret plus the session
 check is the smaller one that still rejects anonymous callers on both sides.
@@ -282,8 +286,9 @@ Convex function-execution logs record `usage.function_args_bytes` and
 and the `convex` CLI log printer in this repo's installed SDK. A dev deployment
 still forwards console lines to the calling browser, so Convex functions must
 not print identity numbers or the `args` object. `saveSensitiveIds` encrypts
-before `db.replace`. The intake write blanks SSN, A-Number, I-94, and passport
-numbers for the petitioner and the beneficiary before the JSON is stored.
+before `db.replace`. `saveIntake` encrypts SSN and A-Number for the petitioner
+and the beneficiary, and blanks I-94 and passport numbers, before the JSON is
+stored. Queries return the last four digits of an encrypted field.
 Moving the decryption key out of Convex is a separate decision and is not done
 here.
 

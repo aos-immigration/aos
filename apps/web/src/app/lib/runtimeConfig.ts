@@ -19,16 +19,9 @@ export function fillSecret(): string | undefined {
 
 export type UnconfiguredGate = "allow" | "auth-required" | "fill-unauthorized";
 
-export function unconfiguredGate(pathname: string, demo: boolean): UnconfiguredGate {
-  if (pathname.startsWith("/api/fill")) return demo ? "allow" : "fill-unauthorized";
+export function unconfiguredGate(pathname: string, _demo: boolean): UnconfiguredGate {
   if (pathname === "/account" || pathname.startsWith("/account/")) return "auth-required";
   if (pathname === "/sign-in" || pathname.startsWith("/sign-in/")) return "auth-required";
   if (pathname === "/sign-up" || pathname.startsWith("/sign-up/")) return "auth-required";
-  if (pathname === "/sections" || pathname.startsWith("/sections/")) {
-    return demo ? "allow" : "auth-required";
-  }
-  if (pathname === "/forms" || pathname.startsWith("/forms/")) {
-    return demo ? "allow" : "auth-required";
-  }
   return "allow";
 }

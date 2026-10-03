@@ -1,0 +1,29 @@
+{
+  "description": "Demo spouse and parent copied onto I-130A.",
+  "slug": "i-130a",
+  "payload": {
+    "fields": {
+      "form1[0].#subform[0].Pt1Line3a_FamilyName[0]": "Exampleton",
+      "form1[0].#subform[0].Pt1Line3b_GivenName[0]": "Avery",
+      "form1[0].#subform[0].Pt1Line3c_MiddleName[0]": "R",
+      "form1[0].#subform[0].Pt1Line1_AlienNumber[0]": "000000001",
+      "form1[0].#subform[0].Pt1Line4a_StreetNumberName[0]": "100 Fictional Lane",
+      "form1[0].#subform[0].Pt1Line4c_CityOrTown[0]": "Sample City",
+      "form1[0].#subform[1].Pt1Line10_FamilyName[0]": "Exampleton",
+      "form1[0].#subform[1].Pt1Line10_GivenName[0]": "Mina",
+      "form1[0].#subform[1].Pt1Line13_CountryofBirth[0]": "Fictionland"
+    },
+    "checkboxes": {}
+  },
+  "expected_values": {
+    "form1[0].#subform[0].Pt1Line3a_FamilyName[0]": "Exampleton",
+    "form1[0].#subform[0].Pt1Line3b_GivenName[0]": "Avery",
+    "form1[0].#subform[0].Pt1Line3c_MiddleName[0]": "R",
+    "form1[0].#subform[0].Pt1Line1_AlienNumber[0]": "000000001",
+    "form1[0].#subform[0].Pt1Line4a_StreetNumberName[0]": "100 Fictional Lane",
+    "form1[0].#subform[0].Pt1Line4c_CityOrTown[0]": "Sample City",
+    "form1[0].#subform[1].Pt1Line10_FamilyName[0]": "Exampleton",
+    "form1[0].#subform[1].Pt1Line10_GivenName[0]": "Mina",
+    "form1[0].#subform[1].Pt1Line13_CountryofBirth[0]": "Fictionland"
+  }
+}

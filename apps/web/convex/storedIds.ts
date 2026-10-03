@@ -15,7 +15,12 @@ export type StoredIdFieldName = (typeof STORED_ID_FIELD_NAMES)[number];
 
 const ID_FIELDS = new Set<string>(STORED_ID_FIELD_NAMES);
 
-function isEncryptedField(value: unknown): boolean {
+export function isEncryptedField(value: unknown): value is {
+  ciphertext: string;
+  iv: string;
+  keyVersion: number;
+  last4: string;
+} {
   if (!value || typeof value !== "object") return false;
   const record = value as Record<string, unknown>;
   return (

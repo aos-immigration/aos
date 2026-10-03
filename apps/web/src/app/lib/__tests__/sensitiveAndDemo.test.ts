@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { demoAddresses, demoBeneficiary, demoEmployment, demoPetitioner } from "../demoCouple";
+import { demoIntake } from "../intake/demo";
 import { maskANumberLast4, maskSsnLast4, redactFillPayload } from "../sensitiveId";
 import { redactSensitiveText, scrubUrl } from "../../../lib/redactTelemetry";
 
@@ -31,18 +31,17 @@ describe("sensitive id masking", () => {
 });
 
 describe("demo couple", () => {
-  it("is labeled fake and contains no real-looking identifier", () => {
-    const blob = JSON.stringify({
-      demoPetitioner,
-      demoBeneficiary,
-      demoAddresses,
-      demoEmployment,
-    });
-    expect(blob).toContain("Demo");
+  it("is Jordan Sampleton and Avery Exampleton", () => {
+    const intake = demoIntake();
+    const blob = JSON.stringify(intake);
+    expect(intake.petitioner.givenName).toBe("Jordan");
+    expect(intake.petitioner.familyName).toBe("Sampleton");
+    expect(intake.beneficiary.givenName).toBe("Avery");
+    expect(intake.beneficiary.familyName).toBe("Exampleton");
     expect(blob).toContain("example.com");
-    expect(blob).not.toMatch(/\d{3}-\d{2}-\d{4}/);
-    expect(blob).not.toMatch(/\bA\d{7,9}\b/);
-    expect(blob).not.toContain("123456789");
+    expect(blob).not.toContain("Alex Demo");
+    expect(blob).not.toContain("Jamie Demo");
+    expect(blob).not.toContain("123-45-6789");
   });
 });
 

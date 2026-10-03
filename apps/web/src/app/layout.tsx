@@ -43,10 +43,14 @@ export default function RootLayout({
         <RuntimeConfigProvider clerk={isClerkConfigured()} convex={Boolean(convexUrl())}>
           {isClerkConfigured() ? (
             <ClerkProvider appearance={{ theme: dark }}>
-              <Providers convexUrl={convexUrl()}>{children}</Providers>
+              <Providers convexUrl={convexUrl()} persist={Boolean(convexUrl())}>
+                {children}
+              </Providers>
             </ClerkProvider>
           ) : (
-            children
+            <Providers convexUrl="" persist={false}>
+              {children}
+            </Providers>
           )}
         </RuntimeConfigProvider>
       </body>

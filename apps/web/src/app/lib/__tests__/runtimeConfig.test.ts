@@ -6,12 +6,14 @@ describe("unconfigured gate", () => {
     expect(unconfiguredGate("/", false)).toBe("allow");
     expect(unconfiguredGate("/demo", false)).toBe("allow");
     expect(unconfiguredGate("/sections/petitioner", true)).toBe("allow");
-    expect(unconfiguredGate("/sections", false)).toBe("auth-required");
-    expect(unconfiguredGate("/forms/i-130/petitioner", false)).toBe("auth-required");
+    expect(unconfiguredGate("/sections", false)).toBe("allow");
+    expect(unconfiguredGate("/start", false)).toBe("allow");
+    expect(unconfiguredGate("/forms/i-130/petitioner", false)).toBe("allow");
     expect(unconfiguredGate("/account", false)).toBe("auth-required");
     expect(unconfiguredGate("/sign-in", false)).toBe("auth-required");
-    expect(unconfiguredGate("/api/fill/i-130", false)).toBe("fill-unauthorized");
-    expect(unconfiguredGate("/api/fill/i-130", true)).toBe("allow");
+    expect(unconfiguredGate("/api/preview-intake", false)).toBe("allow");
+    expect(unconfiguredGate("/api/packet", false)).toBe("allow");
+    expect(unconfiguredGate("/api/fill/i-130", false)).toBe("allow");
   });
 });
 

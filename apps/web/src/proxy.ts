@@ -3,9 +3,14 @@ import { NextResponse, type NextFetchEvent, type NextRequest } from "next/server
 import { DEMO_COOKIE } from "@/app/lib/demoCouple";
 import { isClerkConfigured, unconfiguredGate } from "@/app/lib/runtimeConfig";
 
-const isIntakeRoute = createRouteMatcher(["/sections(.*)", "/forms(.*)"]);
+const isIntakeRoute = createRouteMatcher(["/sections(.*)", "/forms(.*)", "/start(.*)"]);
 const isAccountRoute = createRouteMatcher(["/account(.*)", "/api/account(.*)"]);
-const isFillRoute = createRouteMatcher(["/api/fill(.*)"]);
+const isFillRoute = createRouteMatcher([
+  "/api/fill(.*)",
+  "/api/fill-intake(.*)",
+  "/api/preview-intake",
+  "/api/packet",
+]);
 
 function demoOn(request: NextRequest) {
   return request.cookies.get(DEMO_COOKIE)?.value === "1";

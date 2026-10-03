@@ -1,28 +1,28 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
-import { useAction, useQuery } from "convex/react";
-import { api } from "../../convex/_generated/api";
+import { useState, useCallback } from "react";
+import { usePathname } from "next/navigation";
 import { Sidebar } from "./Sidebar";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { ThemeToggle } from "./ThemeToggle";
-import { UserButton } from "@clerk/nextjs";
-import { Eye, Download, Loader2 } from "lucide-react";
+import { Eye, Loader2 } from "lucide-react";
 import { LifecycleRail } from "@/components/system/LifecycleRail";
+import type { StageId } from "@/components/system/stages";
 import { ErrorState } from "@/components/system/States";
 import { SiteFooter } from "@/components/system/SiteFooter";
-import { useApplicationId } from "@/app/lib/useApplicationId";
-import { useDemoMode } from "@/app/lib/intakeMode";
-import { useRuntimeConfig } from "@/app/lib/runtimeConfigContext";
-import { DEMO_BANNER } from "@/app/lib/demoCouple";
-import { buildPdfPayload } from "@/app/lib/buildPdfPayload";
-import type { AddressRow, EmploymentRow } from "@/app/lib/buildPdfPayload";
 import {
   PERSISTABLE_SECTION_HREFS,
   savedSectionCount,
   type IntakeSnapshot,
 } from "@/app/lib/sectionSaveState";
 import { SavedSectionsLabel } from "@/components/SavedSectionsLabel";
+import { UserButton } from "@clerk/nextjs";
+import { LoadDemoButton } from "@/components/intake/LoadDemoButton";
+import { FormPreview, type PreviewForm } from "@/components/intake/FormPreview";
+import { DOWNLOAD_BOXES } from "@/components/intake/trustCopy";
+import { useIntake } from "@/components/intake/IntakeProvider";
+import { useRuntimeConfig } from "@/app/lib/runtimeConfigContext";
+import type { Intake } from "@/app/lib/intake/schema";
 import {
   Dialog,
   DialogContent,
@@ -35,6 +35,28 @@ type DashboardLayoutProps = {
   children: React.ReactNode;
 };
 
+function stageFor(pathname: string): StageId {
+  if (pathname === "/start" || pathname === "/cost") return "start";
+  if (pathname.startsWith("/sections/review")) return "review";
+  return "collect";
+}
+
+function snapshotFromIntake(intake: Intake): IntakeSnapshot {
+  return {
+    petitionerGivenName: intake.petitioner.givenName,
+    petitionerFamilyName: intake.petitioner.familyName,
+    petitionerAddressCount: intake.addresses.filter(
+      (row) => row.personRole === "petitioner" && row.street.trim() !== "",
+    ).length,
+    petitionerEmploymentCount: intake.employment.filter(
+      (row) => row.personRole === "petitioner" && row.fromYear.trim() !== "",
+    ).length,
+    beneficiaryAddressCount: intake.addresses.filter(
+      (row) => row.personRole === "beneficiary" && row.street.trim() !== "",
+    ).length,
+  };
+}
+
 const EMPTY_SNAPSHOT: IntakeSnapshot = {
   petitionerGivenName: "",
   petitionerFamilyName: "",
@@ -43,47 +65,31 @@ const EMPTY_SNAPSHOT: IntakeSnapshot = {
   beneficiaryAddressCount: 0,
 };
 
-function DashboardFrame({
-  children,
-  demo,
-  showAccount,
-  error,
-  isGenerating,
-  previewDisabled,
-  onPreview,
-  onExport,
-  exportDisabled,
-  pdfUrl,
-  isPreviewOpen,
-  onPreviewOpenChange,
-  snapshot,
-}: {
-  children: React.ReactNode;
-  demo: boolean;
-  showAccount: boolean;
-  error: string | null;
-  isGenerating: boolean;
-  previewDisabled: boolean;
-  onPreview: () => void;
-  onExport: () => void;
-  exportDisabled: boolean;
-  pdfUrl: string | null;
-  isPreviewOpen: boolean;
-  onPreviewOpenChange: (open: boolean) => void;
-  snapshot: IntakeSnapshot | null;
-}) {
+export function DashboardLayout({ children }: DashboardLayoutProps) {
+  const pathname = usePathname();
+  const [navOpen, setNavOpen] = useState(false);
+  const { intake, ready } = useIntake();
+  const snapshot = ready ? snapshotFromIntake(intake) : null;
   return (
     <div className="flex h-screen overflow-hidden">
-      <Sidebar snapshot={snapshot ?? EMPTY_SNAPSHOT} />
-      <main className="relative flex flex-1 flex-col overflow-hidden">
-        {demo ? (
-          <div className="border-b border-amber-500/30 bg-amber-500/15 px-6 py-2 text-sm text-amber-200">
-            {DEMO_BANNER}
-          </div>
-        ) : null}
+      <Sidebar
+        open={navOpen}
+        onNavigate={() => setNavOpen(false)}
+        snapshot={snapshot ?? EMPTY_SNAPSHOT}
+      />
+      <main className="flex-1 flex flex-col overflow-hidden relative">
         <header className="z-10 border-b border-border bg-background">
-          <div className="flex h-14 items-center justify-between px-6">
-            <Breadcrumbs />
+          <div className="flex min-h-14 flex-wrap items-center justify-between gap-3 px-4 py-2 sm:px-6">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                className="text-sm underline decoration-foreground/30 underline-offset-4 md:hidden"
+                onClick={() => setNavOpen((open) => !open)}
+              >
+                {navOpen ? "Close" : "Menu"}
+              </button>
+              <Breadcrumbs />
+            </div>
             <div className="flex items-center gap-3">
               {snapshot ? (
                 <SavedSectionsLabel
@@ -95,235 +101,132 @@ function DashboardFrame({
                   Checking saved sections
                 </div>
               )}
-              {showAccount ? <UserButton /> : null}
+              <SaveStatus />
+              <LoadDemoButton className="text-sm underline decoration-foreground/30 underline-offset-4" />
+              <AccountMenu />
               <ThemeToggle />
-              {process.env.NODE_ENV === "development" && !demo ? (
-                <button
-                  onClick={onExport}
-                  disabled={exportDisabled}
-                  className="flex items-center gap-2 rounded border border-border px-3 py-2 text-xs font-medium text-muted-foreground transition-all hover:text-foreground disabled:opacity-50"
-                >
-                  <Download className="h-3 w-3" />
-                  Export Fixture
-                </button>
-              ) : null}
-              <button
-                onClick={onPreview}
-                disabled={previewDisabled}
-                className="flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
-              >
-                {isGenerating ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Eye className="h-4 w-4" />
-                )}
-                {isGenerating ? "Preparing preview" : "Preview my forms"}
-              </button>
+              <PreviewControls />
             </div>
           </div>
           <div className="border-t border-border px-6 py-4">
-            <LifecycleRail current="collect" />
+            <LifecycleRail current={stageFor(pathname)} />
           </div>
         </header>
-        <div className="custom-scrollbar flex-1 overflow-y-auto bg-background">
-          <div className="p-6 md:p-8">
-            {error ? <ErrorState message={error} /> : null}
-            {children}
-          </div>
+        <div className="flex-1 overflow-y-auto custom-scrollbar bg-background">
+          <div className="p-6 md:p-8">{children}</div>
           <SiteFooter />
         </div>
       </main>
-      <Dialog open={isPreviewOpen} onOpenChange={onPreviewOpenChange}>
-        <DialogContent className="flex h-[85vh] w-[90vw] max-w-6xl flex-col gap-4 p-6">
-          <DialogHeader>
-            <DialogTitle>Preview: Form I-130</DialogTitle>
-            <DialogDescription>
-              {demo
-                ? "Sample I-130 for Alex Demo and Jamie Demo. It is not a filing."
-                : "This is a draft made from your answers. Check every field against the USCIS instructions before you sign."}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex-1 overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800">
-            {pdfUrl ? (
-              <iframe title="I-130 preview" src={pdfUrl} className="h-full w-full" />
-            ) : (
-              <div className="flex h-full items-center justify-center text-sm text-zinc-500">
-                Generate a preview to view the PDF.
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
 
-function usePdfPreview() {
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+function SaveStatus() {
+  const { status, error } = useIntake();
+  if (status === "idle") return null;
+  return (
+    <span className="max-w-48 truncate text-sm" role="status">
+      {status === "saving" ? "Saving" : status === "saved" ? "Saved" : error}
+    </span>
+  );
+}
+
+function AccountMenu() {
+  const { clerk } = useRuntimeConfig();
+  if (!clerk) return null;
+  return <UserButton />;
+}
+
+function PreviewControls() {
+  const { flush } = useIntake();
+  const [loading, setLoading] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [forms, setForms] = useState<PreviewForm[]>([]);
+  const [notes, setNotes] = useState<string[]>([]);
+  const [acks, setAcks] = useState<boolean[]>(() => DOWNLOAD_BOXES.map(() => false));
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    return () => {
-      if (pdfUrl) globalThis.URL.revokeObjectURL(pdfUrl);
-    };
-  }, [pdfUrl]);
-
-  const showPdf = useCallback((blob: Blob) => {
-    const url = globalThis.URL.createObjectURL(blob);
-    setPdfUrl((current) => {
-      if (current) globalThis.URL.revokeObjectURL(current);
-      return url;
-    });
-    setIsPreviewOpen(true);
-  }, []);
-
-  return { isGenerating, setIsGenerating, pdfUrl, isPreviewOpen, setIsPreviewOpen, error, setError, showPdf };
-}
-
-async function demoPdfBlob() {
-  const response = await fetch("/api/fill/i-130", { method: "POST" });
-  if (!response.ok) throw new Error(`Failed to generate PDF (${response.status})`);
-  return response.blob();
-}
-
-function DemoDashboard({ children }: DashboardLayoutProps) {
-  const preview = usePdfPreview();
-  const onPreview = useCallback(async () => {
-    preview.setIsGenerating(true);
-    preview.setError(null);
+  const openPreview = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    setAcks(DOWNLOAD_BOXES.map(() => false));
+    setOpen(true);
     try {
-      preview.showPdf(await demoPdfBlob());
+      await flush();
+      const response = await fetch("/api/preview-intake", { method: "POST" });
+      if (!response.ok) {
+        throw new Error(`Failed to prepare the preview (${response.status})`);
+      }
+      const body = (await response.json()) as { forms?: PreviewForm[]; notes?: string[] };
+      setForms(body.forms ?? []);
+      setNotes(body.notes ?? []);
     } catch (err) {
-      preview.setError(err instanceof Error ? err.message : "Failed to generate PDF");
+      setForms([]);
+      setNotes([]);
+      setError(err instanceof Error ? err.message : "Failed to prepare the preview");
     } finally {
-      preview.setIsGenerating(false);
+      setLoading(false);
     }
-  }, [preview]);
+  }, [flush]);
+
+  const downloadPacket = useCallback(async () => {
+    setDownloading(true);
+    setError(null);
+    try {
+      await flush();
+      const response = await fetch("/api/packet", { method: "POST" });
+      if (!response.ok) {
+        throw new Error(`Failed to build the packet (${response.status})`);
+      }
+      const blob = await response.blob();
+      const url = globalThis.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "aos-packet.zip";
+      a.click();
+      globalThis.URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to build the packet");
+    } finally {
+      setDownloading(false);
+    }
+  }, [flush]);
 
   return (
-    <DashboardFrame
-      demo
-      showAccount={false}
-      error={preview.error}
-      isGenerating={preview.isGenerating}
-      previewDisabled={preview.isGenerating}
-      onPreview={onPreview}
-      onExport={() => undefined}
-      exportDisabled
-      pdfUrl={preview.pdfUrl}
-      isPreviewOpen={preview.isPreviewOpen}
-      onPreviewOpenChange={preview.setIsPreviewOpen}
-      snapshot={EMPTY_SNAPSHOT}
-    >
-      {children}
-    </DashboardFrame>
+    <>
+      <button
+        type="button"
+        onClick={openPreview}
+        disabled={loading}
+        className="flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+      >
+        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
+        Preview
+      </button>
+      {error && !open ? <ErrorState message={error} /> : null}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="flex max-h-[92vh] w-[min(92vw,56rem)] max-w-4xl flex-col gap-4 overflow-hidden p-6">
+          <DialogHeader>
+            <DialogTitle>Preview</DialogTitle>
+            <DialogDescription>
+              Page images of the draft forms. The PDF downloads only after the acknowledgements.
+            </DialogDescription>
+          </DialogHeader>
+          {error ? <ErrorState message={error} /> : null}
+          <FormPreview
+            forms={forms}
+            notes={notes}
+            loading={loading}
+            downloading={downloading}
+            acks={acks}
+            onToggle={(index, checked) =>
+              setAcks((current) => current.map((value, item) => (item === index ? checked : value)))
+            }
+            onDownload={downloadPacket}
+          />
+        </DialogContent>
+      </Dialog>
+    </>
   );
-}
-
-function LiveDashboard({ children }: DashboardLayoutProps) {
-  const applicationId = useApplicationId();
-  const fillI130 = useAction(api.sensitive.fillI130);
-  const basics = useQuery(
-    api.petitioner.getPetitionerBasics,
-    applicationId ? { applicationId } : "skip",
-  );
-  const addresses = useQuery(
-    api.petitioner.listAddresses,
-    applicationId ? { applicationId, personRole: "petitioner" } : "skip",
-  );
-  const employment = useQuery(
-    api.petitioner.listEmploymentEntries,
-    applicationId ? { applicationId, personRole: "petitioner" } : "skip",
-  );
-  const beneficiaryAddresses = useQuery(
-    api.petitioner.listAddresses,
-    applicationId ? { applicationId, personRole: "beneficiary" } : "skip",
-  );
-  const preview = usePdfPreview();
-
-  const intakeLoaded =
-    basics !== undefined &&
-    addresses !== undefined &&
-    employment !== undefined &&
-    beneficiaryAddresses !== undefined;
-  const snapshot: IntakeSnapshot | null =
-    applicationId && !intakeLoaded
-      ? null
-      : {
-          petitionerGivenName: basics?.givenName ?? "",
-          petitionerFamilyName: basics?.familyName ?? "",
-          petitionerAddressCount: addresses?.length ?? 0,
-          petitionerEmploymentCount: employment?.length ?? 0,
-          beneficiaryAddressCount: beneficiaryAddresses?.length ?? 0,
-        };
-
-  const onPreview = useCallback(async () => {
-    if (!applicationId) {
-      preview.setError("No petitioner data found. Please fill in the basic information first.");
-      return;
-    }
-    preview.setIsGenerating(true);
-    preview.setError(null);
-    try {
-      const pdf = await fillI130({});
-      const binary = atob(pdf);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
-      preview.showPdf(new Blob([bytes], { type: "application/pdf" }));
-    } catch (err) {
-      preview.setError(err instanceof Error ? err.message : "Failed to generate PDF");
-    } finally {
-      preview.setIsGenerating(false);
-    }
-  }, [applicationId, fillI130, preview]);
-
-  const onExport = useCallback(() => {
-    if (!basics) return;
-    const payload = buildPdfPayload(
-      basics,
-      (addresses ?? []) as AddressRow[],
-      (employment ?? []) as EmploymentRow[],
-    );
-    const fixture = {
-      description: `i-130 fixture exported on ${new Date().toISOString().slice(0, 10)}`,
-      slug: "i-130",
-      payload,
-      expected_values: { ...payload.fields },
-    };
-    const blob = new Blob([JSON.stringify(fixture, null, 2)], { type: "application/json" });
-    const url = globalThis.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `i-130-fixture-${Date.now()}.json`;
-    a.click();
-    globalThis.URL.revokeObjectURL(url);
-  }, [addresses, basics, employment]);
-
-  return (
-    <DashboardFrame
-      demo={false}
-      showAccount
-      error={preview.error}
-      isGenerating={preview.isGenerating}
-      previewDisabled={preview.isGenerating || !applicationId}
-      onPreview={onPreview}
-      onExport={onExport}
-      exportDisabled={!basics}
-      pdfUrl={preview.pdfUrl}
-      isPreviewOpen={preview.isPreviewOpen}
-      onPreviewOpenChange={preview.setIsPreviewOpen}
-      snapshot={snapshot}
-    >
-      {children}
-    </DashboardFrame>
-  );
-}
-
-export function DashboardLayout({ children }: DashboardLayoutProps) {
-  const demo = useDemoMode();
-  const { clerk, convex } = useRuntimeConfig();
-  if (demo || !clerk || !convex) return <DemoDashboard>{children}</DemoDashboard>;
-  return <LiveDashboard>{children}</LiveDashboard>;
 }

@@ -17,6 +17,15 @@ def test_fill_rejects_missing_secret(client: TestClient) -> None:
     assert response.status_code == 401
 
 
+@pytest.mark.parametrize("path", ["/fill-intake/i-130", "/preview-intake", "/packet"])
+def test_intake_routes_reject_missing_secret(client: TestClient, path: str) -> None:
+    response = client.post(
+        path,
+        json={"intake": {"selectedForms": ["i-130"]}, "acknowledged": True},
+    )
+    assert response.status_code == 401
+
+
 def test_fill_rejects_wrong_secret(client: TestClient) -> None:
     response = client.post(
         "/fill/i-130",
