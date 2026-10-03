@@ -40,15 +40,18 @@ that baseline rather than assuming you caused them.
 - Convex is the only persistence layer. `intakeStorage.ts` is types and factory
   helpers despite its name; `sessionStorage` is used only for the PDF preview
   draft, and `localStorage` only for the theme.
-- Discriminated unions for form field values (`MonthValue`, `RelationshipValue`,
-  `EmploymentStatus`).
+- Constrained values are string-literal unions or `z.enum` option lists, not
+ free strings: `MonthValue` in `intakeStorage.ts`, and the relationship,
+ citizenship-status and employment-status options in the Zod schemas.
 - Guard browser APIs with `typeof window !== "undefined"`.
 - Dark mode is on by default; use Tailwind `dark:` variants.
 
 ## PDF field gotchas
 
-Checkbox on-values differ per field. `_Yes[0]` fields take `/Y`, `_No[0]` fields
-take `/N`, and everything else is sniffed from the `/AP` dictionary. Set both
+Checkbox on-values differ per field and are always sniffed from the `/AP`
+dictionary; there is no name-based rule. On the I-130, every `_Yes[0]` field
+uses `/Y` and most `_No[0]` fields use `/N`, but `Pt4Line20_No[0]` and
+`Pt4Line28_No[0]` use `/Y`. Set both
 `/V` and `/AS`, sync radio-group parents and siblings, and set
 `/NeedAppearances`. To inspect a field:
 
