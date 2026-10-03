@@ -20,9 +20,17 @@
       "id": "/privacy",
       "kind": "page",
       "status": "wired",
-      "does": "Privacy notes that are true today. Lines that depend on auth, encryption, or analytics changes stay out of the page.",
+      "does": "Privacy notes that are true today. Session replay is off, so the page says AOS does not record the screen or form typing. Lines that depend on auth or encryption stay out.",
       "reach": "the Privacy link in the site footer",
       "verify": "bun run check runs apps/web/src/components/system/system.test.tsx, which asserts encryption and sign-in claims are hidden."
+    },
+    {
+      "id": "/start",
+      "kind": "page",
+      "status": "wired",
+      "does": "A short list of situations people take to an attorney before filing. It does not say whether the person can file, and it does not store a result. The intake modal links here as Find legal help instead.",
+      "reach": "Find legal help instead on the intake modal, or the URL /start",
+      "verify": "bun run check runs apps/web/src/components/intake/intake-ui.test.tsx, which expects that link."
     },
     {
       "id": "/sections",
@@ -124,7 +132,7 @@
       "id": "/forms",
       "kind": "page",
       "status": "mocked",
-      "does": "Static forms index. The sidebar does not link here. The page tells the reader to pick a form that nothing routes to from the nav.",
+      "does": "Static forms index. The sidebar does not link here. The page says these previews do not save.",
       "reach": "the URL /forms only",
       "verify": "Open /forms. No unit test covers the screen."
     },
@@ -132,7 +140,7 @@
       "id": "/forms/i-130/petitioner",
       "kind": "page",
       "status": "mocked",
-      "does": "Static I-130 petitioner mock. The live petitioner form is /sections/petitioner. The shared layout no longer calls Convex hooks when NEXT_PUBLIC_CONVEX_URL is empty.",
+      "does": "Static I-130 petitioner mock. The live petitioner form is /sections/petitioner. The mock does not show an A-Number, SSN, or street address. The shared layout does not call Convex hooks when NEXT_PUBLIC_CONVEX_URL is empty.",
       "reach": "the URL /forms/i-130/petitioner only",
       "verify": "Open the URL. No unit test covers the screen. Do not treat a successful next build as proof the form saves."
     },
@@ -140,7 +148,7 @@
       "id": "/forms/i-130/beneficiary",
       "kind": "page",
       "status": "mocked",
-      "does": "Static I-130 beneficiary mock. The live beneficiary address form is /sections/beneficiary/address.",
+      "does": "Static I-130 beneficiary mock. Names and the date of birth are empty. The live beneficiary address form is /sections/beneficiary/address.",
       "reach": "the URL /forms/i-130/beneficiary only",
       "verify": "Open the URL. No unit test covers the screen."
     },
@@ -148,9 +156,25 @@
       "id": "/forms/i-485/biographic",
       "kind": "page",
       "status": "mocked",
-      "does": "Static I-485 biographic mock. It does not save, and it no longer shows a hardcoded completion percent.",
+      "does": "Static I-485 biographic mock. Eye color is not preselected, it does not save, and it does not show a completion percent.",
       "reach": "the URL /forms/i-485/biographic only",
-      "verify": "Open the URL. No unit test covers the screen."
+      "verify": "bun run check renders the page in apps/web/src/app/lib/__tests__/mockSections.test.tsx."
+    },
+    {
+      "id": "/sections/documents",
+      "kind": "page",
+      "status": "mocked",
+      "does": "Coming soon page for Document Vault. Nothing on the page is saved.",
+      "reach": "Sidebar, Documents & Evidence, Document Vault",
+      "verify": "Open /sections/documents. The page says the section is not available yet. bun run check renders it in mockSections.test.tsx."
+    },
+    {
+      "id": "/sections/proof",
+      "kind": "page",
+      "status": "mocked",
+      "does": "Coming soon page for Bona Fide Proof. Nothing on the page is saved.",
+      "reach": "Sidebar, Documents & Evidence, Bona Fide Proof",
+      "verify": "Open /sections/proof. The page says the section is not available yet."
     },
     {
       "id": "GET /health",
@@ -164,7 +188,7 @@
       "id": "GET /fields/{slug}",
       "kind": "api",
       "status": "wired",
-      "does": "Lists AcroForm leaf fields for Forms/{slug}.pdf. Any filename in Forms/ is a slug. Only i-130 is used by the UI.",
+      "does": "Lists AcroForm leaf fields for an allowlisted form. The allowlist is i-130, i-130a, i-131, i-485, and i-765. Only i-130 is used by the UI.",
       "reach": "GET /fields/i-130 on the API",
       "verify": "bun run check runs test_unknown_form_is_not_found. A real listing is GET /fields/i-130 against a running server, or the catalog apps/api/data/i-130.fields.csv."
     },
@@ -180,8 +204,8 @@
       "id": "POST /fill/{slug}",
       "kind": "api",
       "status": "wired",
-      "does": "Fills Forms/{slug}.pdf from {fields, checkboxes} and streams the PDF back. Checkbox on-values are sniffed from /AP. /V and /AS are both set, and /NeedAppearances is set on the AcroForm.",
-      "reach": "the Verify & Preview button, or POST /fill/i-130",
+      "does": "Fills an allowlisted form from {fields, checkboxes} and streams the PDF back with Cache-Control no-store. Checkbox on-values are sniffed from /AP. /V and /AS are both set, and /NeedAppearances is set on the AcroForm. Browser callers must send an Origin listed in ALLOWED_ORIGINS. When that variable is unset, the only allowed origin is http://localhost:3000. A validation error does not echo the submitted value.",
+      "reach": "the Preview my forms button, or POST /fill/i-130",
       "verify": "bun run check runs uv run python scripts/eval_fill.py fixtures/ from apps/api. That command exits 1 when a fixture field or appearance state does not match."
     }
   ],
@@ -189,7 +213,7 @@
     {
       "id": "verify-and-preview",
       "status": "partial",
-      "does": "DashboardLayout builds an I-130 payload from Convex basics, addresses, and employment, prefers the sessionStorage basics draft, POSTs /fill/i-130, and shows the PDF in an iframe. Employment is passed in and then ignored. The header no longer shows a hardcoded percent.",
+      "does": "DashboardLayout builds an I-130 payload from Convex basics, addresses, and employment, prefers the sessionStorage basics draft, POSTs /fill/i-130, and shows the PDF in an iframe. Employment is passed in and then ignored. The header counts saved sections and does not show a percentage.",
       "reach": "the Preview my forms button in the app header, on any /sections or /forms page",
       "verify": "apps/web/e2e/review-package.spec.ts drives the button with a mocked /fill/i-130 response. It needs Convex and Playwright, so it is not part of bun run check. Fill accuracy without the browser is eval_fill.py."
     },

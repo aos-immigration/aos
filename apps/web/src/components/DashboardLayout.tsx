@@ -14,7 +14,15 @@ import { useApplicationId } from "@/app/lib/useApplicationId";
 import { buildPdfPayload } from "@/app/lib/buildPdfPayload";
 import type { AddressRow, EmploymentRow } from "@/app/lib/buildPdfPayload";
 import { readPetitionerBasicsDraft } from "@/app/lib/reviewDraft";
+import {
+  PERSISTABLE_SECTION_HREFS,
+  savedSectionCount,
+  type IntakeSnapshot,
+} from "@/app/lib/sectionSaveState";
+import { SavedSectionsLabel } from "@/components/SavedSectionsLabel";
+import { LoadDemoButton } from "@/components/intake/LoadDemoButton";
 import { useIntake } from "@/components/intake/IntakeProvider";
+import type { Intake } from "@/app/lib/intake/schema";
 import {
   Dialog,
   DialogContent,
@@ -27,17 +35,55 @@ type DashboardLayoutProps = {
   children: React.ReactNode;
 };
 
+function snapshotFromIntake(intake: Intake): IntakeSnapshot {
+  return {
+    petitionerGivenName: intake.petitioner.givenName,
+    petitionerFamilyName: intake.petitioner.familyName,
+    petitionerAddressCount: intake.addresses.filter(
+      (row) => row.personRole === "petitioner" && row.street.trim() !== "",
+    ).length,
+    petitionerEmploymentCount: intake.employment.filter(
+      (row) => row.personRole === "petitioner" && row.fromYear.trim() !== "",
+    ).length,
+    beneficiaryAddressCount: intake.addresses.filter(
+      (row) => row.personRole === "beneficiary" && row.street.trim() !== "",
+    ).length,
+  };
+}
+
 export function DashboardLayout({ children }: DashboardLayoutProps) {
+  const { intake, ready } = useIntake();
+  const snapshot = ready ? snapshotFromIntake(intake) : null;
   return (
     <div className="flex h-screen overflow-hidden">
-      <Sidebar />
+      <Sidebar
+        snapshot={
+          snapshot ?? {
+            petitionerGivenName: "",
+            petitionerFamilyName: "",
+            petitionerAddressCount: 0,
+            petitionerEmploymentCount: 0,
+            beneficiaryAddressCount: 0,
+          }
+        }
+      />
       <main className="flex-1 flex flex-col overflow-hidden relative">
         <header className="z-10 border-b border-border bg-background">
           <div className="flex min-h-14 flex-wrap items-center justify-between gap-3 px-4 py-2 sm:px-6">
             <Breadcrumbs />
             <div className="flex items-center gap-3">
+              {snapshot ? (
+                <SavedSectionsLabel
+                  persistable={PERSISTABLE_SECTION_HREFS.length}
+                  saved={savedSectionCount(snapshot)}
+                />
+              ) : (
+                <div className="text-[10px] font-mono text-muted-foreground">
+                  Checking saved sections
+                </div>
+              )}
               <SaveStatus />
-              <LoadDemoButton />
+              <LoadDemoButton className="text-sm underline decoration-foreground/30 underline-offset-4" />
               <ThemeToggle />
               <PreviewControls />
             </div>
@@ -62,19 +108,6 @@ function SaveStatus() {
     <span className="max-w-48 truncate text-sm" role="status">
       {status === "saving" ? "Saving" : status === "saved" ? "Saved" : error}
     </span>
-  );
-}
-
-function LoadDemoButton() {
-  const { loadDemo } = useIntake();
-  return (
-    <button
-      type="button"
-      onClick={loadDemo}
-      className="text-sm underline decoration-foreground/30 underline-offset-4"
-    >
-      Load demo
-    </button>
   );
 }
 
@@ -115,7 +148,6 @@ function ConvexPreviewControls() {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Clean up blob URL on unmount
   useEffect(() => {
     return () => {
       if (pdfUrl) {
@@ -230,11 +262,7 @@ function ConvexPreviewControls() {
           </DialogHeader>
           <div className="flex-1 overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800">
             {pdfUrl ? (
-              <iframe
-                title="I-130 preview"
-                src={pdfUrl}
-                className="h-full w-full"
-              />
+              <iframe title="I-130 preview" src={pdfUrl} className="h-full w-full" />
             ) : (
               <div className="flex h-full items-center justify-center text-sm text-zinc-500">
                 Generate a preview to view the PDF.

@@ -6,6 +6,20 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
+vi.mock("next/link", () => ({
+  default: ({
+    href,
+    children,
+    ...props
+  }: {
+    href: string;
+    children: React.ReactNode;
+  }) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
+  ),
+}));
 import { memoryIntake, resetMemoryIntake } from "@/app/lib/intake/memory";
 import { DisclaimerGate } from "./DisclaimerGate";
 import { IntakeProvider } from "./IntakeProvider";
@@ -44,6 +58,11 @@ describe("question intake", () => {
       </IntakeProvider>,
     );
 
+    expect(screen.getByRole("heading", { name: "Before you start" })).toBeTruthy();
+    expect(screen.getAllByText(/not a substitute for the advice of an attorney/).length).toBeGreaterThan(0);
+    expect(screen.getByRole("link", { name: "Find legal help instead" }).getAttribute("href")).toBe(
+      "/start",
+    );
     const continueButton = screen.getByRole("button", { name: "Continue" });
     expect(continueButton).toHaveProperty("disabled", true);
     fireEvent.click(screen.getByRole("checkbox"));

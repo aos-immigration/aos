@@ -36,11 +36,21 @@ Verify: Open /terms. The disclaimer phrases are asserted in apps/web/src/compone
 
 Status: wired.
 
-Privacy notes that are true today. Lines that depend on auth, encryption, or analytics changes stay out of the page.
+Privacy notes that are true today. Session replay is off, so the page says AOS does not record the screen or form typing. Lines that depend on auth or encryption stay out.
 
 Reach it from the Privacy link in the site footer.
 
 Verify: bun run check runs apps/web/src/components/system/system.test.tsx, which asserts encryption and sign-in claims are hidden.
+
+### `/start`
+
+Status: wired.
+
+A short list of situations people take to an attorney before filing. It does not say whether the person can file, and it does not store a result. The intake modal links here as Find legal help instead.
+
+Reach it from Find legal help instead on the intake modal, or the URL /start.
+
+Verify: bun run check runs apps/web/src/components/intake/intake-ui.test.tsx, which expects that link.
 
 ### `/sections`
 
@@ -166,7 +176,7 @@ Verify: bun run check runs apps/web/src/app/lib/intake/path.test.ts, which inclu
 
 Status: mocked.
 
-Static forms index. The sidebar does not link here. The page tells the reader to pick a form that nothing routes to from the nav.
+Static forms index. The sidebar does not link here. The page says these previews do not save.
 
 Reach it from the URL /forms only.
 
@@ -176,7 +186,7 @@ Verify: Open /forms. No unit test covers the screen.
 
 Status: mocked.
 
-Static I-130 petitioner mock. The live petitioner form is /sections/petitioner. The shared layout no longer calls Convex hooks when NEXT_PUBLIC_CONVEX_URL is empty.
+Static I-130 petitioner mock. The live petitioner form is /sections/petitioner. The mock does not show an A-Number, SSN, or street address. The shared layout does not call Convex hooks when NEXT_PUBLIC_CONVEX_URL is empty.
 
 Reach it from the URL /forms/i-130/petitioner only.
 
@@ -186,7 +196,7 @@ Verify: Open the URL. No unit test covers the screen. Do not treat a successful 
 
 Status: mocked.
 
-Static I-130 beneficiary mock. The live beneficiary address form is /sections/beneficiary/address.
+Static I-130 beneficiary mock. Names and the date of birth are empty. The live beneficiary address form is /sections/beneficiary/address.
 
 Reach it from the URL /forms/i-130/beneficiary only.
 
@@ -196,11 +206,31 @@ Verify: Open the URL. No unit test covers the screen.
 
 Status: mocked.
 
-Static I-485 biographic mock. It does not save, and it no longer shows a hardcoded completion percent.
+Static I-485 biographic mock. Eye color is not preselected, it does not save, and it does not show a completion percent.
 
 Reach it from the URL /forms/i-485/biographic only.
 
-Verify: Open the URL. No unit test covers the screen.
+Verify: bun run check renders the page in apps/web/src/app/lib/__tests__/mockSections.test.tsx.
+
+### `/sections/documents`
+
+Status: mocked.
+
+Coming soon page for Document Vault. Nothing on the page is saved.
+
+Reach it from Sidebar, Documents & Evidence, Document Vault.
+
+Verify: Open /sections/documents. The page says the section is not available yet. bun run check renders it in mockSections.test.tsx.
+
+### `/sections/proof`
+
+Status: mocked.
+
+Coming soon page for Bona Fide Proof. Nothing on the page is saved.
+
+Reach it from Sidebar, Documents & Evidence, Bona Fide Proof.
+
+Verify: Open /sections/proof. The page says the section is not available yet.
 
 ## API
 
@@ -218,7 +248,7 @@ Verify: bun run check runs apps/api/tests/test_api.py::test_health_ok. The test 
 
 Status: wired.
 
-Lists AcroForm leaf fields for Forms/{slug}.pdf. Any filename in Forms/ is a slug. Only i-130 is used by the UI.
+Lists AcroForm leaf fields for an allowlisted form. The allowlist is i-130, i-130a, i-131, i-485, and i-765. Only i-130 is used by the UI.
 
 Reach it from GET /fields/i-130 on the API.
 
@@ -238,9 +268,9 @@ Verify: bun run check runs test_debug_field_requires_a_name. Inspect a live fiel
 
 Status: wired.
 
-Fills Forms/{slug}.pdf from {fields, checkboxes} and streams the PDF back. Checkbox on-values are sniffed from /AP. /V and /AS are both set, and /NeedAppearances is set on the AcroForm.
+Fills an allowlisted form from {fields, checkboxes} and streams the PDF back with Cache-Control no-store. Checkbox on-values are sniffed from /AP. /V and /AS are both set, and /NeedAppearances is set on the AcroForm. Browser callers must send an Origin listed in ALLOWED_ORIGINS. When that variable is unset, the only allowed origin is http://localhost:3000. A validation error does not echo the submitted value.
 
-Reach it from the Verify & Preview button, or POST /fill/i-130.
+Reach it from the Preview my forms button, or POST /fill/i-130.
 
 Verify: bun run check runs uv run python scripts/eval_fill.py fixtures/ from apps/api. That command exits 1 when a fixture field or appearance state does not match.
 
@@ -254,7 +284,7 @@ None.
 
 Status: partial.
 
-DashboardLayout builds an I-130 payload from Convex basics, addresses, and employment, prefers the sessionStorage basics draft, POSTs /fill/i-130, and shows the PDF in an iframe. Employment is passed in and then ignored. The header no longer shows a hardcoded percent.
+DashboardLayout builds an I-130 payload from Convex basics, addresses, and employment, prefers the sessionStorage basics draft, POSTs /fill/i-130, and shows the PDF in an iframe. Employment is passed in and then ignored. The header counts saved sections and does not show a percentage.
 
 Reach it from the Preview my forms button in the app header, on any /sections or /forms page.
 

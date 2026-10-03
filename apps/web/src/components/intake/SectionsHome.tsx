@@ -8,6 +8,7 @@ import { LoadingState } from "@/components/system/States";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { DemoBanner } from "./DemoBanner";
+import { LoadDemoButton } from "./LoadDemoButton";
 import { useIntake } from "./IntakeProvider";
 
 const FORM_LINES: Record<FormId, string> = {
@@ -21,7 +22,7 @@ const FORM_LINES: Record<FormId, string> = {
 };
 
 export function SectionsHome() {
-  const { intake, ready, status, error, update, loadDemo } = useIntake();
+  const { intake, ready, status, error, update } = useIntake();
   if (!ready) return <LoadingState label="Loading your answers" />;
 
   const sections = sectionProgress(intake, new Date());
@@ -37,9 +38,7 @@ export function SectionsHome() {
             Choose the forms you want to prepare. Nothing is selected for you.
           </p>
         </div>
-        <button type="button" className={buttonVariants({ variant: "outline" })} onClick={loadDemo}>
-          Load demo
-        </button>
+        <LoadDemoButton className={buttonVariants({ variant: "outline" })} />
       </div>
       <p className="text-sm" role="status">
         {status === "saving"
