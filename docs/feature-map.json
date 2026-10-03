@@ -121,6 +121,14 @@
       "verify": "bun run check runs apps/web/src/app/lib/intake/path.test.ts, which includes the sponsor paths."
     },
     {
+      "id": "/sections/review",
+      "kind": "page",
+      "status": "wired",
+      "does": "Key facts with their source, the live automated-check list, and five-year address and employment timelines. Review stays locked until required sections are filled and checkIntake is empty. Specialist and attorney review are labeled coming soon.",
+      "reach": "Sidebar, Case, Review",
+      "verify": "bun run check runs apps/web/src/app/lib/intake/timeline.test.ts and apps/web/src/components/intake/review.test.tsx."
+    },
+    {
       "id": "/forms",
       "kind": "page",
       "status": "mocked",

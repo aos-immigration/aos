@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import { checkIntake } from "@/app/lib/intake/checks";
+import { addressBars, employmentBars } from "@/app/lib/intake/timeline";
 import type { Intake, IntakeAddress, IntakeEmployment, PersonRole } from "@/app/lib/intake/schema";
 import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LoadingState } from "@/components/system/States";
 import { DemoBanner } from "./DemoBanner";
+import { HistoryTrack } from "./HistoryTrack";
 import { useIntake } from "./IntakeProvider";
 
 const MONTHS = ["", "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"];
@@ -85,6 +87,7 @@ export function AddressHistoryEditor({
       <p className="text-sm leading-6">
         List every physical address for the last five years. A gap needs a short explanation.
       </p>
+      <HistoryTrack title="Address timeline" bars={addressBars(intake.addresses, role, new Date())} />
       {issues.map((issue) => (
         <p key={issue.id} className="text-sm text-destructive" role="alert">
           {issue.summary}
@@ -177,6 +180,7 @@ export function EmploymentHistoryEditor({
       <DemoBanner />
       <h1 className="type-title">{title}</h1>
       <p className="text-sm leading-6">List work, school, and unemployment for the last five years.</p>
+      <HistoryTrack title="Employment timeline" bars={employmentBars(intake.employment, role, new Date())} />
       {issues.map((issue) => (
         <p key={issue.id} className="text-sm text-destructive" role="alert">
           {issue.summary}
