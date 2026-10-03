@@ -45,7 +45,7 @@ export const PRIVACY_LINES: CopyLine[] = [
   {
     id: "replay",
     text: "We don't record your screen or form typing for analytics.",
-    requires: "datadog-replay-off",
+    requires: null,
   },
 ];
 

@@ -1,17 +1,26 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { usePathname } from "next/navigation";
 import { Sidebar } from "./Sidebar";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { ThemeToggle } from "./ThemeToggle";
-import { Eye, Download, Loader2 } from "lucide-react";
+import { Eye, Loader2 } from "lucide-react";
 import { LifecycleRail } from "@/components/system/LifecycleRail";
 import type { StageId } from "@/components/system/stages";
 import { ErrorState } from "@/components/system/States";
 import { SiteFooter } from "@/components/system/SiteFooter";
-import { DISCLAIMER } from "@/components/system/copy";
+import {
+  PERSISTABLE_SECTION_HREFS,
+  savedSectionCount,
+  type IntakeSnapshot,
+} from "@/app/lib/sectionSaveState";
+import { SavedSectionsLabel } from "@/components/SavedSectionsLabel";
+import { LoadDemoButton } from "@/components/intake/LoadDemoButton";
+import { FormPreview, type PreviewForm } from "@/components/intake/FormPreview";
+import { DOWNLOAD_BOXES } from "@/components/intake/trustCopy";
 import { useIntake } from "@/components/intake/IntakeProvider";
+import type { Intake } from "@/app/lib/intake/schema";
 import {
   Dialog,
   DialogContent,
@@ -30,12 +39,42 @@ function stageFor(pathname: string): StageId {
   return "collect";
 }
 
+function snapshotFromIntake(intake: Intake): IntakeSnapshot {
+  return {
+    petitionerGivenName: intake.petitioner.givenName,
+    petitionerFamilyName: intake.petitioner.familyName,
+    petitionerAddressCount: intake.addresses.filter(
+      (row) => row.personRole === "petitioner" && row.street.trim() !== "",
+    ).length,
+    petitionerEmploymentCount: intake.employment.filter(
+      (row) => row.personRole === "petitioner" && row.fromYear.trim() !== "",
+    ).length,
+    beneficiaryAddressCount: intake.addresses.filter(
+      (row) => row.personRole === "beneficiary" && row.street.trim() !== "",
+    ).length,
+  };
+}
+
+const EMPTY_SNAPSHOT: IntakeSnapshot = {
+  petitionerGivenName: "",
+  petitionerFamilyName: "",
+  petitionerAddressCount: 0,
+  petitionerEmploymentCount: 0,
+  beneficiaryAddressCount: 0,
+};
+
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname();
   const [navOpen, setNavOpen] = useState(false);
+  const { intake, ready } = useIntake();
+  const snapshot = ready ? snapshotFromIntake(intake) : null;
   return (
     <div className="flex h-screen overflow-hidden">
-      <Sidebar open={navOpen} onNavigate={() => setNavOpen(false)} />
+      <Sidebar
+        open={navOpen}
+        onNavigate={() => setNavOpen(false)}
+        snapshot={snapshot ?? EMPTY_SNAPSHOT}
+      />
       <main className="flex-1 flex flex-col overflow-hidden relative">
         <header className="z-10 border-b border-border bg-background">
           <div className="flex min-h-14 flex-wrap items-center justify-between gap-3 px-4 py-2 sm:px-6">
@@ -50,8 +89,18 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <Breadcrumbs />
             </div>
             <div className="flex items-center gap-3">
+              {snapshot ? (
+                <SavedSectionsLabel
+                  persistable={PERSISTABLE_SECTION_HREFS.length}
+                  saved={savedSectionCount(snapshot)}
+                />
+              ) : (
+                <div className="text-[10px] font-mono text-muted-foreground">
+                  Checking saved sections
+                </div>
+              )}
               <SaveStatus />
-              <LoadDemoButton />
+              <LoadDemoButton className="text-sm underline decoration-foreground/30 underline-offset-4" />
               <ThemeToggle />
               <PreviewControls />
             </div>
@@ -79,78 +128,52 @@ function SaveStatus() {
   );
 }
 
-function LoadDemoButton() {
-  const { loadDemo } = useIntake();
-  return (
-    <button
-      type="button"
-      onClick={loadDemo}
-      className="text-sm underline decoration-foreground/30 underline-offset-4"
-    >
-      Load demo
-    </button>
-  );
-}
-
-const DOWNLOAD_ACKS = [
-  "AOS is not a law firm.",
-  "AOS is not a substitute for the advice of an attorney.",
-  "AOS is not affiliated with USCIS.",
-  "I will check this draft before I sign or file it.",
-] as const;
-
 function PreviewControls() {
   const { intake } = useIntake();
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  const [downloadOpen, setDownloadOpen] = useState(false);
-  const [acks, setAcks] = useState<boolean[]>(() => DOWNLOAD_ACKS.map(() => false));
+  const [loading, setLoading] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [forms, setForms] = useState<PreviewForm[]>([]);
+  const [notes, setNotes] = useState<string[]>([]);
+  const [acks, setAcks] = useState<boolean[]>(() => DOWNLOAD_BOXES.map(() => false));
   const [error, setError] = useState<string | null>(null);
-
-  // Clean up blob URL on unmount
-  useEffect(() => {
-    return () => {
-      if (pdfUrl) {
-        globalThis.URL.revokeObjectURL(pdfUrl);
-      }
-    };
-  }, [pdfUrl]);
 
   const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-  const handleReviewPackage = useCallback(async () => {
-    setIsGenerating(true);
+  const openPreview = useCallback(async () => {
+    setLoading(true);
     setError(null);
+    setAcks(DOWNLOAD_BOXES.map(() => false));
+    setOpen(true);
     try {
-      const response = await fetch(`${apiBase}/fill-intake/i-130`, {
+      const response = await fetch(`${apiBase}/preview-intake`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ intake }),
       });
       if (!response.ok) {
-        throw new Error(`Failed to generate PDF (${response.status})`);
+        throw new Error(`Failed to prepare the preview (${response.status})`);
       }
-      const blob = await response.blob();
-      const url = globalThis.URL.createObjectURL(blob);
-      if (pdfUrl) globalThis.URL.revokeObjectURL(pdfUrl);
-      setPdfUrl(url);
-      setIsPreviewOpen(true);
+      const body = (await response.json()) as { forms?: PreviewForm[]; notes?: string[] };
+      setForms(body.forms ?? []);
+      setNotes(body.notes ?? []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to generate PDF");
+      setForms([]);
+      setNotes([]);
+      setError(err instanceof Error ? err.message : "Failed to prepare the preview");
     } finally {
-      setIsGenerating(false);
+      setLoading(false);
     }
-  }, [apiBase, intake, pdfUrl]);
+  }, [apiBase, intake]);
 
-  const handleDownload = useCallback(async () => {
-    setIsGenerating(true);
+  const downloadPacket = useCallback(async () => {
+    setDownloading(true);
     setError(null);
     try {
       const response = await fetch(`${apiBase}/packet`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ intake }),
+        body: JSON.stringify({ intake, acknowledged: true }),
       });
       if (!response.ok) {
         throw new Error(`Failed to build the packet (${response.status})`);
@@ -162,11 +185,10 @@ function PreviewControls() {
       a.download = "aos-packet.zip";
       a.click();
       globalThis.URL.revokeObjectURL(url);
-      setDownloadOpen(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to build the packet");
     } finally {
-      setIsGenerating(false);
+      setDownloading(false);
     }
   }, [apiBase, intake]);
 
@@ -174,84 +196,34 @@ function PreviewControls() {
     <>
       <button
         type="button"
-        onClick={() => {
-          setAcks(DOWNLOAD_ACKS.map(() => false));
-          setDownloadOpen(true);
-        }}
-        className="text-sm underline decoration-foreground/30 underline-offset-4"
-      >
-        Download my forms (PDF)
-      </button>
-      <button
-        onClick={handleReviewPackage}
-        disabled={isGenerating}
+        onClick={openPreview}
+        disabled={loading}
         className="flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
       >
-        {isGenerating ? (
-          <Loader2 className="w-4 h-4 animate-spin" />
-        ) : (
-          <Eye className="w-4 h-4" />
-        )}
-        {isGenerating ? "Preparing preview" : "Preview my forms"}
+        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
+        Preview
       </button>
-      {error ? <ErrorState message={error} /> : null}
-      <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-        <DialogContent className="flex h-[85vh] w-[90vw] max-w-6xl flex-col gap-4 p-6">
+      {error && !open ? <ErrorState message={error} /> : null}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="flex max-h-[92vh] w-[min(92vw,56rem)] max-w-4xl flex-col gap-4 overflow-hidden p-6">
           <DialogHeader>
-            <DialogTitle>Preview: Form I-130</DialogTitle>
+            <DialogTitle>Preview</DialogTitle>
             <DialogDescription>
-              This is a draft made from your answers. Check every field against the USCIS instructions before you sign.
+              Page images of the draft forms. The PDF downloads only after the acknowledgements.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex-1 overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800">
-            {pdfUrl ? (
-              <iframe
-                title="I-130 preview"
-                src={pdfUrl}
-                className="h-full w-full"
-              />
-            ) : (
-              <div className="flex h-full items-center justify-center text-sm text-zinc-500">
-                Generate a preview to view the PDF.
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-      <Dialog open={downloadOpen} onOpenChange={setDownloadOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Download the draft packet</DialogTitle>
-            <DialogDescription>{DISCLAIMER}</DialogDescription>
-          </DialogHeader>
-          <ul className="space-y-3">
-            {DOWNLOAD_ACKS.map((label, index) => (
-              <li key={label}>
-                <label className="flex items-start gap-3 text-sm leading-6">
-                  <input
-                    type="checkbox"
-                    className="mt-1"
-                    checked={acks[index]}
-                    onChange={(event) =>
-                      setAcks((current) =>
-                        current.map((value, item) => (item === index ? event.target.checked : value)),
-                      )
-                    }
-                  />
-                  <span>{label}</span>
-                </label>
-              </li>
-            ))}
-          </ul>
-          <button
-            type="button"
-            className="inline-flex h-12 items-center gap-2 rounded-md bg-primary px-6 text-base font-medium text-primary-foreground disabled:opacity-40"
-            disabled={isGenerating || acks.some((checked) => !checked)}
-            onClick={handleDownload}
-          >
-            {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-            Download my forms (PDF)
-          </button>
+          {error ? <ErrorState message={error} /> : null}
+          <FormPreview
+            forms={forms}
+            notes={notes}
+            loading={loading}
+            downloading={downloading}
+            acks={acks}
+            onToggle={(index, checked) =>
+              setAcks((current) => current.map((value, item) => (item === index ? checked : value)))
+            }
+            onDownload={downloadPacket}
+          />
         </DialogContent>
       </Dialog>
     </>

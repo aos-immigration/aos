@@ -56,7 +56,12 @@ export function CostScreen() {
           {lines.map((line) => (
             <tr key={line.id}>
               <th scope="row" className="py-3 text-left font-normal">
-                {line.label}
+                <span className="block">{line.label}</span>
+                {line.id === "i-765" || line.id === "i-131" ? (
+                  <span className="mt-1 block text-xs font-normal leading-5 text-foreground/60">
+                    {line.source}
+                  </span>
+                ) : null}
               </th>
               <td className="py-3 text-right align-top tabular-nums">{money.format(line.amount)}</td>
             </tr>
