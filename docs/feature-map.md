@@ -36,11 +36,21 @@ Verify: Open /terms. The disclaimer phrases are asserted in apps/web/src/compone
 
 Status: wired.
 
-Privacy notes that are true today. Lines that depend on auth, encryption, or analytics changes stay out of the page.
+Privacy notes that are true today. Session replay is off, so the page says AOS does not record the screen or form typing. Lines that depend on auth or encryption stay out.
 
 Reach it from the Privacy link in the site footer.
 
 Verify: bun run check runs apps/web/src/components/system/system.test.tsx, which asserts encryption and sign-in claims are hidden.
+
+### `/start`
+
+Status: wired.
+
+A short list of situations people take to an attorney before filing. It does not say whether the person can file, and it does not store a result. The intake modal links here as Find legal help instead.
+
+Reach it from Find legal help instead on the intake modal, or the URL /start.
+
+Verify: bun run check runs apps/web/src/components/intake/intake-ui.test.tsx, which expects that link.
 
 ### `/sections`
 
@@ -166,7 +176,7 @@ Verify: bun run check runs apps/web/src/app/lib/intake/path.test.ts, which inclu
 
 Status: mocked.
 
-Static forms index. The sidebar does not link here. The page tells the reader to pick a form that nothing routes to from the nav.
+Static forms index. The sidebar does not link here. The page says these previews do not save.
 
 Reach it from the URL /forms only.
 
@@ -176,7 +186,7 @@ Verify: Open /forms. No unit test covers the screen.
 
 Status: mocked.
 
-Static I-130 petitioner mock. The live petitioner form is /sections/petitioner. The shared layout no longer calls Convex hooks when NEXT_PUBLIC_CONVEX_URL is empty.
+Static I-130 petitioner mock. The live petitioner form is /sections/petitioner. The mock does not show an A-Number, SSN, or street address. The shared layout does not call Convex hooks when NEXT_PUBLIC_CONVEX_URL is empty.
 
 Reach it from the URL /forms/i-130/petitioner only.
 
@@ -186,7 +196,7 @@ Verify: Open the URL. No unit test covers the screen. Do not treat a successful 
 
 Status: mocked.
 
-Static I-130 beneficiary mock. The live beneficiary address form is /sections/beneficiary/address.
+Static I-130 beneficiary mock. Names and the date of birth are empty. The live beneficiary address form is /sections/beneficiary/address.
 
 Reach it from the URL /forms/i-130/beneficiary only.
 
@@ -196,11 +206,31 @@ Verify: Open the URL. No unit test covers the screen.
 
 Status: mocked.
 
-Static I-485 biographic mock. It does not save, and it no longer shows a hardcoded completion percent.
+Static I-485 biographic mock. Eye color is not preselected, it does not save, and it does not show a completion percent.
 
 Reach it from the URL /forms/i-485/biographic only.
 
-Verify: Open the URL. No unit test covers the screen.
+Verify: bun run check renders the page in apps/web/src/app/lib/__tests__/mockSections.test.tsx.
+
+### `/sections/documents`
+
+Status: mocked.
+
+Coming soon page for Document Vault. Nothing on the page is saved.
+
+Reach it from Sidebar, Documents & Evidence, Document Vault.
+
+Verify: Open /sections/documents. The page says the section is not available yet. bun run check renders it in mockSections.test.tsx.
+
+### `/sections/proof`
+
+Status: mocked.
+
+Coming soon page for Bona Fide Proof. Nothing on the page is saved.
+
+Reach it from Sidebar, Documents & Evidence, Bona Fide Proof.
+
+Verify: Open /sections/proof. The page says the section is not available yet.
 
 ## API
 
@@ -218,7 +248,7 @@ Verify: bun run check runs apps/api/tests/test_api.py::test_health_ok. The test 
 
 Status: wired.
 
-Lists AcroForm leaf fields for Forms/{slug}.pdf. Any filename in Forms/ is a slug. Only i-130 is used by the UI.
+Lists AcroForm leaf fields for an allowlisted form. The allowlist is i-130, i-130a, i-131, i-485, and i-765. Only i-130 is used by the UI.
 
 Reach it from GET /fields/i-130 on the API.
 
@@ -238,7 +268,7 @@ Verify: bun run check runs test_debug_field_requires_a_name. Inspect a live fiel
 
 Status: wired.
 
-Fills Forms/{slug}.pdf from {fields, checkboxes} and streams the PDF back. Checkbox on-values are sniffed from /AP. /V and /AS are both set, and /NeedAppearances is set on the AcroForm. A checkbox's subform siblings are left alone.
+Fills an allowlisted form from {fields, checkboxes} and streams the PDF back with Cache-Control no-store. Checkbox on-values are sniffed from /AP. /V and /AS are both set, and /NeedAppearances is set on the AcroForm. A checkbox's subform siblings are left alone. Browser callers must send an Origin listed in ALLOWED_ORIGINS. When that variable is unset, the only allowed origin is http://localhost:3000. A validation error does not echo the submitted value.
 
 Reach it from POST /fill/i-130.
 
@@ -248,21 +278,31 @@ Verify: bun run check runs uv run python scripts/eval_fill.py fixtures/ from app
 
 Status: wired.
 
-Fills one mapped form from a canonical intake. Mapped slugs are i-130, i-130a, and i-485. I-864 is not mapped until the official PDF is in Forms/.
+Fills one mapped form from a canonical intake and returns PDF bytes only when acknowledged is true. Mapped slugs are i-130, i-130a, and i-485. I-864 is not mapped until the official PDF is in Forms/.
 
-Reach it from the Preview my forms button, or POST /fill-intake/i-130 with {intake}.
+Reach it from POST /fill-intake/i-130 with {intake, acknowledged: true}.
 
 Verify: bun run check runs apps/api/tests/test_map_intake.py and the intake_*.json fixtures in eval_fill.py.
+
+### `POST /preview-intake`
+
+Status: wired.
+
+Renders the selected mapped forms as JPEG page images. It does not return PDF bytes and does not require the acknowledgement flag.
+
+Reach it from the Preview button in the app header.
+
+Verify: bun run check runs test_preview_returns_images_without_acknowledgement in apps/api/tests/test_map_intake.py.
 
 ### `POST /packet`
 
 Status: partial.
 
-Zips the mapped forms the person selected, plus a read-me that says the files are drafts and names any selected form that was not filled. I-864, I-765, I-131, and G-1145 are named in that note.
+Returns 400 when selectedForms is empty or acknowledged is not true. Otherwise zips the mapped forms the person selected, plus a read-me that says the files are drafts and names any selected form that was not filled. There is no default to every mapped form. I-864, I-765, I-131, and G-1145 are named in that note when selected.
 
-Reach it from Download my forms (PDF), after four acknowledgement checkboxes.
+Reach it from Download my forms (PDF) inside the preview, after the four acknowledgement boxes.
 
-Verify: bun run check runs test_packet_includes_mapped_forms_and_names_the_gap in apps/api/tests/test_map_intake.py.
+Verify: bun run check runs test_packet_includes_mapped_forms_and_names_the_gap and test_packet_rejects_an_empty_selection in apps/api/tests/test_map_intake.py.
 
 ## Linked paths with no page
 
@@ -274,11 +314,11 @@ None.
 
 Status: partial.
 
-The header posts the canonical intake to /fill-intake/i-130 and shows the draft PDF in an iframe. The download button asks for four acknowledgements, then posts /packet and saves a zip.
+The header Preview button is the only primary action. It posts the canonical intake to /preview-intake and shows page images, with no PDF save control. Download my forms (PDF) is inside that preview and stays off until every acknowledgement box is checked, then posts /packet with acknowledged true.
 
-Reach it from the Preview my forms button in the app header, on any /sections or /forms page.
+Reach it from the Preview button in the app header, on any /sections or /forms page.
 
-Verify: apps/web/e2e/review-package.spec.ts drives the button with a mocked /fill-intake/i-130 response. It needs Playwright, so it is not part of bun run check. Fill accuracy without the browser is eval_fill.py.
+Verify: apps/web/e2e/review-package.spec.ts drives Preview with a mocked /preview-intake response and checks that the header has no download link. It needs Playwright, so it is not part of bun run check. Fill accuracy without the browser is eval_fill.py.
 
 ### export-fixture
 

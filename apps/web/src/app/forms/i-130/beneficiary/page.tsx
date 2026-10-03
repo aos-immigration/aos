@@ -1,3 +1,5 @@
+import { NotSavedNotice } from "@/components/NotSavedNotice";
+
 export default function BeneficiaryPage() {
   return (
     <div className="max-w-5xl mx-auto space-y-8">
@@ -7,8 +9,7 @@ export default function BeneficiaryPage() {
             Beneficiary Information
           </h1>
           <p className="text-muted-foreground text-sm max-w-xl">
-            Gather details about the relative you&apos;re petitioning for. We&apos;ll
-            format this data to meet USCIS requirements automatically.
+            Gather details about the relative you&apos;re petitioning for.
           </p>
         </div>
         <div className="flex gap-2">
@@ -20,6 +21,7 @@ export default function BeneficiaryPage() {
           </span>
         </div>
       </div>
+      <NotSavedNotice />
 
       <div className="space-y-16">
         <section>
@@ -40,7 +42,6 @@ export default function BeneficiaryPage() {
                 className="w-full bg-card border border-border rounded-lg text-sm px-3 py-2 focus:ring-0 transition-all"
                 placeholder="Jane"
                 type="text"
-                defaultValue="Elena"
               />
             </div>
             <div className="col-span-3 space-y-2">
@@ -51,7 +52,6 @@ export default function BeneficiaryPage() {
                 className="w-full bg-card border border-border rounded-lg text-sm px-3 py-2 focus:ring-0 transition-all"
                 placeholder="Smith"
                 type="text"
-                defaultValue="Rodriguez"
               />
             </div>
             <div className="col-span-2 space-y-2">
@@ -61,7 +61,6 @@ export default function BeneficiaryPage() {
               <input
                 className="w-full bg-card border border-border rounded-lg text-sm px-3 py-2 focus:ring-0 transition-all"
                 type="date"
-                defaultValue="1992-05-14"
               />
             </div>
             <div className="col-span-2 space-y-2">
@@ -69,6 +68,7 @@ export default function BeneficiaryPage() {
                 Gender
               </label>
               <select className="w-full bg-card border border-border rounded-lg text-sm px-3 py-2 focus:ring-0 transition-all">
+                <option value="">Select</option>
                 <option>Female</option>
                 <option>Male</option>
                 <option>Other</option>
@@ -85,7 +85,7 @@ export default function BeneficiaryPage() {
                 <button className="px-4 py-1.5 text-xs font-medium rounded hover:bg-accent text-muted-foreground">
                   Yes
                 </button>
-                <button className="px-4 py-1.5 text-xs font-medium rounded bg-border text-foreground shadow-sm">
+                <button className="px-4 py-1.5 text-xs font-medium rounded hover:bg-accent text-muted-foreground">
                   No
                 </button>
               </div>
