@@ -130,10 +130,11 @@ family name, citizenship status and relationship are all filled in.
 `validateAllAddresses()` over the whole list after loading from Convex to catch
 overlapping date ranges — that check is hand-written, not Zod.
 
-**PDF preview** lives in `DashboardLayout.tsx`. It reads basics, addresses and
-employment out of Convex, prefers the `sessionStorage` draft so unsaved typing
-still shows up, runs `buildPdfPayload()` to turn all of it into USCIS field
-names, POSTs to `/fill/i-130`, and drops the returned blob into an iframe.
+**PDF preview** lives in `DashboardLayout.tsx`. The header Preview button posts
+the canonical intake to `/preview-intake` and shows JPEG page images. It does
+not put PDF bytes in the browser. Download my forms (PDF) is inside that
+preview and stays disabled until every acknowledgement box is checked, then
+posts `/packet` with `acknowledged: true`.
 In development the header also shows an "Export Fixture" button. It builds the
 payload from the saved Convex records (not the unsaved `sessionStorage` draft),
 downloads the wrapped fixture shape `eval_fill.py` accepts (`payload` plus

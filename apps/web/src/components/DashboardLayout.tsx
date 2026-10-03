@@ -1,19 +1,13 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
-import { useQuery } from "convex/react";
-import { api } from "../../convex/_generated/api";
+import { useState, useCallback } from "react";
 import { Sidebar } from "./Sidebar";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { ThemeToggle } from "./ThemeToggle";
-import { Eye, Download, Loader2 } from "lucide-react";
+import { Eye, Loader2 } from "lucide-react";
 import { LifecycleRail } from "@/components/system/LifecycleRail";
 import { ErrorState } from "@/components/system/States";
 import { SiteFooter } from "@/components/system/SiteFooter";
-import { useApplicationId } from "@/app/lib/useApplicationId";
-import { buildPdfPayload } from "@/app/lib/buildPdfPayload";
-import type { AddressRow, EmploymentRow } from "@/app/lib/buildPdfPayload";
-import { readPetitionerBasicsDraft } from "@/app/lib/reviewDraft";
 import {
   PERSISTABLE_SECTION_HREFS,
   savedSectionCount,
@@ -21,6 +15,8 @@ import {
 } from "@/app/lib/sectionSaveState";
 import { SavedSectionsLabel } from "@/components/SavedSectionsLabel";
 import { LoadDemoButton } from "@/components/intake/LoadDemoButton";
+import { FormPreview, type PreviewForm } from "@/components/intake/FormPreview";
+import { DOWNLOAD_BOXES } from "@/components/intake/trustCopy";
 import { useIntake } from "@/components/intake/IntakeProvider";
 import type { Intake } from "@/app/lib/intake/schema";
 import {
@@ -112,163 +108,101 @@ function SaveStatus() {
 }
 
 function PreviewControls() {
-  if (!process.env.NEXT_PUBLIC_CONVEX_URL) {
-    return (
-      <button
-        type="button"
-        disabled
-        className="flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground opacity-50"
-      >
-        <Eye className="w-4 h-4" />
-        Preview my forms
-      </button>
-    );
-  }
-  return <ConvexPreviewControls />;
-}
-
-function ConvexPreviewControls() {
-  const applicationId = useApplicationId();
-
-  const basics = useQuery(
-    api.petitioner.getPetitionerBasics,
-    applicationId ? { applicationId } : "skip",
-  );
-  const addresses = useQuery(
-    api.petitioner.listAddresses,
-    applicationId ? { applicationId, personRole: "petitioner" } : "skip",
-  );
-  const employment = useQuery(
-    api.petitioner.listEmploymentEntries,
-    applicationId ? { applicationId, personRole: "petitioner" } : "skip",
-  );
-
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const { intake } = useIntake();
+  const [loading, setLoading] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [forms, setForms] = useState<PreviewForm[]>([]);
+  const [notes, setNotes] = useState<string[]>([]);
+  const [acks, setAcks] = useState<boolean[]>(() => DOWNLOAD_BOXES.map(() => false));
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    return () => {
-      if (pdfUrl) {
-        globalThis.URL.revokeObjectURL(pdfUrl);
-      }
-    };
-  }, [pdfUrl]);
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-  const handleReviewPackage = useCallback(async () => {
-    const basicsForPreview = readPetitionerBasicsDraft() ?? basics;
-    if (!basicsForPreview) {
-      setError("No petitioner data found. Please fill in the basic information first.");
-      return;
-    }
-
-    setIsGenerating(true);
+  const openPreview = useCallback(async () => {
+    setLoading(true);
     setError(null);
-
+    setAcks(DOWNLOAD_BOXES.map(() => false));
+    setOpen(true);
     try {
-      const payload = buildPdfPayload(
-        basicsForPreview,
-        (addresses ?? []) as AddressRow[],
-        (employment ?? []) as EmploymentRow[],
-      );
-
-      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      const response = await fetch(`${apiBase}/fill/i-130`, {
+      const response = await fetch(`${apiBase}/preview-intake`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ intake }),
       });
-
       if (!response.ok) {
-        throw new Error(`Failed to generate PDF (${response.status})`);
+        throw new Error(`Failed to prepare the preview (${response.status})`);
       }
+      const body = (await response.json()) as { forms?: PreviewForm[]; notes?: string[] };
+      setForms(body.forms ?? []);
+      setNotes(body.notes ?? []);
+    } catch (err) {
+      setForms([]);
+      setNotes([]);
+      setError(err instanceof Error ? err.message : "Failed to prepare the preview");
+    } finally {
+      setLoading(false);
+    }
+  }, [apiBase, intake]);
 
+  const downloadPacket = useCallback(async () => {
+    setDownloading(true);
+    setError(null);
+    try {
+      const response = await fetch(`${apiBase}/packet`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ intake, acknowledged: true }),
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to build the packet (${response.status})`);
+      }
       const blob = await response.blob();
       const url = globalThis.URL.createObjectURL(blob);
-
-      if (pdfUrl) {
-        globalThis.URL.revokeObjectURL(pdfUrl);
-      }
-
-      setPdfUrl(url);
-      setIsPreviewOpen(true);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "aos-packet.zip";
+      a.click();
+      globalThis.URL.revokeObjectURL(url);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to generate PDF");
+      setError(err instanceof Error ? err.message : "Failed to build the packet");
     } finally {
-      setIsGenerating(false);
+      setDownloading(false);
     }
-  }, [basics, addresses, employment, pdfUrl]);
-
-  const handleExportFixture = useCallback(() => {
-    if (!basics) return;
-
-    const payload = buildPdfPayload(
-      basics,
-      (addresses ?? []) as AddressRow[],
-      (employment ?? []) as EmploymentRow[],
-    );
-
-    const fixture = {
-      description: `i-130 fixture exported on ${new Date().toISOString().slice(0, 10)}`,
-      slug: "i-130",
-      payload,
-      expected_values: { ...payload.fields },
-    };
-
-    const blob = new Blob([JSON.stringify(fixture, null, 2)], {
-      type: "application/json",
-    });
-    const url = globalThis.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `i-130-fixture-${Date.now()}.json`;
-    a.click();
-    globalThis.URL.revokeObjectURL(url);
-  }, [basics, addresses, employment]);
+  }, [apiBase, intake]);
 
   return (
     <>
-      {process.env.NODE_ENV === "development" && (
-        <button
-          onClick={handleExportFixture}
-          disabled={!basics}
-          className="text-muted-foreground hover:text-foreground text-xs font-medium px-3 py-2 rounded border border-border transition-all flex items-center gap-2 disabled:opacity-50"
-        >
-          <Download className="w-3 h-3" />
-          Export Fixture
-        </button>
-      )}
       <button
-        onClick={handleReviewPackage}
-        disabled={isGenerating || !applicationId}
+        type="button"
+        onClick={openPreview}
+        disabled={loading}
         className="flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
       >
-        {isGenerating ? (
-          <Loader2 className="w-4 h-4 animate-spin" />
-        ) : (
-          <Eye className="w-4 h-4" />
-        )}
-        {isGenerating ? "Preparing preview" : "Preview my forms"}
+        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
+        Preview
       </button>
-      {error ? <ErrorState message={error} /> : null}
-      <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-        <DialogContent className="flex h-[85vh] w-[90vw] max-w-6xl flex-col gap-4 p-6">
+      {error && !open ? <ErrorState message={error} /> : null}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="flex max-h-[92vh] w-[min(92vw,56rem)] max-w-4xl flex-col gap-4 overflow-hidden p-6">
           <DialogHeader>
-            <DialogTitle>Preview: Form I-130</DialogTitle>
+            <DialogTitle>Preview</DialogTitle>
             <DialogDescription>
-              This is a draft made from your answers. Check every field against the USCIS instructions before you sign.
+              Page images of the draft forms. The PDF downloads only after the acknowledgements.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex-1 overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800">
-            {pdfUrl ? (
-              <iframe title="I-130 preview" src={pdfUrl} className="h-full w-full" />
-            ) : (
-              <div className="flex h-full items-center justify-center text-sm text-zinc-500">
-                Generate a preview to view the PDF.
-              </div>
-            )}
-          </div>
+          {error ? <ErrorState message={error} /> : null}
+          <FormPreview
+            forms={forms}
+            notes={notes}
+            loading={loading}
+            downloading={downloading}
+            acks={acks}
+            onToggle={(index, checked) =>
+              setAcks((current) => current.map((value, item) => (item === index ? checked : value)))
+            }
+            onDownload={downloadPacket}
+          />
         </DialogContent>
       </Dialog>
     </>

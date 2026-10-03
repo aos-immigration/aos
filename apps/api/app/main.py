@@ -258,6 +258,8 @@ def _apply_leaf_value(
     if not parent:
         return
     parent_obj = _deref(parent)
+    if str(parent_obj.get("/FT", "")) != "/Btn":
+        return
     parent_obj["/V"] = value
     kids = parent_obj.get(KIDS_KEY, None)
     if not kids:
@@ -327,8 +329,30 @@ def debug_field(slug: str, name: str):
     raise HTTPException(status_code=404, detail="Field name not found")
 
 
-@app.post("/fill/{slug}")
-def fill_pdf(slug: str, payload: FillRequest):
+class IntakeFillRequest(BaseModel):
+    intake: Dict[str, Any] = Field(default_factory=dict)
+    acknowledged: Optional[bool] = None
+
+
+def _require_acknowledgement(body: IntakeFillRequest) -> None:
+    if body.acknowledged is not True:
+        raise HTTPException(
+            status_code=400,
+            detail="Acknowledgement is required before a PDF can be downloaded.",
+        )
+
+
+def _selected_forms(intake: Dict[str, Any]) -> List[str]:
+    selected = intake.get("selectedForms", None)
+    if not isinstance(selected, list) or len(selected) == 0:
+        raise HTTPException(status_code=400, detail="selectedForms is empty")
+    slugs = [slug for slug in selected if isinstance(slug, str) and slug.strip()]
+    if not slugs:
+        raise HTTPException(status_code=400, detail="selectedForms is empty")
+    return slugs
+
+
+def _filled_pdf(slug: str, fields: Dict[str, str], checkboxes: Dict[str, bool]) -> BytesIO:
     pdf_file = _pdf_path(slug)
     if not pdf_file.exists():
         raise HTTPException(status_code=404, detail=PDF_NOT_FOUND)
@@ -336,24 +360,126 @@ def fill_pdf(slug: str, payload: FillRequest):
     acro = pdf.Root.get(ACROFORM_KEY, None)
     if not acro:
         raise HTTPException(status_code=400, detail="PDF has no AcroForm")
-
     acro["/NeedAppearances"] = pikepdf.Boolean(True)
-
-    field_values: Dict[str, str] = dict(payload.fields)
-    checkbox_values: Dict[str, bool] = dict(payload.checkboxes)
-
-    _walk_fields(pdf_get(acro, FIELDS_KEY, []), field_values, checkbox_values)
-
+    _walk_fields(pdf_get(acro, FIELDS_KEY, []), fields, checkboxes)
     output = BytesIO()
     pdf.save(output)
     output.seek(0)
+    return output
 
+
+@app.post("/fill/{slug}")
+def fill_pdf(slug: str, payload: FillRequest):
+    output = _filled_pdf(slug, dict(payload.fields), dict(payload.checkboxes))
     filename = f"{slug}-filled.pdf"
     return StreamingResponse(
         output,
         media_type="application/pdf",
         headers={
             "Content-Disposition": f'attachment; filename="{filename}"',
+            "Cache-Control": "no-store",
+        },
+    )
+
+
+def _map_or_404(slug: str, intake: Dict[str, Any]) -> Dict[str, Any]:
+    from app.map_intake import map_intake
+
+    try:
+        return map_intake(slug, intake)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.post("/fill-intake/{slug}")
+def fill_intake(slug: str, body: IntakeFillRequest):
+    _require_acknowledgement(body)
+    mapped = _map_or_404(slug, body.intake)
+    output = _filled_pdf(slug, mapped["fields"], mapped["checkboxes"])
+    filename = f"{slug}-filled.pdf"
+    return StreamingResponse(
+        output,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Cache-Control": "no-store",
+        },
+    )
+
+
+@app.post("/preview-intake")
+def preview_intake(body: IntakeFillRequest):
+    from app.map_intake import MAPPED_SLUGS
+
+    from app.preview_pages import render_pdf_pages
+
+    selected = _selected_forms(body.intake)
+    forms: List[Dict[str, Any]] = []
+    notes: List[str] = []
+    for slug in selected:
+        if slug not in MAPPED_SLUGS:
+            notes.append(f"{slug}: not filled. This packet does not map that form yet.")
+            continue
+        try:
+            mapped = _map_or_404(slug, body.intake)
+        except HTTPException as exc:
+            if exc.status_code == 404:
+                notes.append(f"{slug}: not filled. The official PDF is not in this checkout.")
+                continue
+            raise
+        pdf = _filled_pdf(slug, mapped["fields"], mapped["checkboxes"])
+        forms.append(
+            {
+                "slug": slug,
+                "title": f"Form {slug.upper()}",
+                "pages": render_pdf_pages(pdf.getvalue()),
+            }
+        )
+    return JSONResponse(
+        {"forms": forms, "notes": notes},
+        headers={"Cache-Control": "no-store"},
+    )
+
+
+@app.post("/packet")
+def packet(body: IntakeFillRequest):
+    import io
+    import zipfile
+
+    from app.map_intake import MAPPED_SLUGS
+
+    _require_acknowledgement(body)
+    selected = _selected_forms(body.intake)
+    buffer = io.BytesIO()
+    notes: List[str] = [
+        "These are drafts. Check every answer against the form instructions before you sign.",
+        "AOS does not file these forms with USCIS.",
+    ]
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+        for slug in selected:
+            if slug not in MAPPED_SLUGS:
+                notes.append(f"{slug}: not filled. This packet does not map that form yet.")
+                continue
+            try:
+                mapped = _map_or_404(slug, body.intake)
+            except HTTPException as exc:
+                if exc.status_code == 404:
+                    notes.append(
+                        f"{slug}: not filled. The official PDF is not in this checkout."
+                    )
+                    continue
+                raise
+            pdf = _filled_pdf(slug, mapped["fields"], mapped["checkboxes"])
+            archive.writestr(f"{slug}-filled.pdf", pdf.getvalue())
+        archive.writestr("read-me.txt", "\n".join(notes) + "\n")
+    buffer.seek(0)
+    return StreamingResponse(
+        buffer,
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": 'attachment; filename="aos-packet.zip"',
             "Cache-Control": "no-store",
         },
     )
