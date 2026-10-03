@@ -8,13 +8,15 @@ import threading
 import urllib.request
 from io import BytesIO
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import pikepdf
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
+
+from app.pdf_access import pdf_get
 
 DD_API_KEY = os.environ.get("DD_API_KEY", "")
 DD_SITE = os.environ.get("DD_SITE", "us5.datadoghq.com")
@@ -25,10 +27,14 @@ logger = logging.getLogger("aos-api")
 logger.setLevel(logging.INFO)
 
 
-def _send_dd_log(message: str, status: str = "info", extra: dict = None):
+def _send_dd_log(
+    message: str,
+    status: str = "info",
+    extra: dict[str, object] | None = None,
+) -> None:
     if not DD_API_KEY:
         return
-    payload = {
+    payload: dict[str, object] = {
         "message": message,
         "ddsource": "python",
         "service": DD_SERVICE,
@@ -114,7 +120,7 @@ def _list_fields(pdf_file: Path) -> List[Dict[str, str]]:
     acro = pdf.Root.get(ACROFORM_KEY, None)
     if not acro:
         return []
-    fields = acro.get(FIELDS_KEY, [])
+    fields = pdf_get(acro, FIELDS_KEY, [])
     results: List[Dict[str, str]] = []
 
     def walk(arr, prefix: str = ""):
@@ -165,7 +171,7 @@ def _checkbox_on_value(obj) -> pikepdf.Name:
 
 
 def _ap_debug(ap):
-    info = {
+    info: dict[str, Any] = {
         "ap_type": str(type(ap)),
     }
     ap = _deref(ap)
@@ -185,7 +191,7 @@ def _ap_debug(ap):
 
 
 def _field_debug(obj):
-    info = {
+    info: dict[str, Any] = {
         "type": str(obj.get("/FT", "")),
         "value": str(obj.get("/V", "")),
         "as": str(obj.get("/AS", "")),
@@ -287,7 +293,7 @@ def debug_field(slug: str, name: str):
     acro = pdf.Root.get(ACROFORM_KEY, None)
     if not acro:
         raise HTTPException(status_code=400, detail="PDF has no AcroForm")
-    stack = [(acro.get(FIELDS_KEY, []), "")]
+    stack = [(pdf_get(acro, FIELDS_KEY, []), "")]
     while stack:
         arr, prefix = stack.pop()
         for f in arr:
@@ -317,7 +323,7 @@ def fill_pdf(slug: str, payload: FillRequest):
     field_values: Dict[str, str] = dict(payload.fields)
     checkbox_values: Dict[str, bool] = dict(payload.checkboxes)
 
-    _walk_fields(acro.get(FIELDS_KEY, []), field_values, checkbox_values)
+    _walk_fields(pdf_get(acro, FIELDS_KEY, []), field_values, checkbox_values)
 
     output = BytesIO()
     pdf.save(output)

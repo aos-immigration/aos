@@ -41,14 +41,19 @@ HTTP middleware, but only when `DD_API_KEY` is set (`DD_SITE`, `DD_SERVICE` and
 ### Checks
 
 ```bash
-npm run test:unit                            # vitest, from the repo root
-cd apps/web && ./node_modules/.bin/tsc --noEmit
-cd apps/web && npm run lint                  # 0 errors, 19 warnings; see Known rough edges
-cd apps/api && uv run python scripts/eval_fill.py fixtures/   # PDF fill accuracy
+bun run setup   # bun install, which also uv-syncs the API
+bun run check   # lint, types, unit tests, API tests, PDF fill eval, feature map
 ```
 
-Use `./node_modules/.bin/tsc`, not `npx tsc` — `npx` misses the local binary here
-and downloads an unrelated package called `tsc`.
+`bun run check` is what CI runs. It calls `apps/web/node_modules/.bin/tsc`,
+not `npx tsc`. `npx` misses the local binary here and downloads an unrelated
+package called `tsc`.
+
+Route status and how to verify each screen is `docs/feature-map.md`.
+`python3 scripts/feature_map.py --check` fails when a page, API route, or
+sidebar href changes without an update to `docs/feature-map.json`.
+
+Agent instructions are `AGENTS.md`.
 
 End-to-end tests (`cd apps/web && npm run test:e2e`) need Playwright browsers
 (`npx playwright install chromium`) and a working Convex login, because the
@@ -226,9 +231,10 @@ catalogs for the other four forms.
 - `npm run lint`: 0 errors and 19 warnings after the JSX-entity and
   `set-state-in-effect` fixes (`ThemeToggle.tsx`, `AddressHistory.tsx`);
   12 errors and 20 warnings without those fixes.
-- GitHub Actions (`.github/workflows/ci.yml`) runs `npm run test:unit`,
-  `tsc --noEmit`, and an API `compileall` check on pull requests. `npm run lint`
-  is not part of that workflow.
+- GitHub Actions (`.github/workflows/ci.yml`) runs `bun run setup` and
+  `bun run check` on pull requests. That includes web lint, `tsc --noEmit`,
+  unit tests, API pytest, pyright, and `eval_fill.py`. Lint warnings do not
+  fail the run.
 - Employment data is passed into `buildPdfPayload()` and then ignored, so it
   never reaches the PDF.
 - Every address is saved with `addressType: "physical"`, so the mailing-address

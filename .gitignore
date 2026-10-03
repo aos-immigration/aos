@@ -28,6 +28,7 @@ playwright/.cache/
 **/build/
 
 # python
+**/.pytest_cache/
 **/__pycache__/
 __pycache__/
 *.py[cod]

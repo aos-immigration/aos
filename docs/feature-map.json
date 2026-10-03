@@ -1,0 +1,180 @@
+{
+  "routes": [
+    {
+      "id": "/",
+      "kind": "page",
+      "status": "wired",
+      "does": "Landing page. It links to /sections and does not read or write intake data.",
+      "reach": "the site root",
+      "verify": "Open /. There is no unit test for this screen. bun run check does not boot Next.js."
+    },
+    {
+      "id": "/sections",
+      "kind": "page",
+      "status": "mocked",
+      "does": "Application overview made of static cards. Nothing on the page is loaded from Convex.",
+      "reach": "the home page link Start Your Application, or the URL",
+      "verify": "Open /sections and confirm the cards do not change after saving petitioner data. No automated test covers this page."
+    },
+    {
+      "id": "/sections/petitioner",
+      "kind": "page",
+      "status": "wired",
+      "does": "Petitioner basics. React Hook Form validates petitionerBasicsSchema, writes a sessionStorage draft immediately, and debounces savePetitionerBasics to Convex once given name, family name, citizenship status, and relationship are filled in.",
+      "reach": "Sidebar, Petitioner Information, Basic Information",
+      "verify": "bun run check runs apps/web/src/app/lib/__tests__/petitionerBasicsSchema.test.ts. The preview flow is apps/web/e2e/review-package.spec.ts, which needs a Convex login and Playwright."
+    },
+    {
+      "id": "/sections/petitioner/address",
+      "kind": "page",
+      "status": "wired",
+      "does": "Petitioner address history. AddressHistory saves on submit through saveAddress with personRole petitioner. Every saved row uses addressType physical, so the mailing-address branch in buildPdfPayload is unreachable from this screen.",
+      "reach": "Sidebar, Petitioner Information, Address History (5 years)",
+      "verify": "bun run check runs addressSchema.test.ts and addressValidation.test.ts. Browser coverage is apps/web/e2e/address-history.spec.ts, which needs Convex and Playwright."
+    },
+    {
+      "id": "/sections/petitioner/employment",
+      "kind": "page",
+      "status": "partial",
+      "does": "Petitioner employment history. EmploymentHistory persists rows to Convex, but both the save and the list query hardcode personRole petitioner. buildPdfPayload accepts the rows and does not write them into the PDF.",
+      "reach": "Sidebar, Petitioner Information, Employment History (5 years)",
+      "verify": "bun run check runs employmentSchema.test.ts. Nothing asserts the role or the PDF mapping. See docs/agent-patterns.md."
+    },
+    {
+      "id": "/sections/beneficiary",
+      "kind": "page",
+      "status": "mocked",
+      "does": "Static beneficiary basics. There is no Convex table for this section and the form does not save.",
+      "reach": "Sidebar, Beneficiary Information, Basic Information",
+      "verify": "Open /sections/beneficiary. The page module does not call useQuery or useMutation. No unit test covers the screen."
+    },
+    {
+      "id": "/sections/beneficiary/address",
+      "kind": "page",
+      "status": "wired",
+      "does": "Beneficiary address history. The same AddressHistory component as the petitioner page, with personRole beneficiary. Saved rows still use addressType physical.",
+      "reach": "Sidebar, Beneficiary Information, Address History (5 years)",
+      "verify": "The address schema and addressValidation tests in bun run check cover the form rules. The Playwright spec only opens the petitioner URL."
+    },
+    {
+      "id": "/sections/beneficiary/employment",
+      "kind": "page",
+      "status": "mocked",
+      "does": "Static beneficiary employment form. It does not use EmploymentHistory and does not save.",
+      "reach": "Sidebar, Beneficiary Information, Employment History (5 years)",
+      "verify": "Open /sections/beneficiary/employment. Inputs are uncontrolled placeholders. No unit test covers the screen."
+    },
+    {
+      "id": "/sections/beneficiary/biographic",
+      "kind": "page",
+      "status": "mocked",
+      "does": "Static biographic details. There is no Convex table for biographic data.",
+      "reach": "Sidebar, Beneficiary Information, Biographic Details",
+      "verify": "Open /sections/beneficiary/biographic. No unit test covers the screen."
+    },
+    {
+      "id": "/sections/marital",
+      "kind": "page",
+      "status": "mocked",
+      "does": "Static marital history. There is no Convex table for marital data.",
+      "reach": "Sidebar, Marital History, Marriage Information",
+      "verify": "Open /sections/marital. No unit test covers the screen."
+    },
+    {
+      "id": "/forms",
+      "kind": "page",
+      "status": "mocked",
+      "does": "Static forms index. The sidebar does not link here. The page tells the reader to pick a form that nothing routes to from the nav.",
+      "reach": "the URL /forms only",
+      "verify": "Open /forms. No unit test covers the screen."
+    },
+    {
+      "id": "/forms/i-130/petitioner",
+      "kind": "page",
+      "status": "mocked",
+      "does": "Static I-130 petitioner mock. The live petitioner form is /sections/petitioner. Next.js fails the production build on this URL when NEXT_PUBLIC_CONVEX_URL is empty, because the shared layout calls useMutation.",
+      "reach": "the URL /forms/i-130/petitioner only",
+      "verify": "Open the URL. No unit test covers the screen. Do not treat a successful next build as proof the form saves."
+    },
+    {
+      "id": "/forms/i-130/beneficiary",
+      "kind": "page",
+      "status": "mocked",
+      "does": "Static I-130 beneficiary mock. The live beneficiary address form is /sections/beneficiary/address.",
+      "reach": "the URL /forms/i-130/beneficiary only",
+      "verify": "Open the URL. No unit test covers the screen."
+    },
+    {
+      "id": "/forms/i-485/biographic",
+      "kind": "page",
+      "status": "mocked",
+      "does": "Static I-485 biographic mock. The progress label on the page is the hardcoded string 64%.",
+      "reach": "the URL /forms/i-485/biographic only",
+      "verify": "Open the URL. No unit test covers the screen. The hardcoded progress is logged in docs/agent-patterns.md and is left for the UI honesty work."
+    },
+    {
+      "id": "/sections/documents",
+      "kind": "link",
+      "status": "missing",
+      "does": "Sidebar item Document Vault. There is no page.tsx for this path.",
+      "reach": "Sidebar, Documents & Evidence, Document Vault",
+      "verify": "python3 scripts/feature_map.py --check fails if the href disappears or a page is added without a status update. Opening the URL 404s."
+    },
+    {
+      "id": "/sections/proof",
+      "kind": "link",
+      "status": "missing",
+      "does": "Sidebar item Bona Fide Proof. There is no page.tsx for this path.",
+      "reach": "Sidebar, Documents & Evidence, Bona Fide Proof",
+      "verify": "python3 scripts/feature_map.py --check tracks the href. Opening the URL 404s."
+    },
+    {
+      "id": "GET /health",
+      "kind": "api",
+      "status": "wired",
+      "does": "Liveness response {\"ok\": true}.",
+      "reach": "GET http://localhost:8000/health while the API is running",
+      "verify": "bun run check runs apps/api/tests/test_api.py::test_health_ok. The test uses FastAPI TestClient and does not bind a port."
+    },
+    {
+      "id": "GET /fields/{slug}",
+      "kind": "api",
+      "status": "wired",
+      "does": "Lists AcroForm leaf fields for Forms/{slug}.pdf. Any filename in Forms/ is a slug. Only i-130 is used by the UI.",
+      "reach": "GET /fields/i-130 on the API",
+      "verify": "bun run check runs test_unknown_form_is_not_found. A real listing is GET /fields/i-130 against a running server, or the catalog apps/api/data/i-130.fields.csv."
+    },
+    {
+      "id": "GET /debug/field/{slug}",
+      "kind": "api",
+      "status": "wired",
+      "does": "Dumps one field's /AP, /V, /AS, and parent. The name query must be URL-encoded, with brackets as %5B and %5D.",
+      "reach": "GET /debug/field/i-130?name=... on the API",
+      "verify": "bun run check runs test_debug_field_requires_a_name. Inspect a live field only when the server is up."
+    },
+    {
+      "id": "POST /fill/{slug}",
+      "kind": "api",
+      "status": "wired",
+      "does": "Fills Forms/{slug}.pdf from {fields, checkboxes} and streams the PDF back. Checkbox on-values are sniffed from /AP. /V and /AS are both set, and /NeedAppearances is set on the AcroForm.",
+      "reach": "the Verify & Preview button, or POST /fill/i-130",
+      "verify": "bun run check runs uv run python scripts/eval_fill.py fixtures/ from apps/api. That command exits 1 when a fixture field or appearance state does not match."
+    }
+  ],
+  "flows": [
+    {
+      "id": "verify-and-preview",
+      "status": "partial",
+      "does": "DashboardLayout builds an I-130 payload from Convex basics, addresses, and employment, prefers the sessionStorage basics draft, POSTs /fill/i-130, and shows the PDF in an iframe. Employment is passed in and then ignored. The header progress label is a hardcoded 64%.",
+      "reach": "the Verify & Preview button in the app header, on any /sections or /forms page",
+      "verify": "apps/web/e2e/review-package.spec.ts drives the button with a mocked /fill/i-130 response. It needs Convex and Playwright, so it is not part of bun run check. Fill accuracy without the browser is eval_fill.py."
+    },
+    {
+      "id": "export-fixture",
+      "status": "wired",
+      "does": "Development-only header button. It builds the fixture from saved Convex records, not the unsaved sessionStorage draft, downloads {payload, expected_values}, and copies expected_values from text fields only.",
+      "reach": "the Export Fixture button in the header when NODE_ENV is development",
+      "verify": "No unit test covers the button. The downloaded shape is what eval_fill.py accepts. Confirm against apps/api/scripts/eval_fill.py _load_fixture."
+    }
+  ]
+}

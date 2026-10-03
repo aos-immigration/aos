@@ -103,9 +103,11 @@ export function validateAllAddresses(
 
   for (let i = 0; i < addresses.length; i++) {
     const addr = addresses[i];
+    if (!addr) continue;
     const required = validateRequiredFields(addr);
-    if (Object.keys(required).length > 0) {
-      errors[addr.id] = Object.values(required)[0];
+    const firstError = Object.values(required)[0];
+    if (firstError) {
+      errors[addr.id] = firstError;
       continue;
     }
 
@@ -122,7 +124,8 @@ export function validateAllAddresses(
     }
 
     for (let j = i + 1; j < addresses.length; j++) {
-      if (checkOverlap(addr, addresses[j])) {
+      const other = addresses[j];
+      if (other && checkOverlap(addr, other)) {
         errors[addr.id] = "Address dates overlap with another address";
         break;
       }

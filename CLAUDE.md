@@ -1,69 +1,9 @@
 # CLAUDE.md
 
-Guidance for coding agents working in this repository. Read `README.md` first —
-it covers the architecture, what is real versus mocked, and the PDF pipeline.
+Agent instructions live in [AGENTS.md](./AGENTS.md). Read that file before
+changing code. It is the source of truth for setup, `bun run check`, module
+boundaries, and the rule that every non-trivial task starts with
+`/poteto-mode`.
 
-## Commands
-
-```bash
-bun install                                        # web deps + `uv sync` for the API
-
-cd apps/web && npm run dev                         # Convex + Next.js on :3000
-cd apps/api && npm run dev                         # FastAPI on :8000
-
-npm run test:unit                                  # vitest, from the repo root
-cd apps/web && ./node_modules/.bin/tsc --noEmit    # NOT `npx tsc`
-cd apps/web && npm run lint
-cd apps/web && npm run test:e2e                    # needs Convex login + browsers
-cd apps/api && uv run python scripts/eval_fill.py fixtures/
-```
-
-`npx tsc` does not work here — it misses the local binary and installs an
-unrelated package named `tsc`. Always use `./node_modules/.bin/tsc`.
-
-`npm run lint` reports 0 errors and 19 warnings. Compare new warnings against
-that baseline rather than assuming you caused them.
-
-## After making changes
-
-1. Logic change → `npm run test:unit`
-2. Any TypeScript change → `./node_modules/.bin/tsc --noEmit`
-3. PDF fill change → `uv run python scripts/eval_fill.py fixtures/`
-4. PDF mapping change → `uv run python scripts/render_fields.py fixtures/<f>.json`
-   then view the PNG crops to confirm values render in the right boxes
-5. UI change → `npm run test:e2e` if the environment supports it
-
-## Code patterns
-
-- Forms use React Hook Form with a Zod resolver. Schemas live in
-  `apps/web/src/app/lib/schemas/`. Do not hand-roll field validation.
-- Convex is the only persistence layer. `intakeStorage.ts` is types and factory
-  helpers despite its name; `sessionStorage` is used only for the PDF preview
-  draft, and `localStorage` only for the theme.
-- Constrained values are string-literal unions or `z.enum` option lists, not
- free strings: `MonthValue` in `intakeStorage.ts`, and the relationship,
- citizenship-status and employment-status options in the Zod schemas.
-- Guard browser APIs with `typeof window !== "undefined"`.
-- Dark mode is on by default; use Tailwind `dark:` variants.
-
-## PDF field gotchas
-
-Checkbox on-values differ per field and are always sniffed from the `/AP`
-dictionary; there is no name-based rule. On the I-130, every `_Yes[0]` field
-uses `/Y` and most `_No[0]` fields use `/N`, but `Pt4Line20_No[0]` and
-`Pt4Line28_No[0]` use `/Y`. Set both
-`/V` and `/AS`, sync radio-group parents and siblings, and set
-`/NeedAppearances`. To inspect a field:
-
-```bash
-curl 'http://localhost:8000/debug/field/i-130?name=<urlencoded-name>'
-```
-
-Brackets encode as `%5B` and `%5D`. Full explanation in `README.md`.
-
-## Housekeeping
-
-Do not commit run reports, cleanup summaries, task boards, or session logs. A
-scheduled agent previously wrote `cleanup_report.md` on every run, which made
-30 pull requests conflict with each other. Put that kind of narration in the
-pull request description instead.
+Do not copy those instructions into this file. A second copy is how the docs
+drifted in #77.
