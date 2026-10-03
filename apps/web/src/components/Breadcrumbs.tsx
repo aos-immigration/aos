@@ -27,6 +27,7 @@ export function Breadcrumbs() {
       const parts = pathname.split("/").filter(Boolean);
       if (parts.length >= 2) {
         const sectionId = parts[1];
+        if (!sectionId) return items;
         const sectionLabel =
           sectionLabels[sectionId] ||
           sectionId

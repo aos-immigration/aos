@@ -36,6 +36,7 @@ FORMS_DIR = ROOT_DIR / "Forms"
 sys.path.insert(0, str(API_DIR))
 
 from app.main import _deref, _walk_fields  # noqa: E402
+from app.pdf_access import pdf_get  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # ANSI colours
@@ -74,7 +75,7 @@ def _read_field_values(pdf_bytes: bytes) -> Dict[str, str]:
                 else:
                     results[full] = str(val)
 
-    walk(acro.get("/Fields", []))
+    walk(pdf_get(acro, "/Fields", []))
     return results
 
 
@@ -146,7 +147,7 @@ def _validate_appearance_states(
             if kids:
                 walk(kids, prefix=full + ".")
 
-    walk(acro.get("/Fields", []))
+    walk(pdf_get(acro, "/Fields", []))
     return results
 
 
@@ -160,7 +161,7 @@ def _fill_direct(slug: str, fields: Dict[str, str], checkboxes: Dict[str, bool])
     if not acro:
         raise RuntimeError("PDF has no AcroForm")
     acro["/NeedAppearances"] = pikepdf.Boolean(True)
-    _walk_fields(acro.get("/Fields", []), fields, checkboxes)
+    _walk_fields(pdf_get(acro, "/Fields", []), fields, checkboxes)
     buf = BytesIO()
     pdf.save(buf)
     return buf.getvalue()

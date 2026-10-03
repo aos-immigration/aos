@@ -2,10 +2,15 @@ from __future__ import annotations
 
 import csv
 import json
+import sys
 from pathlib import Path
 from typing import Dict, List
 
 import pikepdf
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from app.pdf_access import pdf_get  # noqa: E402
 
 
 def deref(obj):
@@ -17,7 +22,7 @@ def list_fields(pdf_file: Path) -> List[Dict[str, str]]:
     acro = pdf.Root.get("/AcroForm", None)
     if not acro:
         return []
-    fields = acro.get("/Fields", [])
+    fields = pdf_get(acro, "/Fields", [])
     results: List[Dict[str, str]] = []
 
     def walk(arr, prefix: str = ""):

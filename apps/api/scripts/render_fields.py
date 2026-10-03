@@ -16,7 +16,7 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, cast
 
 import pikepdf
 
@@ -49,7 +49,7 @@ def _widget_locations(pdf_bytes: bytes) -> Dict[str, Tuple[int, List[float]]]:
         annots = page.get("/Annots")
         if annots is None:
             continue
-        for annot in annots:
+        for annot in cast(Any, annots):
             annot = _deref(annot)
             parts: List[str] = []
             node = annot
@@ -92,12 +92,12 @@ def render_fixture(fixture_path: Path, out_dir: Path, full_pages: bool = False) 
     except Exception as exc:  # XFA-hybrid forms warn; AcroForm layer still renders
         print(f"note: init_forms: {exc}", file=sys.stderr)
 
-    page_cache: Dict[int, "object"] = {}
+    page_cache: Dict[int, tuple[Any, Any]] = {}
 
-    def rendered_page(idx: int):
+    def rendered_page(idx: int) -> tuple[Any, Any]:
         if idx not in page_cache:
             page = doc[idx]
-            bitmap = page.render(scale=SCALE, may_draw_forms=True)
+            bitmap = cast(Any, page).render(scale=SCALE, may_draw_forms=True)
             page_cache[idx] = (page, bitmap.to_pil())
         return page_cache[idx]
 

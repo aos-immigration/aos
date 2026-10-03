@@ -6,6 +6,8 @@
     "apps/*"
   ],
   "scripts": {
+    "setup": "bash scripts/setup.sh",
+    "check": "bash scripts/check.sh",
     "dev": "turbo run dev --parallel",
     "build": "turbo run build",
     "lint": "turbo run lint",
