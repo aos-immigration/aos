@@ -21,8 +21,8 @@ cd apps/api && uv run python scripts/eval_fill.py fixtures/
 `npx tsc` does not work here — it misses the local binary and installs an
 unrelated package named `tsc`. Always use `./node_modules/.bin/tsc`.
 
-`npm run lint` currently fails on `main` with pre-existing errors. Compare
-against the baseline rather than assuming you caused them.
+`npm run lint` reports 0 errors and 19 warnings. Compare new warnings against
+that baseline rather than assuming you caused them.
 
 ## After making changes
 

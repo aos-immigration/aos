@@ -7,7 +7,7 @@ export default function BeneficiaryEmploymentPage() {
             Beneficiary Employment History
           </h1>
           <p className="text-muted-foreground text-sm max-w-xl">
-            Provide the beneficiary's employment history for the past 5 years.
+            Provide the beneficiary&apos;s employment history for the past 5 years.
             Include all employers, even if they worked part-time or for a short
             period.
           </p>

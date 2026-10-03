@@ -172,9 +172,9 @@ export default function BiographicPage() {
                 USCIS GUIDANCE
               </h3>
               <p className="text-[13px] leading-relaxed text-muted-foreground font-light">
-                "Provide the race and ethnicity that you best identify with.
+                &quot;Provide the race and ethnicity that you best identify with.
                 This information is used for demographic purposes and background
-                check verification."
+                check verification.&quot;
               </p>
             </div>
             <div className="p-4 rounded-xl bg-primary/5 border border-primary/10">

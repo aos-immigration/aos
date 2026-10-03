@@ -18,7 +18,7 @@ export default function BeneficiaryAddressPage() {
             Beneficiary Address History
           </h1>
           <p className="text-muted-foreground text-sm max-w-xl">
-            Provide the beneficiary's address history for the past 5 years.
+            Provide the beneficiary&apos;s address history for the past 5 years.
             Include all addresses where they have lived, even if temporary.
           </p>
         </div>

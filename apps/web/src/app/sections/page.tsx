@@ -5,7 +5,7 @@ export default function SectionsPage() {
         Your Application
       </h1>
       <p className="text-muted-foreground text-sm max-w-xl mb-8">
-        Fill out your information step by step. We'll use this data to
+        Fill out your information step by step. We&apos;ll use this data to
         automatically complete all required immigration forms for you.
       </p>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
