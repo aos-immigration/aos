@@ -46,7 +46,7 @@ Verify: Open /terms. The disclaimer phrases are asserted in apps/web/src/compone
 
 Status: wired.
 
-Privacy notes that are true today. Lines that depend on auth, encryption, or analytics changes stay out of the page.
+Privacy notes that are true today. Session replay is off, so the page says AOS does not record the screen or form typing. Lines that depend on auth or encryption stay out.
 
 Reach it from the Privacy link in the site footer.
 
@@ -136,7 +136,7 @@ Verify: bun run check runs employmentSchema.test.ts. Nothing asserts the role or
 
 Status: mocked.
 
-Static beneficiary basics. There is no Convex table for this section and the form does not save.
+Static beneficiary basics. There is no Convex table for this section and the form does not save. The page says it is not saved yet and does not preselect gender or an other-names answer.
 
 Reach it from Sidebar, Beneficiary Information, Basic Information.
 
@@ -156,7 +156,7 @@ Verify: The address schema and addressValidation tests in bun run check cover th
 
 Status: mocked.
 
-Static beneficiary employment form. It does not use EmploymentHistory and does not save.
+Static beneficiary employment form. It does not use EmploymentHistory and does not save. The page says it is not saved yet.
 
 Reach it from Sidebar, Beneficiary Information, Employment History (5 years).
 
@@ -166,7 +166,7 @@ Verify: Open /sections/beneficiary/employment. Inputs are uncontrolled placehold
 
 Status: mocked.
 
-Static biographic details. There is no Convex table for biographic data.
+Static biographic details. There is no Convex table for biographic data. Eye color is not preselected, and the page says it is not saved yet.
 
 Reach it from Sidebar, Beneficiary Information, Biographic Details.
 
@@ -176,7 +176,7 @@ Verify: Open /sections/beneficiary/biographic. No unit test covers the screen.
 
 Status: mocked.
 
-Static marital history. There is no Convex table for marital data.
+Static marital history. There is no Convex table for marital data. The page says it is not saved yet.
 
 Reach it from Sidebar, Marital History, Marriage Information.
 
@@ -186,7 +186,7 @@ Verify: Open /sections/marital. No unit test covers the screen.
 
 Status: mocked.
 
-Static forms index. The sidebar does not link here. The page tells the reader to pick a form that nothing routes to from the nav.
+Static forms index. The sidebar does not link here. The page says these previews do not save.
 
 Reach it from the URL /forms only.
 
@@ -196,7 +196,7 @@ Verify: Open /forms. No unit test covers the screen.
 
 Status: mocked.
 
-Static I-130 petitioner mock. The live petitioner form is /sections/petitioner. With no Clerk keys the shared layout renders the demo shell and does not call Convex.
+Static I-130 petitioner mock. The live petitioner form is /sections/petitioner. The mock does not show an A-Number, SSN, or street address. With no Clerk keys the shared layout renders the demo shell and does not call Convex.
 
 Reach it from the URL /forms/i-130/petitioner only.
 
@@ -206,7 +206,7 @@ Verify: Open the URL. No unit test covers the screen. Do not treat a successful 
 
 Status: mocked.
 
-Static I-130 beneficiary mock. The live beneficiary address form is /sections/beneficiary/address.
+Static I-130 beneficiary mock. Names and the date of birth are empty. The live beneficiary address form is /sections/beneficiary/address.
 
 Reach it from the URL /forms/i-130/beneficiary only.
 
@@ -216,11 +216,31 @@ Verify: Open the URL. No unit test covers the screen.
 
 Status: mocked.
 
-Static I-485 biographic mock. It does not save, and it no longer shows a hardcoded completion percent.
+Static I-485 biographic mock. Eye color is not preselected, it does not save, and it does not show a completion percent.
 
 Reach it from the URL /forms/i-485/biographic only.
 
-Verify: Open the URL. No unit test covers the screen.
+Verify: bun run check renders the page in apps/web/src/app/lib/__tests__/mockSections.test.tsx.
+
+### `/sections/documents`
+
+Status: mocked.
+
+Coming soon page for Document Vault. Nothing on the page is saved.
+
+Reach it from Sidebar, Documents & Evidence, Document Vault.
+
+Verify: Open /sections/documents. The page says the section is not available yet. bun run check renders it in mockSections.test.tsx.
+
+### `/sections/proof`
+
+Status: mocked.
+
+Coming soon page for Bona Fide Proof. Nothing on the page is saved.
+
+Reach it from Sidebar, Documents & Evidence, Bona Fide Proof.
+
+Verify: Open /sections/proof. The page says the section is not available yet.
 
 ## API
 
@@ -238,7 +258,7 @@ Verify: bun run check runs apps/api/tests/test_api.py::test_health_ok. The test 
 
 Status: wired.
 
-Lists AcroForm leaf fields for Forms/{slug}.pdf. Any filename in Forms/ is a slug. Only i-130 is used by the UI.
+Lists AcroForm leaf fields for an allowlisted form. The allowlist is i-130, i-130a, i-131, i-485, and i-765. Only i-130 is used by the UI.
 
 Reach it from GET /fields/i-130 on the API.
 
@@ -258,11 +278,11 @@ Verify: bun run check runs test_debug_field_requires_a_name. Inspect a live fiel
 
 Status: wired.
 
-Fills Forms/{slug}.pdf from {fields, checkboxes} and streams the PDF back. The caller must send X-Fill-Secret. The rate limit key is X-Fill-Caller, which the web server sets to the Clerk user id or demo. X-Forwarded-For is ignored. Checkbox on-values are sniffed from /AP. /V and /AS are both set, and /NeedAppearances is set on the AcroForm.
+Fills an allowlisted form from {fields, checkboxes} and streams the PDF back with Cache-Control no-store. The caller must send X-Fill-Secret. The rate limit key is X-Fill-Caller, which the web server sets to the Clerk user id or demo. X-Forwarded-For is ignored. Checkbox on-values are sniffed from /AP. /V and /AS are both set, and /NeedAppearances is set on the AcroForm. Browser callers must send an Origin listed in ALLOWED_ORIGINS. When that variable is unset, the only allowed origin is http://localhost:3000. A validation error does not echo the submitted value.
 
 Reach it from the signed-in Preview my forms button, which calls the Convex fill action with the caller's saved application, or the demo POST /api/fill/i-130 route, which builds the fake I-130 on the server.
 
-Verify: bun run check runs apps/api/tests/test_fill_auth.py and uv run python scripts/eval_fill.py fixtures/ from apps/api. eval_fill.py exits 1 when a fixture field or appearance state does not match.
+Verify: bun run check runs apps/api/tests/test_fill_auth.py, apps/api/tests/test_api.py, and uv run python scripts/eval_fill.py fixtures/ from apps/api. eval_fill.py exits 1 when a fixture field or appearance state does not match.
 
 ## Linked paths with no page
 
@@ -274,7 +294,7 @@ None.
 
 Status: partial.
 
-Preview my forms shows the PDF in an iframe. A signed-in preview is a Convex action that loads that caller's saved application, decrypts SSN and A-Number, and fills only i-130. Demo mode posts to /api/fill/i-130 with no field map; the server builds the Alex Demo payload and ignores the body. Employment is loaded and then ignored. The header no longer shows a hardcoded percent.
+Preview my forms shows the PDF in an iframe. A signed-in preview is a Convex action that loads that caller's saved application, decrypts SSN and A-Number, and fills only i-130. Demo mode posts to /api/fill/i-130 with no field map; the server builds the Alex Demo payload and ignores the body. Employment is loaded and then ignored. The header counts saved sections and does not show a percentage.
 
 Reach it from the Preview my forms button in the app header, on any /sections or /forms page.
 

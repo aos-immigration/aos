@@ -1,3 +1,5 @@
+import { NotSavedNotice } from "@/components/NotSavedNotice";
+
 export default function PetitionerPage() {
   return (
     <div className="max-w-5xl mx-auto space-y-8">
@@ -20,6 +22,7 @@ export default function PetitionerPage() {
           </span>
         </div>
       </div>
+      <NotSavedNotice />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 border border-border p-6 rounded-xl space-y-6 bg-card">
@@ -76,79 +79,19 @@ export default function PetitionerPage() {
 
         <div className="space-y-6">
           <div className="border border-border p-6 rounded-xl space-y-4 bg-card">
-            <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-              Required Proof
-            </h3>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between p-3 bg-muted rounded border border-border">
-                <div className="flex items-center gap-3">
-                  <span className="text-sm text-green-500">✓</span>
-                  <span className="text-xs">U.S. Birth Certificate</span>
-                </div>
-                <span className="text-xs text-muted-foreground">👁</span>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-muted rounded border border-border">
-                <div className="flex items-center gap-3">
-                  <span className="text-sm text-amber-500">⏳</span>
-                  <span className="text-xs">Marriage Certificate</span>
-                </div>
-                <span className="text-xs text-primary">📤</span>
-              </div>
-            </div>
+            <h3 className="font-medium text-sm">Identifiers</h3>
+            <p className="text-xs text-muted-foreground">
+              No A-Number or SSN is stored on this preview.
+            </p>
           </div>
         </div>
 
         <div className="lg:col-span-3 border border-border p-6 rounded-xl bg-card">
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-3">
-              <span className="text-primary text-xl">📍</span>
-              <h3 className="font-medium">Primary Residence History</h3>
-            </div>
-            <button className="text-xs text-primary font-medium flex items-center gap-1">
-              <span>+</span>
-              Add Address
-            </button>
+          <div className="flex items-center gap-3 mb-4">
+            <span className="text-primary text-xl">📍</span>
+            <h3 className="font-medium">Primary Residence History</h3>
           </div>
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 p-4 rounded bg-muted border border-border">
-              <div className="md:col-span-2 space-y-1">
-                <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">
-                  Street Address
-                </div>
-                <div className="text-sm">742 Evergreen Terrace</div>
-                <div className="text-xs text-muted-foreground">
-                  Springfield, IL 62704
-                </div>
-              </div>
-              <div className="space-y-1">
-                <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">
-                  Date From
-                </div>
-                <div className="text-sm font-mono">2020-01-01</div>
-              </div>
-              <div className="space-y-1">
-                <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">
-                  Status
-                </div>
-                <div>
-                  <span className="px-2 py-0.5 bg-green-500/10 text-green-500 text-[10px] rounded border border-green-500/20">
-                    Current
-                  </span>
-                </div>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 p-4 rounded border border-dashed border-border opacity-60">
-              <div className="md:col-span-2 text-xs italic">
-                Previous address history required (past 5 years)
-              </div>
-              <div className="text-xs font-mono">2019 - 2020</div>
-              <div className="text-right">
-                <button className="text-[10px] border border-border px-3 py-1 rounded">
-                  Complete
-                </button>
-              </div>
-            </div>
-          </div>
+          <p className="text-sm text-muted-foreground">No address saved.</p>
         </div>
       </div>
     </div>

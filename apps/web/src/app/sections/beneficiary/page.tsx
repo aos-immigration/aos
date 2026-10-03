@@ -1,3 +1,5 @@
+import { NotSavedNotice } from "@/components/NotSavedNotice";
+
 export default function BeneficiaryPage() {
   return (
     <div className="max-w-5xl mx-auto space-y-8">
@@ -7,11 +9,11 @@ export default function BeneficiaryPage() {
             Beneficiary Information
           </h1>
           <p className="text-muted-foreground text-sm max-w-xl">
-            Tell us about the person you&apos;re sponsoring. This information will
-            be used across all required forms automatically.
+            Tell us about the person you&apos;re sponsoring.
           </p>
         </div>
       </div>
+      <NotSavedNotice />
 
       <div className="space-y-16">
         <section>
@@ -68,6 +70,7 @@ export default function BeneficiaryPage() {
                 Gender
               </label>
               <select className="w-full bg-card border border-border rounded-lg text-sm px-3 py-2 focus:ring-0 transition-all focus:border-primary">
+                <option value="">Select</option>
                 <option>Female</option>
                 <option>Male</option>
                 <option>Other</option>
@@ -84,7 +87,7 @@ export default function BeneficiaryPage() {
                 <button className="px-4 py-1.5 text-xs font-medium rounded hover:bg-accent text-muted-foreground">
                   Yes
                 </button>
-                <button className="px-4 py-1.5 text-xs font-medium rounded bg-border text-foreground shadow-sm">
+                <button className="px-4 py-1.5 text-xs font-medium rounded hover:bg-accent text-muted-foreground">
                   No
                 </button>
               </div>

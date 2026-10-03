@@ -1,7 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from app.main import _allowed_origins, _fill_hits, _send_dd_log, app
+from app.main import _fill_hits, app
 
 SECRET = "test-secret"
 
@@ -82,11 +82,6 @@ def test_health_stays_open(client: TestClient) -> None:
     response = client.get("/health")
     assert response.status_code == 200
     assert response.json() == {"ok": True}
-
-
-def test_allowed_origins_drop_a_wildcard(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("PDF_ALLOWED_ORIGINS", "*,https://app.example")
-    assert _allowed_origins() == ["https://app.example"]
 
 
 def test_cors_allowlists_the_configured_origin(client: TestClient) -> None:

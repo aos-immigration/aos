@@ -1,3 +1,5 @@
+import { NotSavedNotice } from "@/components/NotSavedNotice";
+
 export default function BeneficiaryEmploymentPage() {
   return (
     <div className="max-w-5xl mx-auto space-y-8">
@@ -14,6 +16,8 @@ export default function BeneficiaryEmploymentPage() {
         </div>
       </div>
 
+      <NotSavedNotice />
+
       <div className="space-y-6">
         <div className="border border-border p-6 rounded-xl bg-card">
           <div className="flex items-center justify-between mb-6">
@@ -21,9 +25,6 @@ export default function BeneficiaryEmploymentPage() {
               <span className="text-primary text-xl">💼</span>
               <h3 className="font-medium">Current Employment</h3>
             </div>
-            <span className="px-2 py-0.5 bg-green-500/10 text-green-500 text-[10px] rounded border border-green-500/20">
-              Current
-            </span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
