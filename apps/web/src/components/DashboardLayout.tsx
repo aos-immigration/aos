@@ -18,6 +18,12 @@ import { DEMO_BANNER } from "@/app/lib/demoCouple";
 import { buildPdfPayload } from "@/app/lib/buildPdfPayload";
 import type { AddressRow, EmploymentRow } from "@/app/lib/buildPdfPayload";
 import {
+  PERSISTABLE_SECTION_HREFS,
+  savedSectionCount,
+  type IntakeSnapshot,
+} from "@/app/lib/sectionSaveState";
+import { SavedSectionsLabel } from "@/components/SavedSectionsLabel";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -27,6 +33,14 @@ import {
 
 type DashboardLayoutProps = {
   children: React.ReactNode;
+};
+
+const EMPTY_SNAPSHOT: IntakeSnapshot = {
+  petitionerGivenName: "",
+  petitionerFamilyName: "",
+  petitionerAddressCount: 0,
+  petitionerEmploymentCount: 0,
+  beneficiaryAddressCount: 0,
 };
 
 function DashboardFrame({
@@ -42,6 +56,7 @@ function DashboardFrame({
   pdfUrl,
   isPreviewOpen,
   onPreviewOpenChange,
+  snapshot,
 }: {
   children: React.ReactNode;
   demo: boolean;
@@ -55,10 +70,11 @@ function DashboardFrame({
   pdfUrl: string | null;
   isPreviewOpen: boolean;
   onPreviewOpenChange: (open: boolean) => void;
+  snapshot: IntakeSnapshot | null;
 }) {
   return (
     <div className="flex h-screen overflow-hidden">
-      <Sidebar />
+      <Sidebar snapshot={snapshot ?? EMPTY_SNAPSHOT} />
       <main className="relative flex flex-1 flex-col overflow-hidden">
         {demo ? (
           <div className="border-b border-amber-500/30 bg-amber-500/15 px-6 py-2 text-sm text-amber-200">
@@ -69,6 +85,16 @@ function DashboardFrame({
           <div className="flex h-14 items-center justify-between px-6">
             <Breadcrumbs />
             <div className="flex items-center gap-3">
+              {snapshot ? (
+                <SavedSectionsLabel
+                  persistable={PERSISTABLE_SECTION_HREFS.length}
+                  saved={savedSectionCount(snapshot)}
+                />
+              ) : (
+                <div className="text-[10px] font-mono text-muted-foreground">
+                  Checking saved sections
+                </div>
+              )}
               {showAccount ? <UserButton /> : null}
               <ThemeToggle />
               {process.env.NODE_ENV === "development" && !demo ? (
@@ -189,6 +215,7 @@ function DemoDashboard({ children }: DashboardLayoutProps) {
       pdfUrl={preview.pdfUrl}
       isPreviewOpen={preview.isPreviewOpen}
       onPreviewOpenChange={preview.setIsPreviewOpen}
+      snapshot={EMPTY_SNAPSHOT}
     >
       {children}
     </DashboardFrame>
@@ -210,7 +237,27 @@ function LiveDashboard({ children }: DashboardLayoutProps) {
     api.petitioner.listEmploymentEntries,
     applicationId ? { applicationId, personRole: "petitioner" } : "skip",
   );
+  const beneficiaryAddresses = useQuery(
+    api.petitioner.listAddresses,
+    applicationId ? { applicationId, personRole: "beneficiary" } : "skip",
+  );
   const preview = usePdfPreview();
+
+  const intakeLoaded =
+    basics !== undefined &&
+    addresses !== undefined &&
+    employment !== undefined &&
+    beneficiaryAddresses !== undefined;
+  const snapshot: IntakeSnapshot | null =
+    applicationId && !intakeLoaded
+      ? null
+      : {
+          petitionerGivenName: basics?.givenName ?? "",
+          petitionerFamilyName: basics?.familyName ?? "",
+          petitionerAddressCount: addresses?.length ?? 0,
+          petitionerEmploymentCount: employment?.length ?? 0,
+          beneficiaryAddressCount: beneficiaryAddresses?.length ?? 0,
+        };
 
   const onPreview = useCallback(async () => {
     if (!applicationId) {
@@ -267,6 +314,7 @@ function LiveDashboard({ children }: DashboardLayoutProps) {
       pdfUrl={preview.pdfUrl}
       isPreviewOpen={preview.isPreviewOpen}
       onPreviewOpenChange={preview.setIsPreviewOpen}
+      snapshot={snapshot}
     >
       {children}
     </DashboardFrame>

@@ -1,6 +1,7 @@
 import { datadogRum } from "@datadog/browser-rum";
 import { reactPlugin } from "@datadog/browser-rum-react";
 import { datadogLogs } from "@datadog/browser-logs";
+import { rumPrivacy } from "./app/lib/rumPrivacy";
 import { redactUnknown } from "./lib/redactTelemetry";
 
 datadogRum.init({
@@ -11,8 +12,8 @@ datadogRum.init({
   env: process.env.NODE_ENV || "development",
   version: "0.1.0",
   sessionSampleRate: 100,
-  sessionReplaySampleRate: 0,
-  defaultPrivacyLevel: "mask",
+  sessionReplaySampleRate: rumPrivacy.sessionReplaySampleRate,
+  defaultPrivacyLevel: rumPrivacy.defaultPrivacyLevel,
   trackResources: true,
   trackUserInteractions: false,
   trackLongTasks: true,

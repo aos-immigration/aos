@@ -28,7 +28,7 @@
       "id": "/privacy",
       "kind": "page",
       "status": "wired",
-      "does": "Privacy notes that are true today. Lines that depend on auth, encryption, or analytics changes stay out of the page.",
+      "does": "Privacy notes that are true today. Session replay is off, so the page says AOS does not record the screen or form typing. Lines that depend on auth or encryption stay out.",
       "reach": "the Privacy link in the site footer",
       "verify": "bun run check runs apps/web/src/components/system/system.test.tsx, which asserts encryption and sign-in claims are hidden."
     },
@@ -100,7 +100,7 @@
       "id": "/sections/beneficiary",
       "kind": "page",
       "status": "mocked",
-      "does": "Static beneficiary basics. There is no Convex table for this section and the form does not save.",
+      "does": "Static beneficiary basics. There is no Convex table for this section and the form does not save. The page says it is not saved yet and does not preselect gender or an other-names answer.",
       "reach": "Sidebar, Beneficiary Information, Basic Information",
       "verify": "Open /sections/beneficiary. The page module does not call useQuery or useMutation. No unit test covers the screen."
     },
@@ -116,7 +116,7 @@
       "id": "/sections/beneficiary/employment",
       "kind": "page",
       "status": "mocked",
-      "does": "Static beneficiary employment form. It does not use EmploymentHistory and does not save.",
+      "does": "Static beneficiary employment form. It does not use EmploymentHistory and does not save. The page says it is not saved yet.",
       "reach": "Sidebar, Beneficiary Information, Employment History (5 years)",
       "verify": "Open /sections/beneficiary/employment. Inputs are uncontrolled placeholders. No unit test covers the screen."
     },
@@ -124,7 +124,7 @@
       "id": "/sections/beneficiary/biographic",
       "kind": "page",
       "status": "mocked",
-      "does": "Static biographic details. There is no Convex table for biographic data.",
+      "does": "Static biographic details. There is no Convex table for biographic data. Eye color is not preselected, and the page says it is not saved yet.",
       "reach": "Sidebar, Beneficiary Information, Biographic Details",
       "verify": "Open /sections/beneficiary/biographic. No unit test covers the screen."
     },
@@ -132,7 +132,7 @@
       "id": "/sections/marital",
       "kind": "page",
       "status": "mocked",
-      "does": "Static marital history. There is no Convex table for marital data.",
+      "does": "Static marital history. There is no Convex table for marital data. The page says it is not saved yet.",
       "reach": "Sidebar, Marital History, Marriage Information",
       "verify": "Open /sections/marital. No unit test covers the screen."
     },
@@ -140,7 +140,7 @@
       "id": "/forms",
       "kind": "page",
       "status": "mocked",
-      "does": "Static forms index. The sidebar does not link here. The page tells the reader to pick a form that nothing routes to from the nav.",
+      "does": "Static forms index. The sidebar does not link here. The page says these previews do not save.",
       "reach": "the URL /forms only",
       "verify": "Open /forms. No unit test covers the screen."
     },
@@ -148,7 +148,7 @@
       "id": "/forms/i-130/petitioner",
       "kind": "page",
       "status": "mocked",
-      "does": "Static I-130 petitioner mock. The live petitioner form is /sections/petitioner. With no Clerk keys the shared layout renders the demo shell and does not call Convex.",
+      "does": "Static I-130 petitioner mock. The live petitioner form is /sections/petitioner. The mock does not show an A-Number, SSN, or street address. With no Clerk keys the shared layout renders the demo shell and does not call Convex.",
       "reach": "the URL /forms/i-130/petitioner only",
       "verify": "Open the URL. No unit test covers the screen. Do not treat a successful next build as proof the form saves."
     },
@@ -156,7 +156,7 @@
       "id": "/forms/i-130/beneficiary",
       "kind": "page",
       "status": "mocked",
-      "does": "Static I-130 beneficiary mock. The live beneficiary address form is /sections/beneficiary/address.",
+      "does": "Static I-130 beneficiary mock. Names and the date of birth are empty. The live beneficiary address form is /sections/beneficiary/address.",
       "reach": "the URL /forms/i-130/beneficiary only",
       "verify": "Open the URL. No unit test covers the screen."
     },
@@ -164,9 +164,25 @@
       "id": "/forms/i-485/biographic",
       "kind": "page",
       "status": "mocked",
-      "does": "Static I-485 biographic mock. It does not save, and it no longer shows a hardcoded completion percent.",
+      "does": "Static I-485 biographic mock. Eye color is not preselected, it does not save, and it does not show a completion percent.",
       "reach": "the URL /forms/i-485/biographic only",
-      "verify": "Open the URL. No unit test covers the screen."
+      "verify": "bun run check renders the page in apps/web/src/app/lib/__tests__/mockSections.test.tsx."
+    },
+    {
+      "id": "/sections/documents",
+      "kind": "page",
+      "status": "mocked",
+      "does": "Coming soon page for Document Vault. Nothing on the page is saved.",
+      "reach": "Sidebar, Documents & Evidence, Document Vault",
+      "verify": "Open /sections/documents. The page says the section is not available yet. bun run check renders it in mockSections.test.tsx."
+    },
+    {
+      "id": "/sections/proof",
+      "kind": "page",
+      "status": "mocked",
+      "does": "Coming soon page for Bona Fide Proof. Nothing on the page is saved.",
+      "reach": "Sidebar, Documents & Evidence, Bona Fide Proof",
+      "verify": "Open /sections/proof. The page says the section is not available yet."
     },
     {
       "id": "GET /health",
@@ -180,7 +196,7 @@
       "id": "GET /fields/{slug}",
       "kind": "api",
       "status": "wired",
-      "does": "Lists AcroForm leaf fields for Forms/{slug}.pdf. Any filename in Forms/ is a slug. Only i-130 is used by the UI.",
+      "does": "Lists AcroForm leaf fields for an allowlisted form. The allowlist is i-130, i-130a, i-131, i-485, and i-765. Only i-130 is used by the UI.",
       "reach": "GET /fields/i-130 on the API",
       "verify": "bun run check runs test_unknown_form_is_not_found. A real listing is GET /fields/i-130 against a running server, or the catalog apps/api/data/i-130.fields.csv."
     },
@@ -196,16 +212,16 @@
       "id": "POST /fill/{slug}",
       "kind": "api",
       "status": "wired",
-      "does": "Fills Forms/{slug}.pdf from {fields, checkboxes} and streams the PDF back. The caller must send X-Fill-Secret. The rate limit key is X-Fill-Caller, which the web server sets to the Clerk user id or demo. X-Forwarded-For is ignored. Checkbox on-values are sniffed from /AP. /V and /AS are both set, and /NeedAppearances is set on the AcroForm.",
+      "does": "Fills an allowlisted form from {fields, checkboxes} and streams the PDF back with Cache-Control no-store. The caller must send X-Fill-Secret. The rate limit key is X-Fill-Caller, which the web server sets to the Clerk user id or demo. X-Forwarded-For is ignored. Checkbox on-values are sniffed from /AP. /V and /AS are both set, and /NeedAppearances is set on the AcroForm. Browser callers must send an Origin listed in ALLOWED_ORIGINS. When that variable is unset, the only allowed origin is http://localhost:3000. A validation error does not echo the submitted value.",
       "reach": "the signed-in Preview my forms button, which calls the Convex fill action with the caller's saved application, or the demo POST /api/fill/i-130 route, which builds the fake I-130 on the server",
-      "verify": "bun run check runs apps/api/tests/test_fill_auth.py and uv run python scripts/eval_fill.py fixtures/ from apps/api. eval_fill.py exits 1 when a fixture field or appearance state does not match."
+      "verify": "bun run check runs apps/api/tests/test_fill_auth.py, apps/api/tests/test_api.py, and uv run python scripts/eval_fill.py fixtures/ from apps/api. eval_fill.py exits 1 when a fixture field or appearance state does not match."
     }
   ],
   "flows": [
     {
       "id": "verify-and-preview",
       "status": "partial",
-      "does": "Preview my forms shows the PDF in an iframe. A signed-in preview is a Convex action that loads that caller's saved application, decrypts SSN and A-Number, and fills only i-130. Demo mode posts to /api/fill/i-130 with no field map; the server builds the Alex Demo payload and ignores the body. Employment is loaded and then ignored. The header no longer shows a hardcoded percent.",
+      "does": "Preview my forms shows the PDF in an iframe. A signed-in preview is a Convex action that loads that caller's saved application, decrypts SSN and A-Number, and fills only i-130. Demo mode posts to /api/fill/i-130 with no field map; the server builds the Alex Demo payload and ignores the body. Employment is loaded and then ignored. The header counts saved sections and does not show a percentage.",
       "reach": "the Preview my forms button in the app header, on any /sections or /forms page",
       "verify": "apps/web/e2e/review-package.spec.ts drives the button with a mocked /fill/i-130 response. It needs Convex and Playwright, so it is not part of bun run check. Fill accuracy without the browser is eval_fill.py."
     },

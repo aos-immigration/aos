@@ -15,10 +15,17 @@ from typing import Any, Dict, List, Optional
 
 import pikepdf
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
+from app.http_policy import (
+    FORMS_DIR,
+    form_pdf,
+    parse_allowed_origins,
+    validation_errors_for_client,
+)
 from app.pdf_access import pdf_get
 
 DD_API_KEY = os.environ.get("DD_API_KEY", "")
@@ -73,19 +80,23 @@ FIELDS_KEY = "/Fields"
 PDF_NOT_FOUND = "PDF not found"
 DEV_FILL_SECRET = "dev-only-fill-secret"
 
-def _allowed_origins() -> List[str]:
-    raw = os.environ.get("PDF_ALLOWED_ORIGINS", "http://localhost:3000")
-    origins = [part.strip() for part in raw.split(",") if part.strip() and part.strip() != "*"]
-    return origins or ["http://localhost:3000"]
-
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_allowed_origins(),
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["Content-Type", "X-Fill-Secret"],
+    allow_origins=parse_allowed_origins(os.environ.get("ALLOWED_ORIGINS")),
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type", "X-Fill-Secret", "X-Fill-Caller"],
 )
+
+
+@app.exception_handler(RequestValidationError)
+async def hide_validation_input(
+    _request: Request, exc: RequestValidationError
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=422,
+        content={"detail": validation_errors_for_client(exc.errors())},
+    )
 
 
 @app.middleware("http")
@@ -113,8 +124,10 @@ class FillRequest(BaseModel):
 
 
 def _pdf_path(slug: str) -> Path:
-    base = Path(__file__).resolve().parents[3]
-    return base / "Forms" / f"{slug}.pdf"
+    path = form_pdf(slug, FORMS_DIR)
+    if path is None:
+        raise HTTPException(status_code=404, detail=PDF_NOT_FOUND)
+    return path
 
 
 def _deref(obj):
@@ -328,9 +341,6 @@ def debug_field(slug: str, name: str):
     raise HTTPException(status_code=404, detail="Field name not found")
 
 
-_SLUG = re.compile(r"[a-z0-9-]+")
-
-
 _fill_hits: Dict[str, List[float]] = {}
 _CALLER_KEY = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
 
@@ -387,8 +397,6 @@ async def fill_pdf(slug: str, request: Request):
         raise HTTPException(status_code=401, detail="Unauthorized")
     if not _rate_ok(request):
         raise HTTPException(status_code=429, detail="Too many requests")
-    if not _SLUG.fullmatch(slug):
-        raise HTTPException(status_code=404, detail=PDF_NOT_FOUND)
     raw = await request.body()
     try:
         max_bytes = int(os.environ.get("PDF_MAX_BODY_BYTES", "1000000"))
@@ -423,5 +431,8 @@ async def fill_pdf(slug: str, request: Request):
     return StreamingResponse(
         output,
         media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Cache-Control": "no-store",
+        },
     )

@@ -88,16 +88,17 @@ docs/              feature map, agent patterns, review process
 `apps/web` owns the UI and the Convex client. It does not fill PDFs.
 `apps/web/convex` owns persistence. `apps/api` fills PDFs and does not store
 intake answers. `Forms/{slug}.pdf` is the template for `POST /fill/{slug}`.
-Demo `POST /api/fill/i-130` builds the fake payload on the server and ignores
-the client body. Signed-in fill loads that caller's Convex rows inside
-`fillI130`. The PDF service rate-limits `X-Fill-Caller` and ignores
-`X-Forwarded-For`. Identity numbers are encrypted or omitted, never a
+The slug allowlist is `i-130`, `i-130a`, `i-131`, `i-485`, and `i-765`. Only
+`i-130` is wired in the UI. Browser calls are limited to `ALLOWED_ORIGINS`,
+which defaults to `http://localhost:3000` when unset. Demo
+`POST /api/fill/i-130` builds the fake payload on the server and ignores the
+client body. Signed-in fill loads that caller's Convex rows inside `fillI130`.
+The PDF service requires `X-Fill-Secret`, rate-limits `X-Fill-Caller`, and
+ignores `X-Forwarded-For`. Identity numbers are encrypted or omitted, never a
 plaintext Convex column. Do not `console.log` Convex function arguments.
 `/account` POSTs `/api/account/delete`. That route deletes Convex rows and
 then the Clerk user. `/api/webhooks/clerk` verifies Svix and purges on
 `user.deleted`.
-There is no form registry. All five PDFs are reachable. Only `i-130` is
-wired in the UI.
 
 Bun workspaces, Turborepo. Root `dev` and `lint` exist in both apps. `build`,
 `test:unit`, and `test:e2e` exist only in `apps/web`.
@@ -113,18 +114,18 @@ user and returns that user's draft. Intake routes require a session. `/demo`
 sets a cookie and shows a fake couple without writing Convex. SSN and
 A-Number are encrypted in Convex and are not returned by the basics query.
 
-The authoritative list of routes, how to open each one, how to verify it,
-and whether it is wired, partial, mocked, or missing is
-`docs/feature-map.md`. Short version: petitioner basics, both address
-histories, and `POST /fill/{slug}` are real. Petitioner employment persists
+Route status is `docs/feature-map.md`. Petitioner basics, both address
+histories, and `POST /fill/{slug}` persist. Petitioner employment persists
 but does not reach the PDF. Beneficiary basics, beneficiary employment,
-biographic, marital, the sections overview, and everything under `/forms`
-are static mockups. `/sections/documents` and `/sections/proof` are sidebar
-links with no page.
+biographic, marital history, and everything under `/forms` are static
+mockups. The header counts sections that have stored data. It does not show
+a percentage. Mock sections say they are not saved yet.
+`/sections/documents` and `/sections/proof` are coming-soon pages inside
+the shell.
 
 Datadog RUM in the web app uses a hardcoded client token in
-`apps/web/src/instrumentation-client.ts`. The API logs one line per request
-only when `DD_API_KEY` is set.
+`apps/web/src/instrumentation-client.ts`. Session replay is off and text is
+masked. The API logs one line per request only when `DD_API_KEY` is set.
 
 ## Conventions
 
