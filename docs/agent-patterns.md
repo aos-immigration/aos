@@ -219,3 +219,18 @@ signature and purges on `user.deleted`. `deleteAccount.test.ts` covers the
 order, the retry, the second webhook delivery, and that `account/page.tsx`
 does not call `user.delete`. `purgeOwner` in `sensitive.test.ts` deletes one
 owner twice and leaves the other.
+
+## Preview responses stay under 4.5MB
+
+`cc3c554` on #91 lowered preview render from scale 2 and JPEG quality 80
+to scale 1, quality 40, and `optimize=True`. GitHub squash-merged #91 as
+`702e1f2`. That fix records page images of about 20MB at the old
+settings, and a Sampleton preview body of 3.9MB after the change. Vercel
+rejects a function response over 4.5MB. The API and the Next preview
+route both return that JSON.
+
+Guard: `test_preview_returns_images_without_acknowledgement` in
+`apps/api/tests/test_map_intake.py` asserts
+`len(response.content) < 4_500_000` for the Sampleton packet. Do not
+raise preview scale or JPEG quality unless the Sampleton preview, or
+another preview of the full packet, stays under that 4.5MB limit.
