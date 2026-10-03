@@ -1,0 +1,19 @@
+---
+description: Non-trivial work starts with poteto-mode, and sub-workers are poteto-agent
+alwaysApply: true
+---
+
+Every non-trivial task starts by reading `.cursor/skills/poteto-mode/SKILL.md`
+and following it. That file is `/poteto-mode`.
+
+Spawn sub-workers as `poteto-agent` (`.cursor/agents/poteto-agent.md`).
+Do not substitute `generalPurpose` for that role. Routed workflow skills
+(`how`, `why`, `interrogate`, `reflect`, `swarm`) name their own subagent
+types. Respect those.
+
+`poteto-mode` sets `disable-model-invocation`, so it will not start itself.
+Read it anyway when the task is more than a casual question.
+
+Before finishing, read `.cursor/skills/review-lessons/SKILL.md` and check the
+diff against `docs/agent-patterns.md`. Use `docs/feature-map.md` before
+treating a page as real.
