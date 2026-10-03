@@ -35,7 +35,7 @@ is enough to get a build through.
 ```bash
 npm run test:unit                            # vitest, from the repo root
 cd apps/web && ./node_modules/.bin/tsc --noEmit
-cd apps/web && npm run lint                  # currently fails, see Known rough edges
+cd apps/web && npm run lint                  # 0 errors, 19 warnings; see Known rough edges
 cd apps/api && uv run python scripts/eval_fill.py fixtures/   # PDF fill accuracy
 ```
 
@@ -201,9 +201,12 @@ cd apps/api && uv run python scripts/render_fields.py fixtures/basic_petitioner.
 
 ## Known rough edges
 
-- `npm run lint` fails: 12 errors, 21 warnings. Ten are unescaped apostrophes in
-  JSX; two are `set-state-in-effect` in `ThemeToggle.tsx`.
-- No CI. Nothing checks builds, types or tests on a pull request.
+- `npm run lint`: 0 errors and 19 warnings after the JSX-entity and
+  `set-state-in-effect` fixes (`ThemeToggle.tsx`, `AddressHistory.tsx`);
+  12 errors and 20 warnings without those fixes.
+- GitHub Actions (`.github/workflows/ci.yml`) runs `npm run test:unit`,
+  `tsc --noEmit`, and an API `compileall` check on pull requests. `npm run lint`
+  is not part of that workflow.
 - Employment data is passed into `buildPdfPayload()` and then ignored, so it
   never reaches the PDF.
 - Every address is saved with `addressType: "physical"`, so the mailing-address
