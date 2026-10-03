@@ -22,7 +22,7 @@ def _pdf_path(slug: str) -> Path:
 def _deref(obj: Any) -> Any:
     return obj.get_object() if hasattr(obj, "get_object") else obj
 
-MAPPED_SLUGS = ("i-130", "i-130a", "i-485")
+MAPPED_SLUGS = ("i-130", "i-130a", "i-485", "i-765", "i-131")
 
 
 def _person(intake: dict[str, Any], role: str) -> dict[str, Any]:
@@ -279,10 +279,135 @@ def _map_i485(intake: dict[str, Any]) -> MappedForm:
     return form
 
 
+def _selected(intake: dict[str, Any], slug: str) -> bool:
+    selected = intake.get("selectedForms") or []
+    return isinstance(selected, list) and slug in selected
+
+
+def _map_i765(intake: dict[str, Any]) -> MappedForm:
+    """I-765 identity fields, plus category (c)(9) when an I-485 is also selected.
+
+    The category boxes are the three Item 27 fields: four characters, then three, then three.
+    (c)(9) is the pending-I-485 category. It is not written unless I-485 is selected.
+    """
+    form = MappedForm("i-765")
+    person = _person(intake, "beneficiary")
+    immigration = intake.get("immigration") or {}
+    form.text("Line1a_FamilyName[0]", str(person.get("familyName") or ""))
+    form.text("Line1b_GivenName[0]", str(person.get("givenName") or ""))
+    form.text("Line1c_MiddleName[0]", str(person.get("middleName") or ""))
+    form.text("Line7_AlienNumber[0]", _digits(str(person.get("aNumber") or "")))
+    form.text("Line12b_SSN[0]", _digits(str(person.get("ssn") or "")))
+    form.text("Line19_DOB[0]", _date(person.get("dateOfBirth")))
+    form.text("Line18a_CityTownOfBirth[0]", str(person.get("birthCity") or ""))
+    form.text("Line18c_CountryOfBirth[0]", str(person.get("birthCountry") or ""))
+    if person.get("sex") == "female":
+        form.box("Line9_Checkbox[0]")
+    elif person.get("sex") == "male":
+        form.box("Line9_Checkbox[1]")
+    form.text("Pt3Line5_Email[0]", str(person.get("email") or ""))
+    form.text("Line20b_Passport[0]", str(immigration.get("passportNumber") or ""))
+    form.text("Line20d_CountryOfIssuance[0]", str(immigration.get("passportCountry") or ""))
+    form.text("Line20e_ExpDate[0]", _date(immigration.get("passportExpiry")))
+    form.text("Line20a_I94Number[0]", str(immigration.get("i94Number") or ""))
+    form.text("Line21_DateOfLastEntry[0]", _date(immigration.get("arrival")))
+    form.text("Line23_StatusLastEntry[0]", str(immigration.get("classOfAdmission") or ""))
+    form.text("Line24_CurrentStatus[0]", str(immigration.get("currentStatus") or ""))
+    address = _current_address(intake, "beneficiary")
+    if address:
+        form.box("Part2Line5_Checkbox[1]")
+        form.text("Line4b_StreetNumberName[0]", str(address.get("street") or ""))
+        form.text("Pt2Line5_CityOrTown[0]", str(address.get("city") or ""))
+        form.text("Pt2Line5_State[0]", str(address.get("state") or ""))
+        form.text("Pt2Line5_ZipCode[0]", str(address.get("postal") or ""))
+    if _selected(intake, "i-485"):
+        form.text("section_1[0]", "(c)(")
+        form.text("section_2[0]", "9)")
+    return form
+
+
+def _map_i131(intake: dict[str, Any]) -> MappedForm:
+    """I-131 advance parole for a pending I-485, plus the beneficiary fields we collect.
+
+    CB_AppType[4] is the first widget with that short name. Its tooltip is the
+    pending Form I-485 checkbox, not a later duplicate.
+    """
+    form = MappedForm("i-131")
+    person = _person(intake, "beneficiary")
+    immigration = intake.get("immigration") or {}
+    bio = ((intake.get("biographics") or {}).get("beneficiary")) or {}
+    if _selected(intake, "i-485"):
+        form.box("CB_AppType[4]")
+    form.text("Part2_Line1_FamilyName[0]", str(person.get("familyName") or ""))
+    form.text("Part2_Line1_GivenName[0]", str(person.get("givenName") or ""))
+    form.text("Part2_Line1_MiddleName[0]", str(person.get("middleName") or ""))
+    form.text("Part2_Line9_DateOfBirth[0]", _date(person.get("dateOfBirth")))
+    form.text("Part2_Line5_AlienNumber[0]", _digits(str(person.get("aNumber") or "")))
+    form.text("Part2_Line10_SSN[0]", str(person.get("ssn") or ""))
+    form.text("Part2_Line6_CountryOfBirth[0]", str(person.get("birthCountry") or ""))
+    form.text("Part2_Line13_I94RecordNo[0]", str(immigration.get("i94Number") or ""))
+    if person.get("sex") == "female":
+        form.box("Part2_Line8_Gender[0]")
+    elif person.get("sex") == "male":
+        form.box("Part2_Line8_Gender[1]")
+    address = _current_address(intake, "beneficiary")
+    if address:
+        form.text("Part2_Line3_StreetNumberName[0]", str(address.get("street") or ""))
+        form.text("Part2_Line3_CityTown[0]", str(address.get("city") or ""))
+        form.text("Part2_Line3_State[0]", str(address.get("state") or ""))
+        form.text("Part2_Line3_ZipCode[0]", str(address.get("postal") or ""))
+        form.text("Part2_Line3_Country[0]", str(address.get("country") or ""))
+    if bio.get("ethnicity") == "not_hispanic":
+        form.box("P3_Line1_Ethnicity[0]")
+    elif bio.get("ethnicity") == "hispanic":
+        form.box("P3_Line1_Ethnicity[1]")
+    race = {
+        "white": "P3_Line2_Race_White[0]",
+        "asian": "P3_Line2_Race_Asian[0]",
+        "black": "P3_Line2_Race_Black[0]",
+        "native": "P3_Line2_Race_American[0]",
+        "pacific": "P3_Line2_Race_Hawaiian[0]",
+    }
+    for item in bio.get("race") or []:
+        short = race.get(str(item))
+        if short:
+            form.box(short)
+    eye = {
+        "brown": "P3_Line5_EyeColor[0]",
+        "blue": "P3_Line5_EyeColor[7]",
+        "green": "P3_Line5_EyeColor[6]",
+        "hazel": "P3_Line5_EyeColor[5]",
+        "black": "P3_Line5_EyeColor[8]",
+        "gray": "P3_Line5_EyeColor[1]",
+        "maroon": "P3_Line5_EyeColor[2]",
+    }.get(str(bio.get("eye") or "").strip().lower())
+    hair = {
+        "black": "P3_Line6_HairColor[8]",
+        "brown": "P3_Line6_HairColor[7]",
+        "blond": "P3_Line6_HairColor[1]",
+        "gray": "P3_Line6_HairColor[2]",
+        "white": "P3_Line6_HairColor[5]",
+        "red": "P3_Line6_HairColor[6]",
+        "bald": "P3_Line6_HairColor[0]",
+    }.get(str(bio.get("hair") or "").strip().lower())
+    if eye:
+        form.box(eye)
+    if hair:
+        form.box(hair)
+    weight = _digits(str(bio.get("weightPounds") or ""))
+    if len(weight) == 3:
+        form.text("P3_Line4_Pound1[0]", weight[0])
+        form.text("P3_Line4_Pound2[0]", weight[1])
+        form.text("P3_Line4_Pound3[0]", weight[2])
+    return form
+
+
 _MAPPERS = {
     "i-130": _map_i130,
     "i-130a": _map_i130a,
     "i-485": _map_i485,
+    "i-765": _map_i765,
+    "i-131": _map_i131,
 }
 
 

@@ -288,7 +288,7 @@ Verify: bun run check runs uv run python scripts/eval_fill.py fixtures/ from app
 
 Status: wired.
 
-Fills one mapped form from a canonical intake. Mapped slugs are i-130, i-130a, and i-485. I-864 is not mapped until the official PDF is in Forms/.
+Fills one mapped form from a canonical intake. Mapped slugs are i-130, i-130a, i-485, i-765, and i-131. I-765 writes category (c)(9) only when I-485 is also selected. I-131 checks advance parole for a pending I-485 only in that same case. I-864 is not mapped until the official PDF is in Forms/.
 
 Reach it from the Preview my forms button, or POST /fill-intake/i-130 with {intake}.
 
@@ -298,7 +298,7 @@ Verify: bun run check runs apps/api/tests/test_map_intake.py and the intake_*.js
 
 Status: partial.
 
-Zips the mapped forms the person selected, plus a read-me that says the files are drafts and names any selected form that was not filled. I-864, I-765, I-131, and G-1145 are named in that note.
+Zips the mapped forms the person selected, plus a read-me that says the files are drafts and names any selected form that was not filled. I-864 and G-1145 are named in that note. I-765 and I-131 are filled when selected.
 
 Reach it from Download my forms (PDF), after four acknowledgement checkboxes.
 
@@ -324,7 +324,7 @@ Verify: apps/web/e2e/review-package.spec.ts drives the button with a mocked /fil
 
 Status: wired.
 
-The header no longer exports a fixture. Fill fixtures for the intake mapper live in apps/api/fixtures/intake_*.json.
+The header no longer exports a fixture. Fill fixtures for the intake mapper live in apps/api/fixtures/intake_*.json, including I-765 and I-131.
 
 Reach it from the fixture files, not a button.
 

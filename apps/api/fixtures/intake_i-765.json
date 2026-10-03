@@ -1,0 +1,58 @@
+{
+  "description": "Demo beneficiary copied onto I-765, including category (c)(9) because I-485 is selected.",
+  "slug": "i-765",
+  "payload": {
+    "fields": {
+      "form1[0].Page1[0].Line1a_FamilyName[0]": "Exampleton",
+      "form1[0].Page1[0].Line1b_GivenName[0]": "Avery",
+      "form1[0].Page1[0].Line1c_MiddleName[0]": "R",
+      "form1[0].Page2[0].Line7_AlienNumber[0]": "000000001",
+      "form1[0].Page2[0].Line12b_SSN[0]": "000000000",
+      "form1[0].Page3[0].Line19_DOB[0]": "07/02/1992",
+      "form1[0].Page3[0].Line18a_CityTownOfBirth[0]": "Faketown",
+      "form1[0].Page3[0].Line18c_CountryOfBirth[0]": "Fictionland",
+      "form1[0].Page4[0].Pt3Line5_Email[0]": "avery.exampleton@example.com",
+      "form1[0].Page3[0].Line20b_Passport[0]": "P0000000",
+      "form1[0].Page3[0].Line20d_CountryOfIssuance[0]": "Fictionland",
+      "form1[0].Page3[0].Line20e_ExpDate[0]": "01/01/2030",
+      "form1[0].Page3[0].Line20a_I94Number[0]": "00000000000",
+      "form1[0].Page3[0].Line21_DateOfLastEntry[0]": "08/01/2022",
+      "form1[0].Page3[0].Line23_StatusLastEntry[0]": "F1",
+      "form1[0].Page3[0].Line24_CurrentStatus[0]": "F1",
+      "form1[0].Page2[0].Line4b_StreetNumberName[0]": "100 Fictional Lane",
+      "form1[0].Page2[0].Pt2Line5_CityOrTown[0]": "Sample City",
+      "form1[0].Page2[0].Pt2Line5_State[0]": "CA",
+      "form1[0].Page2[0].Pt2Line5_ZipCode[0]": "00000",
+      "form1[0].Page3[0].#area[1].section_1[0]": "(c)(",
+      "form1[0].Page3[0].#area[1].section_2[0]": "9)"
+    },
+    "checkboxes": {
+      "form1[0].Page2[0].Line9_Checkbox[1]": true,
+      "form1[0].Page2[0].Part2Line5_Checkbox[1]": true
+    }
+  },
+  "expected_values": {
+    "form1[0].Page1[0].Line1a_FamilyName[0]": "Exampleton",
+    "form1[0].Page1[0].Line1b_GivenName[0]": "Avery",
+    "form1[0].Page1[0].Line1c_MiddleName[0]": "R",
+    "form1[0].Page2[0].Line7_AlienNumber[0]": "000000001",
+    "form1[0].Page2[0].Line12b_SSN[0]": "000000000",
+    "form1[0].Page3[0].Line19_DOB[0]": "07/02/1992",
+    "form1[0].Page3[0].Line18a_CityTownOfBirth[0]": "Faketown",
+    "form1[0].Page3[0].Line18c_CountryOfBirth[0]": "Fictionland",
+    "form1[0].Page4[0].Pt3Line5_Email[0]": "avery.exampleton@example.com",
+    "form1[0].Page3[0].Line20b_Passport[0]": "P0000000",
+    "form1[0].Page3[0].Line20d_CountryOfIssuance[0]": "Fictionland",
+    "form1[0].Page3[0].Line20e_ExpDate[0]": "01/01/2030",
+    "form1[0].Page3[0].Line20a_I94Number[0]": "00000000000",
+    "form1[0].Page3[0].Line21_DateOfLastEntry[0]": "08/01/2022",
+    "form1[0].Page3[0].Line23_StatusLastEntry[0]": "F1",
+    "form1[0].Page3[0].Line24_CurrentStatus[0]": "F1",
+    "form1[0].Page2[0].Line4b_StreetNumberName[0]": "100 Fictional Lane",
+    "form1[0].Page2[0].Pt2Line5_CityOrTown[0]": "Sample City",
+    "form1[0].Page2[0].Pt2Line5_State[0]": "CA",
+    "form1[0].Page2[0].Pt2Line5_ZipCode[0]": "00000",
+    "form1[0].Page3[0].#area[1].section_1[0]": "(c)(",
+    "form1[0].Page3[0].#area[1].section_2[0]": "9)"
+  }
+}

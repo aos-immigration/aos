@@ -9,7 +9,7 @@ from app.map_intake import map_intake
 client = TestClient(app)
 
 DEMO = {
-    "selectedForms": ["i-130", "i-130a", "i-485", "i-864", "i-765"],
+    "selectedForms": ["i-130", "i-130a", "i-485", "i-864", "i-765", "i-131"],
     "petitioner": {
         "givenName": "Jordan",
         "middleName": "Q",
@@ -32,6 +32,8 @@ DEMO = {
         "aNumber": "A000000001",
         "ssn": "000-00-0000",
         "email": "avery.exampleton@example.com",
+        "birthCity": "Faketown",
+        "birthCountry": "Fictionland",
     },
     "marriage": {"date": {"month": "06", "day": "15", "year": "2024"}},
     "addresses": [
@@ -66,7 +68,15 @@ DEMO = {
         }
     ],
     "priorMarriages": [],
-    "immigration": {"i94Number": "00000000000", "passportNumber": "P0000000"},
+    "immigration": {
+        "i94Number": "00000000000",
+        "passportNumber": "P0000000",
+        "passportCountry": "Fictionland",
+        "classOfAdmission": "F1",
+        "currentStatus": "F1",
+        "arrival": {"month": "08", "day": "01", "year": "2022"},
+        "passportExpiry": {"month": "01", "day": "01", "year": "2030"},
+    },
     "biographics": {
         "beneficiary": {
             "ethnicity": "not_hispanic",
@@ -121,6 +131,61 @@ def test_fill_intake_returns_a_pdf() -> None:
     assert response.content.startswith(b"%PDF")
 
 
+def test_i765_copies_identity_and_c9_when_i485_is_selected() -> None:
+    mapped = map_intake("i-765", DEMO)
+    fields = mapped["fields"]
+    assert fields[_full("i-765", "Line1a_FamilyName[0]")] == "Exampleton"
+    assert fields[_full("i-765", "Line12b_SSN[0]")] == "000000000"
+    assert fields[_full("i-765", "section_1[0]")] == "(c)("
+    assert fields[_full("i-765", "section_2[0]")] == "9)"
+    assert fields[_full("i-765", "Line20a_I94Number[0]")] == "00000000000"
+    assert mapped["checkboxes"][_full("i-765", "Line9_Checkbox[1]")] is True
+    without = map_intake("i-765", {**DEMO, "selectedForms": ["i-765"]})
+    assert "section_1[0]" not in {key.split(".")[-1] for key in without["fields"]}
+
+
+def _tooltip(slug: str, short: str) -> str:
+    import pikepdf
+
+    from app.map_intake import _deref, _pdf_path, field_index
+
+    target = field_index(slug)[short]
+    pdf = pikepdf.Pdf.open(str(_pdf_path(slug)))
+    found = ""
+
+    def walk(fields, prefix: str = "") -> None:
+        nonlocal found
+        for field in fields:
+            obj = _deref(field)
+            name = str(obj.get("/T", ""))
+            full = f"{prefix}{name}" if name else prefix
+            if full == target and obj.get("/TU"):
+                found = str(obj.get("/TU"))
+            kids = obj.get("/Kids")
+            if kids:
+                walk(kids, full + ".")
+
+    walk(pdf.Root.AcroForm.Fields)
+    return found
+
+
+def test_i131_checks_pending_i485_and_copies_the_applicant() -> None:
+    mapped = map_intake("i-131", DEMO)
+    fields = mapped["fields"]
+    assert fields[_full("i-131", "Part2_Line1_FamilyName[0]")] == "Exampleton"
+    assert fields[_full("i-131", "Part2_Line13_I94RecordNo[0]")] == "00000000000"
+    assert fields[_full("i-131", "P3_Line4_Pound1[0]")] == "1"
+    assert mapped["checkboxes"][_full("i-131", "CB_AppType[4]")] is True
+    assert "pending Form I-485" in _tooltip("i-131", "CB_AppType[4]")
+    assert "Your Full Legal Name" in _tooltip("i-765", "Line1a_FamilyName[0]")
+    assert "Eligibility Category" in _tooltip("i-765", "section_1[0]")
+    assert mapped["checkboxes"][_full("i-131", "Part2_Line8_Gender[1]")] is True
+    assert mapped["checkboxes"][_full("i-131", "P3_Line1_Ethnicity[0]")] is True
+    assert mapped["checkboxes"][_full("i-131", "P3_Line5_EyeColor[0]")] is True
+    without = map_intake("i-131", {**DEMO, "selectedForms": ["i-131"]})
+    assert _full("i-131", "CB_AppType[4]") not in without["checkboxes"]
+
+
 def test_packet_includes_mapped_forms_and_names_the_gap() -> None:
     response = client.post("/packet", json={"intake": DEMO})
     assert response.status_code == 200
@@ -130,14 +195,16 @@ def test_packet_includes_mapped_forms_and_names_the_gap() -> None:
         "i-130-filled.pdf",
         "i-130a-filled.pdf",
         "i-485-filled.pdf",
+        "i-765-filled.pdf",
+        "i-131-filled.pdf",
         "read-me.txt",
     }
     note = archive.read("read-me.txt").decode()
     assert "i-864" in note
-    assert "i-765" in note
+    assert "i-765" not in note
     assert "does not file" in note
 
 
 def test_unmapped_slug_is_not_found() -> None:
-    response = client.post("/fill-intake/i-765", json={"intake": DEMO})
+    response = client.post("/fill-intake/g-1145", json={"intake": DEMO})
     assert response.status_code == 404
