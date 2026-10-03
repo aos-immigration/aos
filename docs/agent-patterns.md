@@ -139,12 +139,15 @@ Guard: the convention in `AGENTS.md`. There is no lint, because a ban on
 
 The demo preview posted whatever JSON the browser built, and a signed-in
 caller could do the same. Legal review of #81 required the server to build
-the demo I-130 and to fill signed-in previews from that caller's saved rows.
+the demo intake and to fill signed-in previews from that caller's saved rows.
+`/fill-intake`, `/preview-intake`, and `/packet` use that same proxy. The
+browser posts to `/api/preview-intake` and `/api/packet` with no body.
 
 Guard: `apps/web/src/app/api/fill/[slug]/route.test.ts` posts a hostile body
-and expects the upstream fields to be Alex Demo, and expects a signed-in
-call to pass `{}` into the Convex action. `fillI130` takes no field map.
-`bun run check` runs both tests.
+and expects the upstream intake to be Jordan Sampleton, and expects a signed-in
+call to pass `{ slug }` into the Convex action. `apps/api/tests/test_fill_auth.py`
+rejects `/fill-intake`, `/preview-intake`, and `/packet` with no
+`X-Fill-Secret`. `bun run check` runs both tests.
 
 ## PDF rate limits follow the caller, not `X-Forwarded-For`
 
@@ -178,11 +181,14 @@ beneficiary were accepted as strings inside the intake JSON and written
 with `JSON.stringify`.
 
 Guard: `STORED_ID_FIELD_NAMES` in `apps/web/convex/storedIds.ts`.
-`stripStoredIds` blanks those keys before `saveIntake` writes.
-`storedIds.test.ts` saves a sentinel for every name and expects it to be
-absent. The schema scan fails if any of those names is declared
-`v.string()` in `apps/web/convex`. Add a new id to the list; do not add a
-new test function.
+`saveIntake` encrypts a valid SSN and A-Number for both people.
+`stripStoredIds` blanks every other catalog id, and blanks an SSN or
+A-Number that is not already ciphertext. `storedIds.test.ts` saves a
+sentinel for every name and expects the plaintext to be absent, and it
+saves real SSN and A-Number values and expects ciphertext plus last4.
+The schema scan fails if any of those names is declared `v.string()` in
+`apps/web/convex`. Add a new id to the list; do not add a new test
+function.
 
 ## Convex execution logs store argument size, not argument values
 

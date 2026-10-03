@@ -1,21 +1,13 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import BeneficiaryBiographicPage from "@/app/sections/beneficiary/biographic/page";
 import FormBeneficiaryPage from "@/app/forms/i-130/beneficiary/page";
 import FormPetitionerPage from "@/app/forms/i-130/petitioner/page";
 import I485BiographicPage from "@/app/forms/i-485/biographic/page";
-import DocumentsPage from "@/app/sections/documents/page";
+import ProofPage from "@/app/sections/proof/page";
 
 const NOT_SAVED = "Not saved yet. This section does not store what you type.";
 
 describe("mock sections", () => {
-  it("does not prefill an eye color and says the biographic section is not saved", () => {
-    const html = renderToStaticMarkup(<BeneficiaryBiographicPage />);
-    expect(html).toContain(NOT_SAVED);
-    expect(html).not.toContain("✓");
-    expect(html).not.toContain("bg-primary/10");
-  });
-
   it("does not prefill a beneficiary name or date of birth", () => {
     const html = renderToStaticMarkup(<FormBeneficiaryPage />);
     expect(html).toContain(NOT_SAVED);
@@ -34,9 +26,9 @@ describe("mock sections", () => {
     expect(html).not.toContain("2024-05-12");
   });
 
-  it("shows document vault as not available and not saved", () => {
-    const html = renderToStaticMarkup(<DocumentsPage />);
-    expect(html).toContain("Document Vault");
+  it("shows bona fide proof as not available and not saved", () => {
+    const html = renderToStaticMarkup(<ProofPage />);
+    expect(html).toContain("Bona Fide Proof");
     expect(html).toContain("not available yet");
     expect(html).toContain(NOT_SAVED);
   });

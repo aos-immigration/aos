@@ -1,56 +1,56 @@
 import { test, expect } from "@playwright/test";
 
-test.describe("Verify and preview", () => {
-  test("uses current draft data and opens PDF preview modal", async ({ page }) => {
-    let capturedPayload: unknown = null;
+const TINY_JPEG =
+  "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAgDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD6VooooA//2Q==";
 
-    await page.route("**/fill/i-130", async (route) => {
-      capturedPayload = route.request().postDataJSON();
+test.describe("Preview", () => {
+  test("shows page images and keeps the PDF behind the acknowledgements", async ({ page }) => {
+    const captured: { acknowledged?: boolean; intake?: { petitioner?: { familyName?: string } } } = {};
+
+    await page.route("**/preview-intake", async (route) => {
       await route.fulfill({
         status: 200,
-        headers: {
-          "content-type": "application/pdf",
-        },
-        body: Buffer.from("%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF"),
+        contentType: "application/json",
+        body: JSON.stringify({
+          forms: [{ slug: "i-130", title: "Form I-130", pages: [TINY_JPEG] }],
+          notes: [],
+        }),
+      });
+    });
+    await page.route("**/packet", async (route) => {
+      Object.assign(captured, route.request().postDataJSON());
+      await route.fulfill({
+        status: 200,
+        headers: { "content-type": "application/zip" },
+        body: Buffer.from("PK"),
       });
     });
 
     await page.goto("/sections/petitioner");
+    await page.getByRole("checkbox").check();
+    await page.getByRole("button", { name: "Continue" }).click();
+    await page.getByLabel("Given name").fill("Alex");
+    await page.getByLabel("Family name").fill("Rivera");
 
-    await page.evaluate(() => {
-      window.sessionStorage.setItem(
-        "aos.reviewDraft.petitionerBasics",
-        JSON.stringify({
-          givenName: "Alex",
-          middleName: "Q",
-          familyName: "Rivera",
-          relationship: "spouse",
-          dateOfBirth: {
-            month: "01",
-            day: "10",
-            year: "1990",
-          },
-        }),
-      );
-    });
+    await expect(page.getByRole("link", { name: "Download my forms (PDF)" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Download my forms (PDF)" })).toHaveCount(0);
 
-    const verifyButton = page.getByRole("button", {
-      name: /Preview my forms/,
-    });
-    await expect(verifyButton).toBeEnabled();
-    await verifyButton.click();
+    await page.getByRole("button", { name: "Preview" }).click();
+    await expect(page.getByRole("heading", { name: "Before you download" })).toBeVisible();
+    await expect(page.getByText("AOS did not review them for legal accuracy.")).toBeVisible();
+    await expect(page.getByRole("img", { name: "Form I-130 page 1" })).toBeVisible();
+    await expect(page.locator("iframe")).toHaveCount(0);
 
-    await expect(page.getByRole("heading", { name: "Preview: Form I-130" })).toBeVisible();
-    await expect(page.locator('iframe[title="I-130 preview"]')).toBeVisible();
-
-    const payload = capturedPayload as {
-      fields?: Record<string, string>;
-    } | null;
-    expect(payload?.fields?.["form1[0].#subform[0].Pt2Line4a_FamilyName[0]"]).toBe(
-      "Rivera",
-    );
-    expect(payload?.fields?.["form1[0].#subform[0].Pt2Line4b_GivenName[0]"]).toBe(
-      "Alex",
-    );
+    const download = page.getByRole("button", { name: "Download my forms (PDF)" });
+    await expect(download).toBeDisabled();
+    const boxes = page.getByRole("dialog").getByRole("checkbox");
+    await expect(boxes).toHaveCount(4);
+    for (let index = 0; index < 4; index += 1) {
+      await boxes.nth(index).check();
+    }
+    await expect(download).toBeEnabled();
+    await download.click();
+    await expect.poll(() => captured.acknowledged).toBe(true);
+    expect(captured.intake?.petitioner?.familyName).toBe("Rivera");
   });
 });

@@ -16,7 +16,7 @@ Verifying agents start here, then run the command named on the row.
 
 Status: wired.
 
-Landing page. The primary button opens the fake demo couple. It states a $0 service fee and does not read or write intake data. When Clerk keys are missing it says auth is not configured.
+Landing page. It links to /start and to the Jordan Sampleton sample couple, states a $0 service fee, and links the USCIS fee table. It does not read or write intake data. Sign-in appears when Clerk keys are set.
 
 Reach it from the site root.
 
@@ -26,9 +26,9 @@ Verify: Open /. bun run check runs next build with Clerk and Convex variables un
 
 Status: wired.
 
-Shown when a sign-in route is opened and Clerk keys are missing. It says auth is not configured and links to the demo couple.
+Shown when a sign-in route is opened and Clerk keys are missing. It says auth is not configured.
 
-Reach it from a redirect from /sections, /forms, /account, /sign-in, or /sign-up when Clerk is not configured.
+Reach it from a redirect from /account, /sign-in, or /sign-up when Clerk is not configured.
 
 Verify: bun run check runs apps/web/src/app/lib/__tests__/runtimeConfig.test.ts. Open /sections with no Clerk keys and confirm the redirect.
 
@@ -56,11 +56,11 @@ Verify: bun run check runs apps/web/src/components/system/system.test.tsx, which
 
 Status: wired.
 
-Explains that Alex Demo and Jamie Demo are a fake couple, then sets the aos_demo cookie and opens the petitioner screen. Demo screens do not write Convex.
+Explains that Jordan Sampleton and Avery Exampleton are fictional, then sets the aos_demo cookie and opens the intake. Demo screens do not write Convex.
 
-Reach it from the home page link Explore the demo couple.
+Reach it from the home page link Explore the sample couple.
 
-Verify: bun run check runs apps/web/src/app/lib/__tests__/sensitiveAndDemo.test.ts, which asserts the fixture has no SSN or A-Number.
+Verify: bun run check runs apps/web/src/app/lib/__tests__/sensitiveAndDemo.test.ts, which asserts the couple names.
 
 ### `/sign-in/[[...sign-in]]`
 
@@ -92,95 +92,165 @@ Reach it from the home page Account link while signed in.
 
 Verify: bun run check runs the delete case in apps/web/convex/sensitive.test.ts. The page itself is not opened by that test.
 
+### `/start`
+
+Status: wired.
+
+The attorney list. It does not say whether the person can file, and it does not store a result. The intake modal links here as Find legal help instead, and the download step links here as Talk to an attorney first.
+
+Reach it from Sidebar, Prepare, Before you file; Find legal help instead on the intake modal; Talk to an attorney first in the preview.
+
+Verify: bun run check runs apps/web/src/components/intake/prepare.test.tsx, which asserts the page has no eligibility verdict, and intake-ui.test.tsx, which expects the modal link.
+
+### `/cost`
+
+Status: wired.
+
+Itemized USCIS fees from Form G-1055, edition 10/01/26, for the forms the person selected. I-765 cites Appendix C ($260 with a pending I-485 filed on or after 4/1/2024). I-131 cites Appendix B ($630 paper / $580 online with a pending I-485). Paper and online amounts are a toggle stored on the intake. The service fee is $0. No form is preselected.
+
+Reach it from Sidebar, Prepare, USCIS fees, or the home page USCIS fees link.
+
+Verify: bun run check runs apps/web/src/components/intake/prepare.test.tsx, which expects the demo packet to total $3,005 on paper and $2,855 online and to cite Appendix B and Appendix C.
+
 ### `/sections`
 
-Status: mocked.
+Status: wired.
 
-Application overview made of static cards. Nothing on the page is loaded from Convex.
+Answer hub. The person picks forms with nothing preselected, sees which sections are still open, and can load the fictional Sampleton demo. Answers autosave through the intake store.
 
 Reach it from the home page link Start filling out my forms, or the URL.
 
-Verify: Open /sections and confirm the cards do not change after saving petitioner data. No automated test covers this page.
+Verify: bun run check runs apps/web/src/components/intake/intake-ui.test.tsx and apps/web/src/app/lib/intake/intake.test.ts.
 
 ### `/sections/petitioner`
 
 Status: wired.
 
-Petitioner basics. React Hook Form validates petitionerBasicsSchema, writes a sessionStorage draft immediately, and debounces savePetitionerBasics to Convex once given name, family name, citizenship status, and relationship are filled in.
+Petitioner questions, one screen at a time, bound to the canonical intake. Choices can advance on tap. Sensitive fields stay masked until shown.
 
 Reach it from Sidebar, Petitioner Information, Basic Information.
 
-Verify: bun run check runs apps/web/src/app/lib/__tests__/petitionerBasicsSchema.test.ts. The preview flow is apps/web/e2e/review-package.spec.ts, which needs a Convex login and Playwright.
+Verify: bun run check runs apps/web/src/components/intake/intake-ui.test.tsx and apps/web/src/app/lib/intake/path.test.ts.
 
 ### `/sections/petitioner/address`
 
 Status: wired.
 
-Petitioner address history. AddressHistory saves on submit through saveAddress with personRole petitioner. Every saved row uses addressType physical, so the mailing-address branch in buildPdfPayload is unreachable from this screen.
+Petitioner physical addresses on the canonical intake. Gaps and overlaps from checkIntake render on this page.
 
 Reach it from Sidebar, Petitioner Information, Address History (5 years).
 
-Verify: bun run check runs addressSchema.test.ts and addressValidation.test.ts. Browser coverage is apps/web/e2e/address-history.spec.ts, which needs Convex and Playwright.
+Verify: bun run check runs apps/web/src/app/lib/intake/intake.test.ts, which asserts address gap links to this URL.
 
 ### `/sections/petitioner/employment`
 
-Status: partial.
+Status: wired.
 
-Petitioner employment history. EmploymentHistory persists rows to Convex, but both the save and the list query hardcode personRole petitioner. buildPdfPayload accepts the rows and does not write them into the PDF.
+Petitioner employment rows on the canonical intake, including unemployment and school.
 
 Reach it from Sidebar, Petitioner Information, Employment History (5 years).
 
-Verify: bun run check runs employmentSchema.test.ts. Nothing asserts the role or the PDF mapping. See docs/agent-patterns.md.
+Verify: bun run check runs apps/web/src/app/lib/intake/intake.test.ts. PDF mapping of these rows is still a later slice.
 
 ### `/sections/beneficiary`
 
-Status: mocked.
+Status: wired.
 
-Static beneficiary basics. There is no Convex table for this section and the form does not save. The page says it is not saved yet and does not preselect gender or an other-names answer.
+Beneficiary questions on the canonical intake, including parents.
 
 Reach it from Sidebar, Beneficiary Information, Basic Information.
 
-Verify: Open /sections/beneficiary. The page module does not call useQuery or useMutation. No unit test covers the screen.
+Verify: bun run check runs apps/web/src/app/lib/intake/path.test.ts, which reads every beneficiary question path.
 
 ### `/sections/beneficiary/address`
 
 Status: wired.
 
-Beneficiary address history. The same AddressHistory component as the petitioner page, with personRole beneficiary. Saved rows still use addressType physical.
+Beneficiary physical addresses on the canonical intake.
 
 Reach it from Sidebar, Beneficiary Information, Address History (5 years).
 
-Verify: The address schema and addressValidation tests in bun run check cover the form rules. The Playwright spec only opens the petitioner URL.
+Verify: bun run check runs apps/web/src/app/lib/intake/intake.test.ts for address issues.
 
 ### `/sections/beneficiary/employment`
 
-Status: mocked.
+Status: wired.
 
-Static beneficiary employment form. It does not use EmploymentHistory and does not save. The page says it is not saved yet.
+Beneficiary employment rows on the canonical intake.
 
 Reach it from Sidebar, Beneficiary Information, Employment History (5 years).
 
-Verify: Open /sections/beneficiary/employment. Inputs are uncontrolled placeholders. No unit test covers the screen.
+Verify: bun run check runs the intake model tests. This screen writes employment rows for the beneficiary role.
 
 ### `/sections/beneficiary/biographic`
 
-Status: mocked.
+Status: wired.
 
-Static biographic details. There is no Convex table for biographic data. Eye color is not preselected, and the page says it is not saved yet.
+Beneficiary ethnicity, race, height, weight, and eye and hair color on the canonical intake.
 
 Reach it from Sidebar, Beneficiary Information, Biographic Details.
 
-Verify: Open /sections/beneficiary/biographic. No unit test covers the screen.
+Verify: bun run check runs apps/web/src/app/lib/intake/path.test.ts, which includes the biographic paths.
 
 ### `/sections/marital`
 
-Status: mocked.
+Status: wired.
 
-Static marital history. There is no Convex table for marital data. The page says it is not saved yet.
+Marriage date and place, whether the couple lives together, and any earlier marriages.
 
 Reach it from Sidebar, Marital History, Marriage Information.
 
-Verify: Open /sections/marital. No unit test covers the screen.
+Verify: bun run check runs apps/web/src/app/lib/intake/intake.test.ts, which flags a prior marriage that ends after the current one.
+
+### `/sections/immigration`
+
+Status: wired.
+
+Beneficiary arrival, I-94, status, and passport on the canonical intake.
+
+Reach it from Sidebar, Case, Immigration history.
+
+Verify: bun run check runs apps/web/src/app/lib/intake/path.test.ts, which includes the immigration paths.
+
+### `/sections/eligibility`
+
+Status: wired.
+
+I-485 eligibility questions. Each one starts unanswered and is never defaulted to no. A yes answer can include an explanation. The screen does not say whether the person may file.
+
+Reach it from Sidebar, Case, Eligibility questions.
+
+Verify: bun run check runs apps/web/src/app/lib/intake/intake.test.ts, which expects an empty intake to leave every eligibility answer unanswered.
+
+### `/sections/sponsor`
+
+Status: wired.
+
+I-864 household size and income. The screen records the numbers and does not judge whether they are enough.
+
+Reach it from Sidebar, Case, Sponsor.
+
+Verify: bun run check runs apps/web/src/app/lib/intake/path.test.ts, which includes the sponsor paths.
+
+### `/sections/documents`
+
+Status: wired.
+
+Document checklist driven by the answers and the selected forms. Choosing a file stores the file name with status uploaded. The screen never marks a file accepted.
+
+Reach it from Sidebar, Prepare, Documents, and Sidebar, Documents & Evidence, Document Vault.
+
+Verify: bun run check runs apps/web/src/components/intake/prepare.test.tsx and apps/web/src/app/lib/intake/intake.test.ts.
+
+### `/sections/review`
+
+Status: wired.
+
+Key facts with their source, the live automated-check list, and five-year address and employment timelines. Review stays locked until required sections are filled and checkIntake is empty. Specialist and attorney review are labeled coming soon.
+
+Reach it from Sidebar, Case, Review.
+
+Verify: bun run check runs apps/web/src/app/lib/intake/timeline.test.ts and apps/web/src/components/intake/review.test.tsx.
 
 ### `/forms`
 
@@ -196,7 +266,7 @@ Verify: Open /forms. No unit test covers the screen.
 
 Status: mocked.
 
-Static I-130 petitioner mock. The live petitioner form is /sections/petitioner. The mock does not show an A-Number, SSN, or street address. With no Clerk keys the shared layout renders the demo shell and does not call Convex.
+Static I-130 petitioner mock. The live petitioner form is /sections/petitioner. The mock does not show an A-Number, SSN, or street address. The shared layout does not call Convex hooks when NEXT_PUBLIC_CONVEX_URL is empty.
 
 Reach it from the URL /forms/i-130/petitioner only.
 
@@ -221,16 +291,6 @@ Static I-485 biographic mock. Eye color is not preselected, it does not save, an
 Reach it from the URL /forms/i-485/biographic only.
 
 Verify: bun run check renders the page in apps/web/src/app/lib/__tests__/mockSections.test.tsx.
-
-### `/sections/documents`
-
-Status: mocked.
-
-Coming soon page for Document Vault. Nothing on the page is saved.
-
-Reach it from Sidebar, Documents & Evidence, Document Vault.
-
-Verify: Open /sections/documents. The page says the section is not available yet. bun run check renders it in mockSections.test.tsx.
 
 ### `/sections/proof`
 
@@ -278,11 +338,41 @@ Verify: bun run check runs test_debug_field_requires_a_name. Inspect a live fiel
 
 Status: wired.
 
-Fills an allowlisted form from {fields, checkboxes} and streams the PDF back with Cache-Control no-store. The caller must send X-Fill-Secret. The rate limit key is X-Fill-Caller, which the web server sets to the Clerk user id or demo. X-Forwarded-For is ignored. Checkbox on-values are sniffed from /AP. /V and /AS are both set, and /NeedAppearances is set on the AcroForm. Browser callers must send an Origin listed in ALLOWED_ORIGINS. When that variable is unset, the only allowed origin is http://localhost:3000. A validation error does not echo the submitted value.
+Fills an allowlisted form from {fields, checkboxes} and streams the PDF back with Cache-Control no-store. The caller must send X-Fill-Secret. The rate limit key is X-Fill-Caller, which the web server sets to the Clerk user id or demo. X-Forwarded-For is ignored. Checkbox on-values are sniffed from /AP. /V and /AS are both set, and /NeedAppearances is set on the AcroForm. A checkbox's subform siblings are left alone. Browser callers must send an Origin listed in ALLOWED_ORIGINS. When that variable is unset, the only allowed origin is http://localhost:3000. A validation error does not echo the submitted value.
 
-Reach it from the signed-in Preview my forms button, which calls the Convex fill action with the caller's saved application, or the demo POST /api/fill/i-130 route, which builds the fake I-130 on the server.
+Reach it from POST /fill/i-130 from the Next.js server, not from the browser.
 
 Verify: bun run check runs apps/api/tests/test_fill_auth.py, apps/api/tests/test_api.py, and uv run python scripts/eval_fill.py fixtures/ from apps/api. eval_fill.py exits 1 when a fixture field or appearance state does not match.
+
+### `POST /fill-intake/{slug}`
+
+Status: wired.
+
+Fills one mapped form from a canonical intake and returns PDF bytes only when acknowledged is true. The caller must send X-Fill-Secret. The rate limit key is X-Fill-Caller. Mapped slugs are i-130, i-130a, i-485, i-765, and i-131. I-765 writes category (c)(9) only when I-485 is also selected. I-131 checks advance parole for a pending I-485 only in that same case. I-864 is not mapped until the official PDF is in Forms/.
+
+Reach it from POST /api/fill-intake/i-130 on the web app. The browser does not call this API route's upstream. Demo mode builds the Sampleton intake on the server..
+
+Verify: bun run check runs apps/api/tests/test_map_intake.py and the intake_*.json fixtures in eval_fill.py.
+
+### `POST /preview-intake`
+
+Status: wired.
+
+Renders the selected mapped forms as JPEG page images. It requires X-Fill-Secret, rate-limits X-Fill-Caller, does not return PDF bytes, and does not require the acknowledgement flag.
+
+Reach it from the Preview button, which posts to /api/preview-intake with no field map.
+
+Verify: bun run check runs test_preview_returns_images_without_acknowledgement in apps/api/tests/test_map_intake.py.
+
+### `POST /packet`
+
+Status: partial.
+
+Requires X-Fill-Secret and rate-limits X-Fill-Caller. Returns 400 when selectedForms is empty or acknowledged is not true. Otherwise zips the mapped forms the person selected, plus a read-me that says the files are drafts and names any selected form that was not filled. There is no default to every mapped form. I-765 and I-131 are filled when selected. I-864 and G-1145 are named in that note when selected.
+
+Reach it from Download my forms (PDF) inside the preview, which posts to /api/packet after the acknowledgement boxes.
+
+Verify: bun run check runs test_packet_includes_mapped_forms_and_names_the_gap and test_packet_rejects_an_empty_selection in apps/api/tests/test_map_intake.py.
 
 ## Linked paths with no page
 
@@ -294,18 +384,18 @@ None.
 
 Status: partial.
 
-Preview my forms shows the PDF in an iframe. A signed-in preview is a Convex action that loads that caller's saved application, decrypts SSN and A-Number, and fills only i-130. Demo mode posts to /api/fill/i-130 with no field map; the server builds the Alex Demo payload and ignores the body. Employment is loaded and then ignored. The header counts saved sections and does not show a percentage.
+The header Preview button posts to /api/preview-intake with no field map and shows page images. Demo mode builds the Jordan Sampleton intake on the server and ignores the client body. A signed-in preview loads that caller's saved intake, decrypts SSN and A-Number, and does not return those numbers to the browser. Download my forms (PDF) stays off until every acknowledgement box is checked, then posts to /api/packet.
 
-Reach it from the Preview my forms button in the app header, on any /sections or /forms page.
+Reach it from the Preview button in the app header, on any /sections or /forms page.
 
-Verify: apps/web/e2e/review-package.spec.ts drives the button with a mocked /fill/i-130 response. It needs Convex and Playwright, so it is not part of bun run check. Fill accuracy without the browser is eval_fill.py.
+Verify: apps/web/e2e/review-package.spec.ts drives Preview with a mocked /preview-intake response and checks that the header has no download link. It needs Playwright, so it is not part of bun run check. Fill accuracy without the browser is eval_fill.py.
 
 ### export-fixture
 
 Status: wired.
 
-Development-only header button. It builds the fixture from saved Convex records, not the unsaved sessionStorage draft, downloads {payload, expected_values}, and copies expected_values from text fields only.
+The header no longer exports a fixture. Fill fixtures for the intake mapper live in apps/api/fixtures/intake_*.json, including I-765 and I-131.
 
-Reach it from the Export Fixture button in the header when NODE_ENV is development.
+Reach it from the fixture files, not a button.
 
-Verify: No unit test covers the button. The downloaded shape is what eval_fill.py accepts. Confirm against apps/api/scripts/eval_fill.py _load_fixture.
+Verify: bun run check runs eval_fill.py fixtures/, which includes intake_i-130.json, intake_i-130a.json, and intake_i-485.json.

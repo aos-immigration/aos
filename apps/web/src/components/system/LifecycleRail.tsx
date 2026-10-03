@@ -13,7 +13,7 @@ export function LifecycleRail({
   className,
 }: LifecycleRailProps) {
   return (
-    <ol className={cn("flex gap-4 overflow-x-auto pb-1", className)}>
+    <ol className={cn("flex flex-col gap-4 sm:flex-row sm:flex-wrap", className)}>
       {STAGES.map((stage, index) => {
         const visual = stageVisual(stage.id, current, done);
         return (
@@ -21,7 +21,7 @@ export function LifecycleRail({
             key={stage.id}
             data-stage={stage.id}
             data-state={visual}
-            className="flex min-w-36 flex-1 gap-3"
+            className="flex min-w-0 flex-1 gap-3 sm:basis-40"
           >
             <span
               className={cn(

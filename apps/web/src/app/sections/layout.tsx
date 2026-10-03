@@ -1,17 +1,10 @@
-import { cookies } from "next/headers";
 import { DashboardLayout } from "@/components/DashboardLayout";
-import { IntakeModeProvider } from "@/app/lib/intakeMode";
-import { DEMO_COOKIE } from "@/app/lib/demoCouple";
+import { DisclaimerGate } from "@/components/intake/DisclaimerGate";
 
-export default async function SectionsLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const demo = (await cookies()).get(DEMO_COOKIE)?.value === "1";
+export default function SectionsLayout({ children }: { children: React.ReactNode }) {
   return (
-    <IntakeModeProvider demo={demo}>
-      <DashboardLayout>{children}</DashboardLayout>
-    </IntakeModeProvider>
+    <DashboardLayout>
+      <DisclaimerGate>{children}</DisclaimerGate>
+    </DashboardLayout>
   );
 }

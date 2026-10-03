@@ -262,6 +262,8 @@ def _apply_leaf_value(
     if not parent:
         return
     parent_obj = _deref(parent)
+    if str(parent_obj.get("/FT", "")) != "/Btn":
+        return
     parent_obj["/V"] = value
     kids = parent_obj.get(KIDS_KEY, None)
     if not kids:
@@ -380,7 +382,7 @@ def _expected_fill_secret() -> str:
 
 
 def _fill_caller_authorized(request: Request) -> bool:
-    """Shared secret from the signed-in Next.js route. Fail closed when unset."""
+    """Shared secret from the Next.js server. Fail closed when unset."""
     expected = _expected_fill_secret()
     provided = request.headers.get("x-fill-secret", "")
     if not expected or not provided:
@@ -391,23 +393,48 @@ def _fill_caller_authorized(request: Request) -> bool:
     )
 
 
-@app.post("/fill/{slug}")
-async def fill_pdf(slug: str, request: Request):
+def _body_limit() -> int:
+    try:
+        return int(os.environ.get("PDF_MAX_BODY_BYTES", "1000000"))
+    except ValueError:
+        return 1_000_000
+
+
+async def _guarded_body(request: Request) -> bytes:
     if not _fill_caller_authorized(request):
         raise HTTPException(status_code=401, detail="Unauthorized")
     if not _rate_ok(request):
         raise HTTPException(status_code=429, detail="Too many requests")
     raw = await request.body()
-    try:
-        max_bytes = int(os.environ.get("PDF_MAX_BODY_BYTES", "1000000"))
-    except ValueError:
-        max_bytes = 1_000_000
-    if len(raw) > max_bytes:
+    if len(raw) > _body_limit():
         raise HTTPException(status_code=413, detail="Request too large")
-    try:
-        payload = FillRequest.model_validate_json(raw)
-    except Exception:
-        raise HTTPException(status_code=422, detail="Invalid fill request") from None
+    return raw
+
+
+class IntakeFillRequest(BaseModel):
+    intake: Dict[str, Any] = Field(default_factory=dict)
+    acknowledged: Optional[bool] = None
+
+
+def _require_acknowledgement(body: IntakeFillRequest) -> None:
+    if body.acknowledged is not True:
+        raise HTTPException(
+            status_code=400,
+            detail="Acknowledgement is required before a PDF can be downloaded.",
+        )
+
+
+def _selected_forms(intake: Dict[str, Any]) -> List[str]:
+    selected = intake.get("selectedForms", None)
+    if not isinstance(selected, list) or len(selected) == 0:
+        raise HTTPException(status_code=400, detail="selectedForms is empty")
+    slugs = [slug for slug in selected if isinstance(slug, str) and slug.strip()]
+    if not slugs:
+        raise HTTPException(status_code=400, detail="selectedForms is empty")
+    return slugs
+
+
+def _filled_pdf(slug: str, fields: Dict[str, str], checkboxes: Dict[str, bool]) -> BytesIO:
     pdf_file = _pdf_path(slug)
     if not pdf_file.exists():
         raise HTTPException(status_code=404, detail=PDF_NOT_FOUND)
@@ -415,24 +442,142 @@ async def fill_pdf(slug: str, request: Request):
     acro = pdf.Root.get(ACROFORM_KEY, None)
     if not acro:
         raise HTTPException(status_code=400, detail="PDF has no AcroForm")
-
     acro["/NeedAppearances"] = pikepdf.Boolean(True)
-
-    field_values: Dict[str, str] = dict(payload.fields)
-    checkbox_values: Dict[str, bool] = dict(payload.checkboxes)
-
-    _walk_fields(pdf_get(acro, FIELDS_KEY, []), field_values, checkbox_values)
-
+    _walk_fields(pdf_get(acro, FIELDS_KEY, []), fields, checkboxes)
     output = BytesIO()
     pdf.save(output)
     output.seek(0)
+    return output
 
+
+@app.post("/fill/{slug}")
+async def fill_pdf(slug: str, request: Request):
+    raw = await _guarded_body(request)
+    try:
+        payload = FillRequest.model_validate_json(raw)
+    except Exception:
+        raise HTTPException(status_code=422, detail="Invalid fill request") from None
+    output = _filled_pdf(slug, dict(payload.fields), dict(payload.checkboxes))
     filename = f"{slug}-filled.pdf"
     return StreamingResponse(
         output,
         media_type="application/pdf",
         headers={
             "Content-Disposition": f'attachment; filename="{filename}"',
+            "Cache-Control": "no-store",
+        },
+    )
+
+
+def _map_or_404(slug: str, intake: Dict[str, Any]) -> Dict[str, Any]:
+    from app.map_intake import map_intake
+
+    try:
+        return map_intake(slug, intake)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+async def _intake_request(request: Request) -> IntakeFillRequest:
+    raw = await _guarded_body(request)
+    try:
+        return IntakeFillRequest.model_validate_json(raw)
+    except Exception:
+        raise HTTPException(status_code=422, detail="Invalid fill request") from None
+
+
+@app.post("/fill-intake/{slug}")
+async def fill_intake(slug: str, request: Request):
+    body = await _intake_request(request)
+    _require_acknowledgement(body)
+    mapped = _map_or_404(slug, body.intake)
+    output = _filled_pdf(slug, mapped["fields"], mapped["checkboxes"])
+    filename = f"{slug}-filled.pdf"
+    return StreamingResponse(
+        output,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Cache-Control": "no-store",
+        },
+    )
+
+
+@app.post("/preview-intake")
+async def preview_intake(request: Request):
+    body = await _intake_request(request)
+    from app.map_intake import MAPPED_SLUGS
+
+    from app.preview_pages import render_pdf_pages
+
+    selected = _selected_forms(body.intake)
+    forms: List[Dict[str, Any]] = []
+    notes: List[str] = []
+    for slug in selected:
+        if slug not in MAPPED_SLUGS:
+            notes.append(f"{slug}: not filled. This packet does not map that form yet.")
+            continue
+        try:
+            mapped = _map_or_404(slug, body.intake)
+        except HTTPException as exc:
+            if exc.status_code == 404:
+                notes.append(f"{slug}: not filled. The official PDF is not in this checkout.")
+                continue
+            raise
+        pdf = _filled_pdf(slug, mapped["fields"], mapped["checkboxes"])
+        forms.append(
+            {
+                "slug": slug,
+                "title": f"Form {slug.upper()}",
+                "pages": render_pdf_pages(pdf.getvalue()),
+            }
+        )
+    return JSONResponse(
+        {"forms": forms, "notes": notes},
+        headers={"Cache-Control": "no-store"},
+    )
+
+
+@app.post("/packet")
+async def packet(request: Request):
+    body = await _intake_request(request)
+    import io
+    import zipfile
+
+    from app.map_intake import MAPPED_SLUGS
+
+    _require_acknowledgement(body)
+    selected = _selected_forms(body.intake)
+    buffer = io.BytesIO()
+    notes: List[str] = [
+        "These are drafts. Check every answer against the form instructions before you sign.",
+        "AOS does not file these forms with USCIS.",
+    ]
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+        for slug in selected:
+            if slug not in MAPPED_SLUGS:
+                notes.append(f"{slug}: not filled. This packet does not map that form yet.")
+                continue
+            try:
+                mapped = _map_or_404(slug, body.intake)
+            except HTTPException as exc:
+                if exc.status_code == 404:
+                    notes.append(
+                        f"{slug}: not filled. The official PDF is not in this checkout."
+                    )
+                    continue
+                raise
+            pdf = _filled_pdf(slug, mapped["fields"], mapped["checkboxes"])
+            archive.writestr(f"{slug}-filled.pdf", pdf.getvalue())
+        archive.writestr("read-me.txt", "\n".join(notes) + "\n")
+    buffer.seek(0)
+    return StreamingResponse(
+        buffer,
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": 'attachment; filename="aos-packet.zip"',
             "Cache-Control": "no-store",
         },
     )
