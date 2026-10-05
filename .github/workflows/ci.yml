@@ -25,3 +25,14 @@ jobs:
 
       - name: Check
         run: bun run check
+
+      - name: Render PDF crops
+        working-directory: apps/api
+        run: uv run python scripts/render_fields.py fixtures/basic_petitioner.json --pages --out "$GITHUB_WORKSPACE/pdf-crops"
+
+      - name: Upload PDF crops
+        uses: actions/upload-artifact@v4
+        with:
+          name: pdf-crops
+          path: pdf-crops
+          if-no-files-found: error
