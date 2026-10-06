@@ -224,8 +224,9 @@ owner twice and leaves the other.
 
 ## USCIS editions expire
 
-USCIS can reject an edition with no grace period. On October 6, 2026 the
-I-485 in `Forms/` was still 01/20/25, and USCIS accepted only 09/18/26.
+USCIS can reject an edition with no grace period. `fc102bf` replaces the
+I-485 in `Forms/`, which was still 01/20/25 on October 6, 2026, when USCIS
+accepted only 09/18/26.
 A newer edition is not always the one USCIS accepts. A September 14, 2026
 court order means USCIS is not accepting I-765 edition 09/15/26, so that
 form stays on 08/21/25.
