@@ -70,7 +70,10 @@ End-to-end tests (`cd apps/web && npm run test:e2e`) need Playwright
 (`npx playwright install chromium`) and a Convex login. They are not part of
 `bun run check`.
 
-After a PDF mapping change, render crops and look at them:
+After a PDF mapping change, look at the page crops. CI renders
+`fixtures/basic_petitioner.json` and uploads `pdf-crops` on the workflow run.
+Those images are the fixture fields. They are not the output of `map_intake`.
+The same command locally:
 
 ```bash
 cd apps/api && uv run python scripts/render_fields.py fixtures/basic_petitioner.json --pages
@@ -122,14 +125,10 @@ user and returns that user's draft. Intake routes require a session. `/demo`
 sets a cookie and shows a fake couple without writing Convex. SSN and
 A-Number are encrypted in Convex and are not returned by the basics query.
 
-Route status is `docs/feature-map.md`. Petitioner basics, both address
-histories, and `POST /fill/{slug}` persist. Petitioner employment persists
-but does not reach the PDF. Beneficiary basics, beneficiary employment,
-biographic, marital history, and everything under `/forms` are static
-mockups. The header counts sections that have stored data. It does not show
-a percentage. Mock sections say they are not saved yet.
-`/sections/documents` and `/sections/proof` are coming-soon pages inside
-the shell.
+Route status is `docs/feature-map.md`. Do not keep a second list in this
+file. Petitioner employment persists but does not reach the PDF. The header
+counts sections that have stored data. It does not show a percentage.
+Screens marked `mocked` in the feature map say they are not saved yet.
 
 Datadog RUM in the web app uses a hardcoded client token in
 `apps/web/src/instrumentation-client.ts`. Session replay is off and text is

@@ -102,26 +102,12 @@ each app that defines it: `dev` and `lint` exist in both apps, while `build`,
 
 ## What actually works today
 
-This matters more than the route list, because a good chunk of the UI is
-unwired mockups.
+Route status is [`docs/feature-map.md`](docs/feature-map.md). That file is
+generated from `docs/feature-map.json`, and `bun run check` fails when a
+page, a FastAPI route, or a sidebar href changes without a matching entry.
+Do not keep a second route list in this file.
 
-**Real, persisted features**
-
-| Route | What it does |
-| --- | --- |
-| `/sections/petitioner` | Petitioner basics. RHF + Zod, debounced auto-save to Convex |
-| `/sections/petitioner/address` | Address history CRUD |
-| `/sections/beneficiary/address` | Address history CRUD |
-| `/sections/petitioner/employment` | Employment history CRUD |
-| "Verify & Preview" button | Builds an I-130 payload and renders the filled PDF |
-
-**Mockups with no data behind them:** `/sections/beneficiary`,
-`/sections/beneficiary/employment`, `/sections/beneficiary/biographic`,
-`/sections/marital`, `/sections` overview, and everything under `/forms/*`.
-Nothing links to `/forms/*`; those pages are reachable only by typing the URL.
-
-**Coming soon:** `/sections/documents` and `/sections/proof` are sidebar links.
-Each page says the section is not available yet and does not save anything.
+Petitioner employment is stored and does not reach the PDF yet.
 
 ---
 
@@ -159,11 +145,10 @@ to `/api/packet`.
 
 ### Convex schema (`apps/web/convex/schema.ts`)
 
-`applications`, `petitionerBasics`, `addresses`, `employmentEntries`, and a
-`forms` table. Addresses and employment are indexed by
+`applications`, `petitionerBasics`, `addresses`, `employmentEntries`,
+`intakes`, and a `forms` table. Addresses and employment are indexed by
 `[applicationId, personRole]`, so the same tables serve petitioner and
-beneficiary. There are no tables yet for marital or biographic data, which is
-why those pages are still mockups.
+beneficiary. `intakes.payload` is the canonical intake for one application.
 
 ---
 
@@ -217,15 +202,17 @@ When a checkbox won't tick, hit `GET /debug/field/i-130?name=...` and read the
 
 `apps/api/scripts/eval_fill.py` fills the PDF, reads every value back out, and
 diffs against `expected_values` in the fixtures. It runs the same code path as
-the API by default, or against a live server with `--http`. Three i-130 fixtures
-in `apps/api/fixtures/`; the other four forms have none. For checkboxes it also
-asserts the written `/V`/`/AS` is a legal `/AP` appearance state — a value
-outside `/AP` reads back "fine" but prints as an unchecked box.
+the API by default, or against a live server with `--http`. It runs every JSON
+file in `apps/api/fixtures/`. For checkboxes it also asserts the written
+`/V`/`/AS` is a legal `/AP` appearance state. A value outside `/AP` reads back
+as set and still prints as an unchecked box.
 
-`apps/api/scripts/render_fields.py` is the visual layer: it fills a fixture,
-renders the pages with pdfium (form drawing on), and writes one PNG crop per
-filled field (plus `--pages` for full pages). An agent or human can eyeball
-the crops to confirm values land in the right boxes — no browser needed.
+`apps/api/scripts/render_fields.py` fills a fixture, renders the pages with
+pdfium (form drawing on), and writes one PNG crop per filled field. `--pages`
+also writes full pages. CI runs this on `fixtures/basic_petitioner.json` and
+uploads the directory as `pdf-crops`. Those images show the fixture fields.
+They do not show what `map_intake` wrote. A person can open the same files
+with no browser.
 
 ```bash
 cd apps/api && uv run python scripts/render_fields.py fixtures/basic_petitioner.json --pages

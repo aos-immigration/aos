@@ -93,14 +93,16 @@ percent.
 Guard: `apps/web/src/app/lib/__tests__/sectionSaveState.test.tsx` and
 `mockSections.test.tsx`. `bun run check` runs both.
 
-## Coming-soon pages for documents and proof
+## Documents is a checklist and proof is coming soon
 
 `/sections/documents` and `/sections/proof` used to 404 outside the shell.
-They are now pages that say the section is not available yet.
+`/sections/documents` is `wired` in `docs/feature-map.json`. It stores a
+chosen file name and never marks a file accepted. `/sections/proof` is
+`mocked`. The page says the section is not available yet.
 
-Guard: both are `mocked` pages in `docs/feature-map.json`. The feature-map
-check fails if the href or the page disappears. `mockSections.test.tsx`
-renders the document vault page.
+Guard: the feature-map check fails if either page or sidebar href
+disappears. `mockSections.test.tsx` renders the proof page. It does not
+render the documents page.
 
 ## Employment never reaches the PDF
 
