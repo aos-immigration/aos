@@ -249,7 +249,10 @@ def _map_i485(intake: dict[str, Any]) -> MappedForm:
     form.text("Pt1Line1_GivenName[0]", str(beneficiary.get("givenName") or ""))
     form.text("Pt1Line1_MiddleName[0]", str(beneficiary.get("middleName") or ""))
     form.text("Pt1Line3_DOB[0]", _date(beneficiary.get("dateOfBirth")))
-    form.text("Pt1Line4_AlienNumber[0]", _digits(str(beneficiary.get("aNumber") or "")))
+    # 09/18/26 renamed the page-1 header onto Pt1Line4_AlienNumber. Index [0]
+    # is that header. Index [2] is the Part 1 answer, at the same rectangle
+    # the 01/20/25 edition used for Pt1Line4_AlienNumber[0].
+    form.text("Pt1Line4_AlienNumber[2]", _digits(str(beneficiary.get("aNumber") or "")))
     form.text("Pt1Line19_SSN[0]", str(beneficiary.get("ssn") or ""))
     if beneficiary.get("sex") == "female":
         form.box("Pt1Line6_CB_Sex[0]")

@@ -128,6 +128,9 @@ def test_i485_copies_the_applicant() -> None:
     mapped = map_intake("i-485", DEMO)
     fields = mapped["fields"]
     assert fields[_full("i-485", "Pt1Line1_FamilyName[0]")] == "Exampleton"
+    assert fields["form1[0].#subform[1].Pt1Line4_AlienNumber[2]"] == "000000001"
+    assert "Pt1Line4_AlienNumber[0]" not in {key.split(".")[-1] for key in fields}
+    assert "9 digit" in _tooltip("i-485", "Pt1Line4_AlienNumber[2]")
     assert fields[_full("i-485", "Pt1Line3_DOB[0]")] == "07/02/1992"
     assert fields[_full("i-485", "P1Line12_I94[0]")] == "00000000000"
     assert fields[_full("i-485", "Pt7Line4_Weight1[0]")] == "1"
