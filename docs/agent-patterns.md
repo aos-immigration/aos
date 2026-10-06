@@ -222,6 +222,24 @@ order, the retry, the second webhook delivery, and that `account/page.tsx`
 does not call `user.delete`. `purgeOwner` in `sensitive.test.ts` deletes one
 owner twice and leaves the other.
 
+## USCIS editions expire
+
+USCIS can reject an edition with no grace period. `fc102bf` on #94 replaces the
+I-485 in `Forms/`, which was still 01/20/25 on October 6, 2026, when USCIS
+accepted only 09/18/26.
+A newer edition is not always the one USCIS accepts. A September 14, 2026
+court order means USCIS is not accepting I-765 edition 09/15/26, so that
+form stays on 08/21/25.
+
+Guard: `Forms/editions.json` records the slug, edition date, uscis.gov
+URL, and last-checked date for each bundled PDF.
+`apps/api/tests/test_form_editions.py` reads the footer
+`Form X Edition MM/DD/YY` on every page. It fails when the footer
+disagrees with the manifest, when a PDF in `Forms/` is missing from the
+manifest, or when a manifest entry has no PDF. It checks `apps/api/forms`
+when that directory has PDFs, and it checks the copy `stage_forms`
+writes. The test does not use the network.
+
 ## Preview responses stay under 4.5MB
 
 `cc3c554` on #91 lowered preview render from scale 2 and JPEG quality 80

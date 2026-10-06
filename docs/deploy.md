@@ -1,8 +1,8 @@
 # Deploy the public demo
 
 Two Vercel projects and one Convex deployment. The PDF API is FastAPI on
-Vercel. The fill wheels are about 22MB compressed and `Forms/` is 3.4MB, so
-the function stays inside the size limit. Render is not required.
+Vercel. The fill wheels are about 22MB compressed and `Forms/` is about
+4.7MB, so the function stays inside the size limit. Render is not required.
 
 Deploy the API first, then Convex, then the web project. `API_URL` and
 `ALLOWED_ORIGINS` need the other project's URL. No trailing slash on either.
@@ -78,4 +78,4 @@ vercel --prod
 `PDF_SERVICE_ENV=production` rejects fills when `PDF_FILL_SECRET` is unset.
 A Vercel function response must stay under 4.5MB. Preview page images are
 rendered so the Sampleton preview JSON fits that limit. The packet zip is
-about 2.3MB.
+about 3.0MB.

@@ -348,7 +348,7 @@ Verify: bun run check runs apps/api/tests/test_fill_auth.py, apps/api/tests/test
 
 Status: wired.
 
-Fills one mapped form from a canonical intake and returns PDF bytes only when acknowledged is true. The caller must send X-Fill-Secret. The rate limit key is X-Fill-Caller. Mapped slugs are i-130, i-130a, i-485, i-765, and i-131. I-765 writes category (c)(9) only when I-485 is also selected. I-131 checks advance parole for a pending I-485 only in that same case. I-864 is not mapped until the official PDF is in Forms/.
+Fills one mapped form from a canonical intake and returns PDF bytes only when acknowledged is true. The caller must send X-Fill-Secret. The rate limit key is X-Fill-Caller. Mapped slugs are i-130, i-130a, i-485, i-765, and i-131. I-765 writes category (c)(9) only when I-485 is also selected. I-131 checks advance parole for a pending I-485 only in that same case. The I-864 edition 08/24/26 PDF is in Forms/ and is not filled.
 
 Reach it from POST /api/fill-intake/i-130 on the web app. The browser does not call this API route's upstream. A demo cookie builds the Sampleton intake on the server. NEXT_PUBLIC_DEMO_ONLY=1 does that for every caller, including a signed-in one..
 

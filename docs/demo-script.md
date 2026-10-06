@@ -59,8 +59,8 @@ Convex only when `NEXT_PUBLIC_CONVEX_URL` is already set.
     until all four boxes under "Before you download" are checked. The zip is
     `aos-packet.zip`. The read-me says these are drafts and that AOS does not
     file them. I-130, I-130A, I-485, I-765, and I-131 are in the zip. I-864
-    and G-1145 are named as not filled. I-864 has no official PDF in
-    `Forms/` yet.
+    and G-1145 are named as not filled. The I-864 PDF is in `Forms/` and
+    this packet does not fill it.
 
 ## What not to claim
 

@@ -91,7 +91,7 @@ apps/web/     Next.js 16 App Router, React 19, Tailwind, shadcn/Radix
   convex/             database schema, queries, mutations
   e2e/                Playwright specs
 apps/api/     FastAPI + pikepdf. One module: app/main.py
-Forms/        the USCIS PDF templates (i-130, i-130a, i-131, i-485, i-765)
+Forms/        the USCIS PDF templates (i-130, i-130a, i-131, i-485, i-765, i-864)
 ```
 
 Bun workspaces driven by Turborepo. Root scripts run the matching script in
